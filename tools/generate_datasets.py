@@ -1,14 +1,14 @@
-"""Generate the synthetic NRRD volumes used to test the plane-projection algorithm.
+"""Generate the NRRD volumes used to test the plane-projection algorithm.
 
-Three volumes with known geometry (full spec in DATA/README.md):
+    cake_3layers.nrrd       uint8    simulated MRI scan of a rectangular three-layer cake, styled like MRHead (see cake.py)
+    cake_3layers.seg.nrrd   uint8    its ground-truth material labels, as a 3D Slicer segmentation
+    tomato.nrrd             uint16   simulated MRI scan of a tomato (see tomato.py)
+    tomato.seg.nrrd         uint8    its ground-truth tissue labels, as a 3D Slicer segmentation
+    dice.nrrd               uint32   game die with a different number of pips per face (toy geometry)
 
-    cake_3layers.nrrd   uint8    three-layer cake with a ball in the center
-    tomato.nrrd         uint16   tomato with skin, five chambers and seeds
-    dice.nrrd           uint32   game die with a different number of pips per face
-
-Every volume is indexed vol[x, y, z], like M[x][y][z] in the assignment, and is
-saved on a 1 mm LPS grid with origin (0, 0, 0), so the IJK index that 3D Slicer
-shows is exactly (x, y, z).
+Every volume is indexed vol[x, y, z], like M[x][y][z] in the assignment, and is saved on an LPS
+grid with origin (0, 0, 0), so the IJK index that 3D Slicer shows is exactly (x, y, z).
+The full spec is in DATA/README.md.
 
 Usage:
     python tools/generate_datasets.py [--out DIR] [--only {cake,tomato,dice}]
@@ -17,6 +17,7 @@ Usage:
 import argparse
 import math
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
@@ -24,52 +25,18 @@ from typing import Callable
 
 import nrrd
 import numpy as np
+from scipy import ndimage
+
+import cake
+import tomato
+from scan_simulation import Scan
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# Header shared by all volumes; same layout as DATA/MRHead_1.nrrd.
-NRRD_HEADER = {
-    "space": "left-posterior-superior",
-    "space directions": np.eye(3),
-    "space origin": np.zeros(3),
-    "kinds": ["domain", "domain", "domain"],
-    "encoding": "gzip",
-}
-
-TOMATO_SEED = 2026  # fixed RNG seed, so the tomato seeds land in the same place on every run
-
-INF = math.inf
-
 
 # ---------------------------------------------------------------------------
-# Voxel values (one IntEnum per volume)
+# The toy die: voxel values, shapes and builder
 # ---------------------------------------------------------------------------
-
-class Cake(IntEnum):
-    """Voxel values of cake_3layers.nrrd (uint8)."""
-    BACKGROUND = 0
-    PLATE = 40
-    CHOCOLATE = 80     # bottom layer
-    STRAWBERRY = 120   # top layer
-    VANILLA = 160      # middle layer
-    FROSTING = 200
-    CREAM = 220
-    CANDLE = 230
-    FLAME = 250
-    BALL = 255
-
-
-class Tomato(IntEnum):
-    """Voxel values of tomato.nrrd (uint16, an MRI-like range)."""
-    BACKGROUND = 0
-    GEL = 250          # jelly inside the chambers
-    FLESH = 600        # outer wall and the septa between chambers
-    CORE = 700         # columella
-    SEPAL = 750
-    STEM = 800
-    SKIN = 900
-    SEED = 1200
-
 
 class Dice(IntEnum):
     """Voxel values of dice.nrrd (uint32). Both are above 65535, so they need 32 bits."""
@@ -77,10 +44,6 @@ class Dice(IntEnum):
     BODY = 100_000
     PIP = 200_000
 
-
-# ---------------------------------------------------------------------------
-# Shapes
-# ---------------------------------------------------------------------------
 
 class Shape(ABC):
     """A solid in voxel coordinates. Voxel (x, y, z) is sampled at its center point."""
@@ -137,51 +100,6 @@ def sphere(center, radius: float) -> Ellipsoid:
     return Ellipsoid(center, (radius, radius, radius))
 
 
-class CylinderZ(Shape):
-    """Vertical cylinder: distance from the axis <= radius, and z_low <= z < z_high."""
-
-    def __init__(self, center_xy, radius: float, z_low: float = -INF, z_high: float = INF):
-        self.cx, self.cy = map(float, center_xy)
-        self.radius = float(radius)
-        self.z_low, self.z_high = float(z_low), float(z_high)
-
-    def bounds(self):
-        r = self.radius
-        return (np.array([self.cx - r, self.cy - r, self.z_low]),
-                np.array([self.cx + r, self.cy + r, self.z_high]))
-
-    def contains(self, x, y, z):
-        in_disk = (x - self.cx) ** 2 + (y - self.cy) ** 2 <= self.radius ** 2
-        return in_disk & (self.z_low <= z) & (z < self.z_high)
-
-
-class RadialWalls(Shape):
-    """Vertical walls that radiate from a z-parallel axis, like the spokes of a wheel.
-
-    Wall k starts on the axis and points at angle start_deg + k * 360 / count,
-    measured from +x toward +y. A voxel is inside if it lies within half_width
-    of a wall. The walls are unbounded, so intersect them with a finite shape.
-    """
-
-    def __init__(self, center_xy, count: int, start_deg: float, half_width: float):
-        self.cx, self.cy = map(float, center_xy)
-        self.angles = [math.radians(start_deg + k * 360.0 / count) for k in range(count)]
-        self.half_width = float(half_width)
-
-    def bounds(self):
-        return np.full(3, -INF), np.full(3, INF)
-
-    def contains(self, x, y, z):
-        dx, dy = x - self.cx, y - self.cy
-        mask = np.zeros(np.broadcast_shapes(dx.shape, dy.shape), dtype=bool)
-        for angle in self.angles:
-            cos, sin = math.cos(angle), math.sin(angle)
-            along = dx * cos + dy * sin
-            across = -dx * sin + dy * cos
-            mask |= (along >= 0) & (np.abs(across) <= self.half_width)
-        return mask
-
-
 class Intersection(Shape):
     """Voxels that are inside every one of the given shapes."""
 
@@ -197,19 +115,6 @@ class Intersection(Shape):
         for shape in self.shapes[1:]:
             mask = mask & shape.contains(x, y, z)
         return mask
-
-
-class Difference(Shape):
-    """Voxels inside `outer` but not inside `hole`."""
-
-    def __init__(self, outer: Shape, hole: Shape):
-        self.outer, self.hole = outer, hole
-
-    def bounds(self):
-        return self.outer.bounds()
-
-    def contains(self, x, y, z):
-        return self.outer.contains(x, y, z) & ~self.hole.contains(x, y, z)
 
 
 class Volume:
@@ -232,75 +137,6 @@ class Volume:
         block[np.broadcast_to(shape.contains(x, y, z), block.shape)] = value
 
 
-# ---------------------------------------------------------------------------
-# Volume builders
-# ---------------------------------------------------------------------------
-
-def build_cake() -> np.ndarray:
-    """A round cake with three layers stacked along z and a ball hidden in the middle."""
-    vol = Volume((300, 280, 200), np.uint8)
-    axis = (150, 140)
-    radius = 110
-
-    vol.paint(CylinderZ(axis, 135, 20, 26), Cake.PLATE)
-    layers = [  # (z_low, z_high, value), bottom to top
-        (26, 66, Cake.CHOCOLATE),
-        (66, 72, Cake.CREAM),
-        (72, 112, Cake.VANILLA),
-        (112, 118, Cake.CREAM),
-        (118, 158, Cake.STRAWBERRY),
-        (158, 164, Cake.FROSTING),
-    ]
-    for z_low, z_high, value in layers:
-        vol.paint(CylinderZ(axis, radius, z_low, z_high), value)
-
-    vol.paint(sphere((150, 140, 92), 40), Cake.BALL)            # crosses all three layers
-    vol.paint(CylinderZ((210, 100), 5, 164, 186), Cake.CANDLE)  # off-center, breaks symmetry
-    vol.paint(Ellipsoid((210, 100, 191), (3, 3, 5)), Cake.FLAME)
-    return vol.data
-
-
-def build_tomato() -> np.ndarray:
-    """An oblate tomato: skin, flesh wall, five gel chambers with seeds, core, stem and sepals."""
-    vol = Volume((240, 220, 200), np.uint16)
-    center = np.array([120.0, 110.0, 100.0])
-    axes = np.array([85.0, 85.0, 70.0])  # flatter along z, like a real tomato
-    axis_xy = center[:2]
-    chambers = 5
-    # At 10 degrees, no flip, swap or 90-degree turn of the xy plane maps the septa onto themselves.
-    septum_start = 10.0
-
-    skin = Ellipsoid(center, axes)
-    interior = Ellipsoid(center, 0.78 * axes)
-    vol.paint(skin, Tomato.SKIN)
-    vol.paint(Ellipsoid(center, 0.96 * axes), Tomato.FLESH)
-    vol.paint(interior, Tomato.GEL)
-    septa = RadialWalls(axis_xy, chambers, septum_start, half_width=3)
-    vol.paint(Intersection(interior, septa), Tomato.FLESH)
-    vol.paint(Intersection(interior, CylinderZ(axis_xy, 14)), Tomato.CORE)
-
-    rng = np.random.default_rng(TOMATO_SEED)
-    for k in range(chambers):
-        middle = septum_start + (k + 0.5) * 360.0 / chambers
-        for _ in range(5):
-            angle = middle + rng.uniform(-14, 14)  # stays clear of the septa
-            r = rng.uniform(30, 48)
-            dz = rng.uniform(-22, 22)
-            seed_center = center + [r * math.cos(math.radians(angle)),
-                                    r * math.sin(math.radians(angle)), dz]
-            vol.paint(Ellipsoid(seed_center, (4, 2.5, 2.5), angle), Tomato.SEED)  # points outward
-
-    # Sepals: a thin layer on top of the skin, cut into five strips between the septa.
-    calyx_layer = Difference(Ellipsoid(center, 1.05 * axes), skin)
-    sepal_strips = RadialWalls(axis_xy, chambers, septum_start + 36, half_width=4)
-    upper_cap = CylinderZ(axis_xy, 30, z_low=center[2])
-    vol.paint(Intersection(calyx_layer, sepal_strips, upper_cap), Tomato.SEPAL)
-
-    top = center[2] + axes[2]  # z of the top pole
-    vol.paint(CylinderZ(axis_xy, 5, top - 4, top + 18), Tomato.STEM)
-    return vol.data
-
-
 # Number of pips on each face, keyed by (axis, side). Opposite faces add up to 7.
 DICE_FACES = {
     (2, +1): 1, (2, -1): 6,   # top / bottom (z)
@@ -319,7 +155,7 @@ PIP_LAYOUTS = {
 }
 
 
-def build_dice() -> np.ndarray:
+def build_dice() -> Scan:
     """A game die: a 120-voxel cube with round pips sunk into each face."""
     vol = Volume((200, 180, 160), np.uint32)
     low = np.array([40, 30, 20])
@@ -337,7 +173,16 @@ def build_dice() -> np.ndarray:
             pip[u_axis] += du * step
             pip[v_axis] += dv * step
             vol.paint(Intersection(sphere(pip, 9), cube), Dice.PIP)
-    return vol.data
+    return Scan(vol.data, landmarks={
+        (39, 89, 79): Dice.BACKGROUND,   # just outside the -x face
+        (99, 89, 79): Dice.BODY,         # center of the cube
+        (99, 89, 139): Dice.PIP,         # the single pip on the top face
+        (99, 89, 20): Dice.BODY,         # the bottom face (6) has no center pip
+        (69, 59, 20): Dice.PIP,          # a corner pip on the bottom face
+        (159, 59, 49): Dice.PIP,         # the 2 face: pips on the (-1, -1) / (1, 1) diagonal
+        (159, 119, 49): Dice.BODY,       # ... and none on the other diagonal
+        (40, 89, 79): Dice.PIP,          # the center pip of the 5 face
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -347,43 +192,16 @@ def build_dice() -> np.ndarray:
 @dataclass(frozen=True)
 class Dataset:
     filename: str
-    build: Callable[[], np.ndarray]
-    labels: type[IntEnum]
-    spot_checks: dict[tuple[int, int, int], IntEnum]  # voxel (x, y, z) -> expected value
+    build: Callable[[], Scan]
+    values: type[IntEnum]       # meaning of each label value (of the image itself, for toy volumes)
+    colors: Mapping[int, tuple[float, float, float]] | None = None  # segment colors, for scans with labels
+    contrast: tuple[IntEnum, ...] = ()  # tissues from brightest to darkest in the image
 
 
 DATASETS = {
-    "cake": Dataset("cake_3layers.nrrd", build_cake, Cake, {
-        (0, 0, 0): Cake.BACKGROUND,
-        (150, 140, 23): Cake.PLATE,
-        (150, 140, 40): Cake.CHOCOLATE,
-        (60, 140, 69): Cake.CREAM,
-        (60, 140, 92): Cake.VANILLA,
-        (60, 140, 130): Cake.STRAWBERRY,
-        (60, 140, 160): Cake.FROSTING,
-        (150, 140, 92): Cake.BALL,
-        (210, 100, 175): Cake.CANDLE,
-        (210, 100, 191): Cake.FLAME,
-    }),
-    "tomato": Dataset("tomato.nrrd", build_tomato, Tomato, {
-        (0, 0, 0): Tomato.BACKGROUND,
-        (120, 110, 100): Tomato.CORE,
-        (204, 110, 100): Tomato.SKIN,
-        (195, 110, 100): Tomato.FLESH,
-        (159, 117, 100): Tomato.FLESH,   # on the septum at 10 degrees
-        (134, 124, 55): Tomato.GEL,
-        (120, 110, 180): Tomato.STEM,
-    }),
-    "dice": Dataset("dice.nrrd", build_dice, Dice, {
-        (39, 89, 79): Dice.BACKGROUND,   # just outside the -x face
-        (99, 89, 79): Dice.BODY,         # center of the cube
-        (99, 89, 139): Dice.PIP,         # the single pip on the top face
-        (99, 89, 20): Dice.BODY,         # the bottom face (6) has no center pip
-        (69, 59, 20): Dice.PIP,          # a corner pip on the bottom face
-        (159, 59, 49): Dice.PIP,         # the 2 face: pips on the (-1, -1) / (1, 1) diagonal
-        (159, 119, 49): Dice.BODY,       # ... and none on the other diagonal
-        (40, 89, 79): Dice.PIP,          # the center pip of the 5 face
-    }),
+    "cake": Dataset("cake_3layers.nrrd", cake.build, cake.Material, cake.COLORS, cake.CONTRAST),
+    "tomato": Dataset("tomato.nrrd", tomato.build, tomato.Tissue, tomato.COLORS, tomato.CONTRAST),
+    "dice": Dataset("dice.nrrd", build_dice, Dice),
 }
 
 
@@ -396,40 +214,98 @@ def check(condition: bool, message: str) -> None:
         raise DatasetError(message)
 
 
-def save_nrrd(path: Path, data: np.ndarray) -> None:
-    """Write data (indexed [x, y, z]) as a gzip NRRD that 3D Slicer opens directly."""
-    nrrd.write(str(path), data, header=dict(NRRD_HEADER), index_order="F")
+def nrrd_header(spacing_mm) -> dict:
+    """Header shared by all files; same layout as DATA/MRHead_1.nrrd, with the axes along x, y, z."""
+    return {
+        "space": "left-posterior-superior",
+        "space directions": np.diag(spacing_mm),
+        "space origin": np.zeros(3),
+        "kinds": ["domain", "domain", "domain"],
+        "encoding": "gzip",
+    }
 
 
-def count_values(data: np.ndarray) -> dict[int, int]:
-    values, counts = np.unique(data, return_counts=True)
-    return dict(zip(values.tolist(), counts.tolist()))
+def segmentation_path(image_path: Path) -> Path:
+    return image_path.with_name(image_path.name.removesuffix(".nrrd") + ".seg.nrrd")
 
 
-def verify(path: Path, expected: np.ndarray, counts: dict[int, int], dataset: Dataset) -> None:
-    """Read the file back and check its data, header, values and known voxels."""
-    data, header = nrrd.read(str(path), index_order="F")
-    check(data.dtype == expected.dtype, f"{path.name}: dtype {data.dtype} != {expected.dtype}")
-    check(np.array_equal(data, expected), f"{path.name}: data read back differs from data written")
-    check(header["space"] == NRRD_HEADER["space"], f"{path.name}: wrong space {header['space']}")
-    check(np.array_equal(header["space directions"], np.eye(3)), f"{path.name}: wrong space directions")
+def segment_fields(labels: np.ndarray, values: type[IntEnum], colors) -> dict[str, str]:
+    """Key/value pairs that make 3D Slicer read a label map as named, colored segments."""
+    fields = {
+        "Segmentation_MasterRepresentation": "Binary labelmap",
+        "Segmentation_ContainedRepresentationNames": "Binary labelmap|",
+        "Segmentation_ReferenceImageExtentOffset": "0 0 0",
+    }
+    boxes = ndimage.find_objects(labels)  # boxes[v - 1] bounds the voxels labeled v
+    for i, value in enumerate(v for v in values if v != 0):
+        box = boxes[value - 1] if value <= len(boxes) else None
+        check(box is not None, f"no voxels are labeled {value.name}")
+        fields |= {
+            f"Segment{i}_ID": f"Segment_{int(value)}",
+            f"Segment{i}_Name": value.name.replace("_", " ").capitalize(),
+            f"Segment{i}_NameAutoGenerated": "0",
+            f"Segment{i}_LabelValue": str(int(value)),
+            f"Segment{i}_Layer": "0",
+            f"Segment{i}_Color": " ".join(f"{c:g}" for c in colors[value]),
+            f"Segment{i}_ColorAutoGenerated": "0",
+            f"Segment{i}_Extent": " ".join(f"{s.start} {s.stop - 1}" for s in box),
+        }
+    return fields
+
+
+def save(path: Path, scan: Scan, dataset: Dataset) -> None:
+    """Write the image, and its labels as a .seg.nrrd segmentation if it has any."""
+    nrrd.write(str(path), scan.image, header=nrrd_header(scan.spacing_mm), index_order="F")
+    if scan.labels is not None:
+        header = nrrd_header(scan.spacing_mm) | segment_fields(scan.labels, dataset.values, dataset.colors)
+        nrrd.write(str(segmentation_path(path)), scan.labels, header=header, index_order="F")
+
+
+def verify(path: Path, scan: Scan, dataset: Dataset) -> None:
+    """Read the files back and check data, header, label values, known voxels and tissue contrast."""
+    image, header = nrrd.read(str(path), index_order="F")
+    check(image.dtype == scan.image.dtype, f"{path.name}: dtype {image.dtype} != {scan.image.dtype}")
+    check(np.array_equal(image, scan.image), f"{path.name}: data read back differs from data written")
+    check(header["space"] == "left-posterior-superior", f"{path.name}: wrong space {header['space']}")
+    check(np.allclose(header["space directions"], np.diag(scan.spacing_mm)), f"{path.name}: wrong spacing")
     check(header["encoding"] == "gzip", f"{path.name}: wrong encoding {header['encoding']}")
 
-    labels = {int(label) for label in dataset.labels}
-    check(set(counts) == labels, f"{path.name}: values {sorted(counts)} != labels {sorted(labels)}")
-    for point, label in dataset.spot_checks.items():
-        check(data[point] == label, f"{path.name}: voxel {point} is {data[point]}, expected {label.name}")
+    truth = image  # toy volumes are their own label maps
+    if scan.labels is not None:
+        seg_path = segmentation_path(path)
+        truth, seg_header = nrrd.read(str(seg_path), index_order="F")
+        check(np.array_equal(truth, scan.labels), f"{seg_path.name}: labels read back differ")
+        check("Segment0_Name" in seg_header, f"{seg_path.name}: segment names are missing")
+
+    values = {int(v) for v in dataset.values}
+    present = set(np.unique(truth).tolist())
+    check(present == values, f"{path.name}: label values {sorted(present)} != {sorted(values)}")
+    for voxel, expected in scan.landmarks.items():
+        check(truth[voxel] == expected, f"{path.name}: voxel {voxel} is {truth[voxel]}, expected {expected.name}")
+    means = [float(image[truth == tissue].mean()) for tissue in dataset.contrast]
+    check(all(a > b for a, b in zip(means, means[1:])),
+          f"{path.name}: tissue brightness out of order: {dict(zip(dataset.contrast, means))}")
 
 
-def print_summary(path: Path, data: np.ndarray, counts: dict[int, int], labels: type[IntEnum]) -> None:
-    shape = " x ".join(map(str, data.shape))
-    print(f"{path.name}: {data.dtype}, {shape}, {path.stat().st_size / 1e6:.2f} MB on disk")
-    for value, count in counts.items():
-        print(f"    {labels(value).name:<11}{value:>9}{count:>13,} voxels")
+def print_summary(path: Path, scan: Scan, dataset: Dataset) -> None:
+    image = scan.image
+    shape = " x ".join(map(str, image.shape))
+    spacing = " x ".join(f"{s:g}" for s in scan.spacing_mm)
+    print(f"{path.name}: {image.dtype}, {shape} voxels of {spacing} mm, "
+          f"{path.stat().st_size / 1e6:.2f} MB on disk")
+    truth = image
+    if scan.labels is not None:
+        truth = scan.labels
+        seg_path = segmentation_path(path)
+        print(f"{seg_path.name}: {len(dataset.values) - 1} segments, {seg_path.stat().st_size / 1e6:.2f} MB on disk")
+    values, counts = np.unique(truth, return_counts=True)
+    for value, count in zip(values.tolist(), counts.tolist()):
+        mean = float(image[truth == value].mean())
+        print(f"    {dataset.values(value).name:<16}{value:>8}{count:>12,} voxels   mean image {mean:9.1f}")
 
 
 def parse_args(argv=None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate the synthetic NRRD test volumes.")
+    parser = argparse.ArgumentParser(description="Generate the NRRD test volumes.")
     parser.add_argument("--out", type=Path, default=PROJECT_ROOT / "DATA",
                         help="output folder (default: DATA/ in the project)")
     parser.add_argument("--only", choices=DATASETS, help="generate a single volume")
@@ -442,11 +318,10 @@ def main(argv=None) -> None:
     for name in [args.only] if args.only else DATASETS:
         dataset = DATASETS[name]
         path = args.out / dataset.filename
-        data = dataset.build()
-        save_nrrd(path, data)
-        counts = count_values(data)
-        verify(path, data, counts, dataset)
-        print_summary(path, data, counts, dataset.labels)
+        scan = dataset.build()
+        save(path, scan, dataset)
+        verify(path, scan, dataset)
+        print_summary(path, scan, dataset)
     print("All files written and verified.")
 
 
