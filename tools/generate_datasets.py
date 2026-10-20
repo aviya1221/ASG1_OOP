@@ -6,6 +6,9 @@
     tomato.seg.nrrd         uint8    its ground-truth tissue labels, as a 3D Slicer segmentation
     dice.nrrd               uint32   game die with a different number of pips per face (toy geometry)
 
+These synthetic volumes have an exact answer for every voxel, so they serve as test data; the main
+data set, the food scans, is made by generate_foods.py. By default the files are written to DATA/synthetic/.
+
 Every volume is indexed vol[x, y, z], like M[x][y][z] in the assignment, and is saved on an LPS
 grid with origin (0, 0, 0), so the IJK index that 3D Slicer shows is exactly (x, y, z).
 The full spec is in DATA/README.md.
@@ -306,8 +309,8 @@ def print_summary(path: Path, scan: Scan, dataset: Dataset) -> None:
 
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate the NRRD test volumes.")
-    parser.add_argument("--out", type=Path, default=PROJECT_ROOT / "DATA",
-                        help="output folder (default: DATA/ in the project)")
+    parser.add_argument("--out", type=Path, default=PROJECT_ROOT / "DATA" / "synthetic",
+                        help="output folder (default: DATA/synthetic/ in the project)")
     parser.add_argument("--only", choices=DATASETS, help="generate a single volume")
     return parser.parse_args(argv)
 

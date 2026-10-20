@@ -1,5 +1,8 @@
 """Building blocks for synthetic scans: the result container, shape painting, and acquisition effects.
 
+Shapes are either painted into a label map (paint_ellipsoid) or drawn as smooth fields, where
+edge_coverage and sheet_coverage give the fraction of each voxel that a surface or a thin sheet covers.
+
 A real scanner never sees sharp boundaries or perfectly uniform tissue. Each acquisition helper
 below adds one effect and is controlled by one parameter:
 
@@ -52,6 +55,92 @@ def paint_ellipsoid(labels, center_vox, axes, semi_axes_mm, value, spacing_mm, o
     if onto is not None:
         inside &= np.isin(block, onto)
     block[inside] = value
+
+
+def smoothstep(t):
+    """0 below 0, 1 above 1, and a smooth S-curve in between."""
+    t = np.clip(t, 0, 1)
+    return t * t * (3 - 2 * t)
+
+
+def gradient_norms(field: np.ndarray, spacing_mm) -> tuple[np.ndarray, np.ndarray]:
+    """Length of the gradient of a field, per voxel step and per millimeter.
+
+    Their ratio is the width of a voxel measured across the field's level surfaces, which is what the
+    coverage functions below need: (field - level) / per_voxel is the distance from a voxel center to
+    that level surface in voxel widths.
+    """
+    steps = np.gradient(field)
+    per_voxel = np.sqrt(sum(g * g for g in steps))
+    per_mm = np.sqrt(sum((g / s) ** 2 for g, s in zip(steps, spacing_mm)))
+    return np.maximum(per_voxel, 1e-6), np.maximum(per_mm, 1e-6)
+
+
+def edge_coverage(distance_vox):
+    """Fraction of a voxel on the inner side of a surface, from the signed distance of the voxel center
+    to the surface in voxel widths (negative inside). A voxel averages over its whole box, so a
+    slanted surface gives a smooth edge instead of a staircase."""
+    return np.clip(0.5 - distance_vox, 0, 1)
+
+
+def sheet_coverage(distance_vox, thickness_vox):
+    """Fraction of a voxel covered by a thin sheet, from the distance of the voxel center to the middle
+    of the sheet and the sheet's thickness, both in voxel widths. A sheet thinner than a voxel still
+    shows, as a faint line: the voxel holds a little of it."""
+    half = 0.5 * thickness_vox
+    return np.clip(np.minimum(distance_vox + half, 0.5) - np.maximum(distance_vox - half, -0.5), 0, 1)
+
+
+def region_coverage(field: np.ndarray, level: float = 0.0) -> np.ndarray:
+    """Fraction of each voxel where a smooth field (such as a signed distance) is below level."""
+    steps = np.gradient(field)
+    per_voxel = np.maximum(np.sqrt(sum(g * g for g in steps)), 1e-6)
+    return edge_coverage((field - level) / per_voxel)
+
+
+def ellipsoid_distance(x, y, z, semi_axes) -> np.ndarray:
+    """Approximate signed distance (mm, negative inside) to an axis-aligned ellipsoid centered at the origin."""
+    a, b, c = semi_axes
+    k0 = np.sqrt((x / a) ** 2 + (y / b) ** 2 + (z / c) ** 2)
+    k1 = np.sqrt((x / a ** 2) ** 2 + (y / b ** 2) ** 2 + (z / c ** 2) ** 2)
+    return k0 * (k0 - 1) / np.maximum(k1, 1e-9)
+
+
+def round_cone_distance(x, y, z, bottom, bottom_radius: float, top, top_radius: float) -> np.ndarray:
+    """Signed distance (mm, negative inside) to a cone with rounded ends: a ball at each end of a
+    segment, joined by the cone that touches both balls."""
+    ba = [float(t - b) for t, b in zip(top, bottom)]
+    l2 = sum(v * v for v in ba)
+    rr = bottom_radius - top_radius
+    a2 = l2 - rr * rr
+    px, py, pz = x - bottom[0], y - bottom[1], z - bottom[2]
+    along = px * ba[0] + py * ba[1] + pz * ba[2]
+    beyond = along - l2
+    x2 = (px * l2 - ba[0] * along) ** 2 + (py * l2 - ba[1] * along) ** 2 + (pz * l2 - ba[2] * along) ** 2
+    y2 = along * along * l2
+    z2 = beyond * beyond * l2
+    k = math.copysign(rr * rr, rr) * x2
+    side = (np.sqrt(x2 * a2 / l2) + along * rr) / l2 - bottom_radius
+    near_top = np.sqrt(x2 + z2) / l2 - top_radius
+    near_bottom = np.sqrt(x2 + y2) / l2 - bottom_radius
+    return np.where(np.sign(beyond) * a2 * z2 > k, near_top,
+                    np.where(np.sign(along) * a2 * y2 < k, near_bottom, side))
+
+
+def tilt_matrix(tilt_deg: float, toward_deg: float) -> np.ndarray:
+    """Rotation that leans the +z axis by tilt_deg toward the horizontal direction at toward_deg
+    (measured from +x toward +y). Its columns are the object's axes in scanner coordinates."""
+    t, a = math.radians(tilt_deg), math.radians(toward_deg)
+    axis = np.array([-math.sin(a), math.cos(a), 0.0])  # horizontal, perpendicular to the lean
+    k = np.array([[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
+    return np.eye(3) + math.sin(t) * k + (1 - math.cos(t)) * (k @ k)
+
+
+def turn_matrix(turn_deg: float) -> np.ndarray:
+    """Rotation by turn_deg about the vertical (+z) axis, from +x toward +y. Its columns are the
+    object's axes in scanner coordinates."""
+    c, s = math.cos(math.radians(turn_deg)), math.sin(math.radians(turn_deg))
+    return np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
 
 
 def smooth_noise(shape, sigma_vox, rng: np.random.Generator) -> np.ndarray:
