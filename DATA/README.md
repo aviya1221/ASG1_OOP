@@ -1,17 +1,22 @@
 # Data set
 
-The main data set is the lecturer's example, `MRHead_1.nrrd`, and three food scans made in its style.
+The main data set is the lecturer's example, `MRHead_1.nrrd`, and four food scans made in its style.
 Each food is a single object with many layers, so a plane through it at any angle shows a cut object with its layers:
 the kind of image the projection algorithm has to produce.
 
-| File | Object | Layers | Size (cm) | Voxel size (mm) |
-|---|---|---|---|---|
-| `MRHead_1.nrrd` | human head, T1-weighted MRI | skin, fat, skull, fluid, gray and white matter, ventricles | | 1 × 1 × 1.3 |
-| `onion.nrrd` | onion | 11 scales around two growing points | 9 wide, 10 tall with its neck and roots | 0.55 × 0.55 × 0.715 |
-| `biscuit_cake.nrrd` | biscuit cake | 7 layers of biscuits, 6 of cream, chocolate on top | 24 long, 11 wide, 8 tall | 1 × 1 × 1.3 |
-| `swiss_roll.nrrd` | Swiss roll | a spiral of sponge and cream, 4 turns | 26 long, 9 wide, 7.5 tall | 1.1 × 1.1 × 1.43 |
+| File | Object | Layers | Size (cm) | Voxel size (mm) | Value type |
+|---|---|---|---|---|---|
+| `MRHead_1.nrrd` | human head, T1-weighted MRI | skin, fat, skull, fluid, gray and white matter, ventricles | | 1 × 1 × 1.3 | `int16` |
+| `onion.nrrd` | onion | 11 scales around two growing points | 9 wide, 10 tall with its neck and roots | 0.55 × 0.55 × 0.715 | `uint8` |
+| `biscuit_cake.nrrd` | biscuit cake | 7 layers of biscuits, 6 of vanilla and chocolate cream, strawberries, chocolate on top | 24 long, 11 wide, 8 tall | 1 × 1 × 1.3 | `uint16` |
+| `swiss_roll.nrrd` | Swiss roll | a spiral of sponge, jam and cream, 4 turns, with fruit inside and rosettes on top | 26 long, 9 wide, 7.5 tall | 1.1 × 1.1 × 1.43 | `uint32` |
+| `croissant.nrrd` | chocolate croissant: the large file, for the speed test | a spiral of rolled dough around two chocolate sticks, each turn a honeycomb of thin sheets | 16 from tip to tip, 9 front to back, 6 tall | 0.37 × 0.37 × 0.37 | `uint8` |
 
-All four files hold 256 × 256 × 130 voxels of `int16`, as gzip-compressed NRRD.
+The head and the three smaller foods hold 256 × 256 × 130 voxels. The croissant holds 500 × 500 × 500,
+the size of the speed test in the assignment (a matrix of 500³ bytes at 100 frames per second).
+All five are gzip-compressed NRRD.
+The assignment allows a voxel to be an unsigned integer of 8, 16 or 32 bits, and the foods use all three sizes.
+The head scan is a signed 16-bit file, but all its values are positive, so it reads like an unsigned one.
 The food scans are simulated MRI scans, made by `tools/generate_foods.py`.
 
 Two more folders:
@@ -19,42 +24,67 @@ Two more folders:
 - `real_scans/` holds four real CT scans from an earlier step: a teapot, a tooth, an engine and a carp.
   They are not single objects with many layers, so they are not part of the main set.
 
+## Preview images
+
+`images/` holds a picture of every volume in this folder and its subfolders: the cuts through its middle that 3D Slicer shows
+in its three views, turned the same way and marked with the directions (R/L, A/P, S/I), and one oblique cut.
+Each cut is zoomed in on the object and has a scale bar.
+`images/overview.png` shows the main set, one row per file; `images/synthetic/` and `images/real_scans/` hold the others.
+
+![The main data set](images/overview.png)
+
+To make the images again, for example after changing a volume:
+
+```
+python tools/make_previews.py
+```
+
 ## What each view shows
 
-The cake and the roll have clearly different lengths, widths and heights, and the onion has a clear top and bottom,
-so each of the three views of 3D Slicer shows something else:
+The cake, the roll and the croissant have clearly different lengths, widths and heights, and the onion has a clear top and bottom,
+so each of the three views of 3D Slicer shows something else.
+Repeating layers alone make a cut hard to read, so the foods also carry landmarks, distinct parts in known places,
+the way the eyes and the ventricles mark a cut through the head: strawberries and two kinds of cream in the cake,
+jam, fruit and rosettes of cream in the roll, and chocolate in the croissant.
 
 | File | Axial: from above | Coronal: from the front | Sagittal: from the side |
 |---|---|---|---|
 | `onion.nrrd` | rings around the two growing points | rings closing at the neck and at the base | the same, with the two growing points side by side |
-| `biscuit_cake.nrrd` | one layer of biscuits: a grid with cream in the joints | the 11 cm short side: stripes of biscuit and cream | the 24 cm long side: the same stripes, with the joints between biscuits |
-| `swiss_roll.nrrd` | the long side, with chocolate along both edges | the spiral | the long side, with chocolate on top and the seam at the bottom |
+| `biscuit_cake.nrrd` | one layer of biscuits: a grid with cream in the joints | the 11 cm short side: stripes of biscuit, vanilla cream (bright) and chocolate cream (darker) | the 24 cm long side: the same stripes, the joints between biscuits, and a strawberry on top at the front |
+| `swiss_roll.nrrd` | the long side, with chocolate along both edges and fruit along the middle of the back half | the spiral, with a rosette and a strawberry on top | the long side: five rosettes on top, fruit in the back half, the seam at the bottom |
+| `croissant.nrrd` | the crescent, with the turns of dough as bands along it and the chocolate in the middle | a long, low arch in layers, with a spiral on each side where the plane crosses the curved body | the spiral of rolled dough, with the two dark chocolate sticks in it |
 
 ## What the food scans copy from the head scan
 
 | Property | `MRHead_1.nrrd` | Food scans |
 |---|---|---|
 | Content | one head in the middle, on a black background | one food in the middle, on a black background |
-| Layers | a line through the middle crosses 23 clear steps or lines | 13 (cake), 19 (roll), 35 (onion) |
-| Grid | 256 × 256 × 130 voxels | the same |
-| Voxel type | `int16`, values 0 to 279 | `int16`, values 0 to 200 |
-| Voxel shape | 1 × 1 × 1.3 mm: slices 1.3 times farther apart than pixels | s × s × 1.3s, with s = 0.55, 1 or 1.1 mm |
+| Layers | a line through the middle crosses 23 clear steps or lines | 13 (cake), 19 (roll), 29 (croissant), 35 (onion) |
+| Grid | 256 × 256 × 130 voxels | the same; the croissant 500 × 500 × 500 |
+| Value type | `int16`, values 0 to 279 | all three sizes the assignment allows: `uint8` (onion, values up to 232; croissant, up to 255), `uint16` (cake, up to 3986), `uint32` (roll, up to 186330) |
+| Voxel shape | 1 × 1 × 1.3 mm: slices 1.3 times farther apart than pixels | s × s × 1.3s, with s = 0.55, 1 or 1.1 mm; the croissant has cubic voxels of 0.37 mm |
 | Orientation | sagittal slices: i runs front to back, j top to bottom, k left to right | the same |
 | Space directions | (0,1,0) (0,0,−1) (−1.3,0,0) | the same, times s |
-| Fill | about 90% of each axis | 93 to 97% of the longest side; the shorter sides fill less |
-| Intensity | brain about 70, fat about 140 | the same scale: biscuits, sponge and onion about 60 to 100; cream 122 to 132; chocolate 150 |
-| Background | 0 to about 8; 40% of it is 0, mean about 1.8 | the same |
+| Fill | about 90% of each axis | 87 to 97% of the longest side; the shorter sides fill less |
+| Intensity | brain about 70, fat about 140 | the head scan's scale times 1.8 (onion, croissant), 20 (cake) or 1000 (roll); on the head scan's scale, strawberries 55, biscuits, sponge and onion about 60 to 100, dough 105, cream 82 to 132, chocolate ganache 150 and solid chocolate 18 |
+| Background | 0 to about 8; 40% of it is 0, mean about 1.8 | the same, times the food's multiplier |
 | MRI look | soft edges with faint ringing, slow shading, noise σ ≈ 4.5 | the same, simulated |
 
-Only the voxel size changes from food to food, so that each food fills the field of view the way the head does.
+The voxel size changes from food to food, so that each food fills the field of view the way the head does.
 A real scanner does the same: a smaller object is scanned with smaller voxels.
+The values are multiplied so that each file uses its type: the onion stretches over the 8-bit range,
+the cake's values reach about 4000, like the 12-bit values of an MRI scanner, which do not fit in 8 bits,
+and the roll's values reach about 186,000, which do not fit in 16 bits.
+A program that reads a type wrongly therefore gives a visibly wrong image. In 3D Slicer they all look alike,
+because Slicer sets the brightness from each file's range.
 
-Because all four files share the grid, a plane given in voxel indices fits every one of them,
-so one CSV of planes can be run on the head and on each food.
+The head and the three smaller foods share the grid, so a plane given in voxel indices fits all four of them,
+and one CSV of planes can be run on each. The croissant's grid is larger, so it needs planes of its own.
 
 ## `onion.nrrd`
 
 A yellow onion, about 90 mm wide; with its neck and roots it is about 103 mm tall. It leans 7° and its outline bulges a little.
+Stored as `uint8`, with the values multiplied by 1.8.
 
 - **Scales:** 11 fleshy scales, from 4.3 to 5 mm thick near the outside down to 2 mm in the middle.
   Every scale runs from the base plate at the bottom up into the neck, so a vertical cut shows rings that close at the top and at the bottom,
@@ -68,41 +98,70 @@ A yellow onion, about 90 mm wide; with its neck and roots it is about 103 mm tal
 ## `biscuit_cake.nrrd`
 
 A biscuit cake built in a loaf pan: 24 cm long (front to back), 11 cm wide and 8 cm tall, with the same voxels as the head scan.
+Stored as `uint16`, with the values multiplied by 20.
 It stands level on a tray, which gives no MRI signal, so its layers lie along the voxel rows. It is turned 1.5° and sits 10 mm left of the middle,
 so the middle slices do not fall into a joint between biscuits.
 
 - **Biscuits:** 7 layers of petit-beurre biscuits, 54 × 58 mm with a scalloped edge and a grid of pricked holes, 5.5 mm thick after soaking in milk.
   They are wet near their surfaces and drier, so darker, in their middle. Each layer has two biscuits across and five pieces along;
   the layers alternate between two patterns, with broken pieces at the ends, so the joints do not line up.
-- **Cream:** 5.9 mm of vanilla cream between the layers and in the 2 mm joints between biscuits. It bulges out a little at the sides.
+- **Cream:** 5.9 mm between the layers and in the 2 mm joints between biscuits, bulging out a little at the sides.
+  From the bottom up: vanilla, chocolate, vanilla with strawberries, chocolate, vanilla, chocolate. Vanilla cream is brighter, so the layers can be told apart.
+- **Strawberries:** the middle layer of cream is 9 mm thick and holds eight slices of strawberry, in two rows of four.
+  Three whole strawberries stand on top at the front end, so the front is easy to find.
 - **Chocolate:** 5 mm of ganache on top, the brightest part, as it is rich in fat.
 
-The layers repeat every 11.4 mm, which gives a check of the geometry: a plane tilted by an angle α from the horizontal
-shows the stripes 11.4 / sin α mm apart, for example 11.4 mm in a vertical plane and 22.8 mm at α = 30°.
+Apart from the thicker middle layer, the layers repeat every 11.4 mm, which gives a check of the geometry: a plane tilted by an angle α
+from the horizontal shows the stripes 11.4 / sin α mm apart, for example 11.4 mm in a vertical plane and 22.8 mm at α = 30°.
 The middle of the field of view falls in the middle of the fourth biscuit layer, so the Axial view opens on a layer of biscuits.
 
 ## `swiss_roll.nrrd`
 
 A Swiss roll lying along the front-to-back axis: 26 cm long, 9 cm wide and 7.5 cm tall. It is turned 2.5°.
+Stored as `uint32`, with the values multiplied by 1000.
 
-- **Spiral:** a sheet of sponge spread with whipped cream and rolled up: 4 layers of cream in a spiral of 6.1 mm sponge and 3.3 mm cream.
+- **Spiral:** a sheet of sponge spread with jam and whipped cream and rolled up, in 4 turns of 5.5 mm sponge, 1.2 mm jam and 2.7 mm cream.
+  The jam is dark and the cream bright, so each turn shows a dark and a bright line, and the way the spiral turns can be seen.
   The roll has settled, so it is wider than tall, and the spiral is not quite even along the roll.
 - **Sponge:** with gas bubbles and darker baked surfaces.
+- **Fruit:** a row of strawberry pieces in the middle of the spiral, in the back half of the roll only.
 - **Seam:** the roll lies on the end of the sheet, which thins out there, so a little cream shows at the bottom.
 - **Chocolate:** 2.5 mm of ganache over the top and the sides. The two ends were cut off after it was poured, so they show the bare spiral.
+- **Rosettes:** five rosettes of whipped cream along the top, 52 mm apart, each with a strawberry on it.
+
+## `croissant.nrrd`
+
+The large file, for the speed test: 500 × 500 × 500 voxels of `uint8`, one byte each as in the assignment, with cubic voxels of 0.37 mm.
+The values are multiplied by 1.8. The croissant is about 16 cm from tip to tip, 9 cm from front to back and 6 cm tall,
+with its tips toward the front. The file is 63 MB.
+
+- **Shape:** a triangle of laminated dough rolled up from its base and curved into a crescent. The middle holds the most turns, about four;
+  toward the tips the outer turns end one after the other, which leaves shallow grooves across the top.
+- **Inside:** each turn of dough is a stack of thin sheets with air between them, joined by thin walls, so the air forms long cells:
+  the honeycomb that makes a croissant flaky. Where two turns touch, the dough is dense. These details are a fraction of a millimeter thick,
+  which is why this croissant needs fine voxels.
+- **Crust:** thin, dry and darker. The end of the dough lies on top of the middle.
+- **Chocolate:** two sticks of chocolate, 10 × 4 mm and 8 cm long, rolled into the middle third. Solid chocolate gives almost no MRI signal,
+  so they are two dark bars inside the bright dough.
+- **Almonds:** flaked almonds on top, rich in oil, so bright.
+- **Tray:** the croissant sits on a tray, which gives no MRI signal, so its bottom is flat.
+
+GitHub accepts a file of this size but warns about files over 50 MB. Instead of sharing the file, it can be made again with
+`python tools/generate_foods.py --only croissant`, which takes about five minutes and about 1.5 GB of memory.
 
 ## Making the food scans again
 
 ```
-python tools/generate_foods.py                    # all three foods into DATA/
-python tools/generate_foods.py --only onion       # just one: onion, biscuit_cake or swiss_roll
+python tools/generate_foods.py                    # all four foods into DATA/
+python tools/generate_foods.py --only onion       # just one: onion, biscuit_cake, swiss_roll or croissant
 ```
 
 Each food is built from a model of the real object, then imaged the way the head was scanned (`tools/head_style.py`):
-blurred by the limited resolution of MRI, shaded, given noise, and stored as `int16`.
+blurred by the limited resolution of MRI, shaded, given noise, and stored in the food's value type.
 Surfaces are drawn as the fraction of each voxel that they cover, so slanted surfaces come out smooth, not as staircases.
-The script reads each file back and checks the data, the header, the value range, the dark background,
+The script reads each file back and checks the data, the header, the value type and range, the dark background,
 that the food does not touch the edge of the field of view, and that a line through its middle crosses at least 10 layer boundaries.
+The croissant is built a slab at a time, and its last checks run at half resolution, to keep the memory use small.
 Random choices use fixed seeds, so the data is identical on every run.
 
 ## Conventions of the main set

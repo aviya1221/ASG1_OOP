@@ -1,9 +1,9 @@
 """Simulated T1-weighted MRI of a biscuit cake, made in the style of the head scan MRHead_1.nrrd.
 
 A biscuit cake is a single object with many layers: seven layers of tea biscuits soaked in milk, a layer
-of vanilla cream between each two, and chocolate ganache on top, built in a loaf pan. It is a box
-with three clearly different sides, 24 cm long, 11 cm wide and 8 cm tall, so each view in 3D Slicer
-shows something else:
+of cream between each two, and chocolate ganache on top, built in a loaf pan. It is a box with three
+clearly different sides, 24 cm long, 11 cm wide and 8 cm tall, so each view in 3D Slicer shows
+something else:
 
     from above (Axial)        one layer of biscuits: two across and five along, with cream in the joints
     from the front (Coronal)  the 11 cm short side: stripes of biscuit and cream
@@ -14,9 +14,11 @@ The model follows a real cake:
     biscuits  petit-beurre biscuits, 54 x 58 mm with a scalloped edge, soaked in milk: wet near their
               surfaces and drier, so darker, in their middle. Along the cake the layers alternate
               between two patterns, with broken pieces at the ends, so the joints do not line up
-    cream     vanilla cream between the layers and in the joints between biscuits; it bulges out a
-              little at the sides
+    cream     between the layers and in the joints between biscuits, bulging out a little at the sides.
+              Vanilla and chocolate cream alternate, so the layers can be told apart: vanilla is
+              brighter. The middle layer is thicker and holds slices of strawberry
     ganache   chocolate on top, rich in fat, so it is the brightest part
+    berries   three whole strawberries stand on top at the front end, so the front is easy to find
     tray      the cake stands on a tray, which gives no MRI signal
 
 The layers are level, so they lie along the voxel rows. Lengths are in mm, in the cake's frame:
@@ -29,10 +31,13 @@ import math
 import numpy as np
 from scipy import ndimage
 
+import garnish
 import head_style
 from scan_simulation import Scan, region_coverage, smooth_noise
 
 VOXEL_MM = 1.0                     # the head scan's own voxel: 1 x 1 x 1.3 mm
+DTYPE = np.uint16                  # 16 bits, one of the three sizes the assignment allows; ...
+SCALE = 20.0                       # ... values up to about 4000, like the 12-bit values of an MRI scanner
 RNG_SEED = 2030
 TURN_DEG = 1.5                     # the cake is not quite square to the scanner
 CENTER_MM = (10.0, 0.0)            # its middle sits this far to the left (x) and back (y) of the middle of
@@ -56,17 +61,24 @@ PLACEMENT_MM = 0.6                 # each biscuit is placed by hand: off by abou
 PLACEMENT_DEG = 1.2                # ... and turned by about this much
 BISCUIT_LAYERS = 7
 BISCUIT_THICKNESS_MM = 5.5         # soaked
+CREAMS = ("vanilla", "chocolate", "strawberry", "chocolate", "vanilla", "chocolate")   # from the bottom up
 CREAM_MM = 5.9
+STRAWBERRY_LAYER_MM = 9.0          # the middle layer of cream is thicker, for the strawberry slices in it ...
+SLICES_ACROSS, SLICES_ALONG = (-27.0, 27.0), (-88.0, -30.0, 28.0, 86.0)   # ... laid out in a 2 x 4 grid
+SLICE_SIZE_MM = (30.0, 13.0)       # strawberry: length and radius
+TOP_BERRIES = ((-38.0, -98.0), (-10.0, -101.0), (18.0, -97.0))   # (u, w) of the berries on top, at the front;
+                                   # the middle one stands on the middle sagittal slice
+TOP_BERRY_MM = (34.0, 13.0)        # length and radius
 BULGE_MM = 1.8                     # the cream bulges out of the sides by up to this much
 BULGE_PATCH_MM = 15.0
 GANACHE_MM = 5.0
-BOTTOM_Z = -36.95                  # puts the middle of the fourth biscuit layer at the middle of the field of view
+BOTTOM_Z = -40.05                  # puts the middle of the fourth biscuit layer at the middle of the field of view
 
 # --- MRI signal, on the head scan's scale (brain about 70, fat about 140) -----------------------
 SOAK_PROFILE = ((0.22, 80.0), (0.38, 70.0), (0.62, 60.0), (0.78, 70.0), (1.0, 80.0))  # (up to fraction of
                                    # the biscuit's thickness, signal): wet surfaces, a drier middle
 HOLE_SIGNAL = 84.0                 # milk in the holes
-CREAM_SIGNAL = 122.0
+CREAM_SIGNAL = {"vanilla": 122.0, "chocolate": 82.0, "strawberry": 122.0}   # the berries sit in vanilla
 GANACHE_SIGNAL = 150.0
 GRAIN, PATCHY = 3.0, 3.0
 
@@ -151,6 +163,19 @@ def bulging_outline(u, w, bulge, rng) -> np.ndarray:
     return region_coverage(distance - bulge * patches)
 
 
+def strawberry_slices(u, w, rng):
+    """Signal and coverage of the strawberry slices in the middle layer of cream, on the columns."""
+    berries = np.zeros(np.broadcast_shapes(u.shape, w.shape), np.float32)
+    signal = np.zeros_like(berries)
+    for center_u in SLICES_ACROSS:
+        for center_w in SLICES_ALONG:
+            center = (center_u + rng.normal(0, 2.0), center_w + rng.normal(0, 2.0))
+            berry, core = garnish.berry_slice(u, w, center, rng.uniform(0, 2 * np.pi), *SLICE_SIZE_MM)
+            signal += garnish.BERRY_SIGNAL * (berry - core) + garnish.CORE_SIGNAL * core
+            berries += berry
+    return signal, np.minimum(berries, 1)
+
+
 def stack(rng):
     """The cake from the bottom up, as (bottom, top, signal, cover) slabs. For every column (i, k),
     cover is the part of the column that the slab fills and signal is its MRI signal times that part."""
@@ -162,24 +187,47 @@ def stack(rng):
     for layer in range(BISCUIT_LAYERS):
         biscuits, holes = biscuit_layer(u, w, layer % 2, rng)
         joints = np.maximum(filled - biscuits, 0)
+        above = CREAM_SIGNAL[CREAMS[layer]] if layer < len(CREAMS) else GANACHE_SIGNAL   # fills the joints
         start = 0.0
         for end, signal in SOAK_PROFILE:
             bottom, top = z + start * BISCUIT_THICKNESS_MM, z + end * BISCUIT_THICKNESS_MM
-            slabs.append((bottom, top, signal * (biscuits - holes) + HOLE_SIGNAL * holes + CREAM_SIGNAL * joints,
+            slabs.append((bottom, top, signal * (biscuits - holes) + HOLE_SIGNAL * holes + above * joints,
                           biscuits + joints))
             start = end
         z += BISCUIT_THICKNESS_MM
         if layer == BISCUIT_LAYERS - 1:
             break
+        flavor = CREAMS[layer]
+        thickness = STRAWBERRY_LAYER_MM if flavor == "strawberry" else CREAM_MM
         for part, bulge in ((0.25, 0.4), (0.75, 1.0), (1.0, 0.4)):   # the cream bulges most at mid-height
             cream = bulging_outline(u, w, bulge * BULGE_MM, rng)
-            slabs.append((slabs[-1][1], z + part * CREAM_MM, CREAM_SIGNAL * cream, cream))
-        z += CREAM_MM
+            signal, cover = CREAM_SIGNAL[flavor] * cream, cream
+            if flavor == "strawberry" and part == 0.75:                # the slices fill the middle part
+                berry_signal, berries = strawberry_slices(u, w, rng)
+                signal = signal * (1 - berries) + berry_signal
+                cover = np.maximum(cover, berries)
+            slabs.append((slabs[-1][1], z + part * thickness, signal, cover))
+        z += thickness
     ganache = bulging_outline(u, w, 0.5, rng)
     slabs.append((z, z + 0.6 * GANACHE_MM, GANACHE_SIGNAL * ganache, ganache))
     rounded_top = region_coverage(outline + 1.2)                  # the top edge of the ganache is rounded
     slabs.append((z + 0.6 * GANACHE_MM, z + GANACHE_MM, GANACHE_SIGNAL * rounded_top, rounded_top))
     return slabs
+
+
+def add_top_berries(signal, tissue, top_z: float) -> None:
+    """Stand the strawberries on top of the cake at its front end (in place)."""
+    x3, y3, z3 = head_style.patient_axes(VOXEL_MM)
+    c, s = math.cos(math.radians(TURN_DEG)), math.sin(math.radians(TURN_DEG))
+    voxel = float(np.prod(head_style.spacing(VOXEL_MM))) ** (1 / 3)
+    for u0, w0 in TOP_BERRIES:
+        x0 = CENTER_MM[0] + c * u0 - s * w0                        # cake frame to patient coordinates
+        y0 = CENTER_MM[1] + s * u0 + c * w0
+        berry, core = garnish.standing_berry(x3 - x0, y3 - y0, z3 - (top_z - 1.0), *TOP_BERRY_MM, voxel)
+        inside = berry > 0
+        signal[inside] = (signal * (1 - berry) + garnish.BERRY_SIGNAL * (berry - core)
+                          + garnish.CORE_SIGNAL * core)[inside]
+        np.maximum(tissue, berry, out=tissue)
 
 
 def build() -> Scan:
@@ -189,12 +237,14 @@ def build() -> Scan:
     low, high = z3[0, :, 0] - height / 2, z3[0, :, 0] + height / 2
     signal = np.zeros(head_style.GRID, np.float32)
     tissue = np.zeros(head_style.GRID, np.float32)
-    for bottom, top, column_signal, cover in stack(rng):
+    slabs = stack(rng)
+    for bottom, top, column_signal, cover in slabs:
         part = np.clip(np.minimum(top, high) - np.maximum(bottom, low), 0, None) / height   # of each voxel's height
         rows = np.nonzero(part)[0]
         signal[:, rows, :] += part[rows][None, :, None] * column_signal[:, None, :]
         tissue[:, rows, :] += part[rows][None, :, None] * cover[:, None, :]
+    add_top_berries(signal, tissue, slabs[-1][1])
     signal += (GRAIN * smooth_noise(head_style.GRID, 0.8, rng)
                + PATCHY * head_style.noise(rng, 5.0, VOXEL_MM)) * np.minimum(tissue, 1)
-    image = head_style.acquire(np.maximum(signal, 0), rng)
+    image = head_style.acquire(np.maximum(signal, 0), rng, DTYPE, SCALE)
     return Scan(image, head_style.spacing(VOXEL_MM))

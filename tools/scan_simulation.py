@@ -136,6 +136,27 @@ def tilt_matrix(tilt_deg: float, toward_deg: float) -> np.ndarray:
     return np.eye(3) + math.sin(t) * k + (1 - math.cos(t)) * (k @ k)
 
 
+def value_noise(coords, table: np.ndarray) -> np.ndarray:
+    """Smooth random function of three coordinate arrays given in lattice units, about -1 to 1.
+
+    The value at each lattice point comes from table (random values; its length a power of 2) by
+    hashing the point, and is blended smoothly in between. Any part of a volume can be computed on
+    its own, with the same result, so a large volume can be built slab by slab.
+    """
+    corners = [np.floor(c).astype(np.int64) for c in coords]
+    weights = [smoothstep(c - k) for c, k in zip(coords, corners)]
+    mask = len(table) - 1
+    result = 0.0
+    for dx in (0, 1):
+        for dy in (0, 1):
+            for dz in (0, 1):
+                key = ((corners[0] + dx) * 73856093) ^ ((corners[1] + dy) * 19349663) ^ ((corners[2] + dz) * 83492791)
+                weight = ((weights[0] if dx else 1 - weights[0]) * (weights[1] if dy else 1 - weights[1])
+                          * (weights[2] if dz else 1 - weights[2]))
+                result = result + weight * table[key & mask]
+    return result
+
+
 def turn_matrix(turn_deg: float) -> np.ndarray:
     """Rotation by turn_deg about the vertical (+z) axis, from +x toward +y. Its columns are the
     object's axes in scanner coordinates."""
@@ -170,6 +191,27 @@ def kspace_window(image: np.ndarray, keep: float, taper: float) -> np.ndarray:
         window = (0.5 - 0.5 * np.cos(np.pi * ramp)).astype(np.float32)
         spectrum *= window.reshape([-1 if a == axis else 1 for a in range(image.ndim)])
     return fft.irfftn(spectrum, s=image.shape, workers=-1).astype(np.float32)
+
+
+def kspace_window_in_place(volume: np.ndarray, keep: float, taper: float, chunk: int = 25) -> None:
+    """kspace_window for a large float32 volume, done in place and a few slabs at a time.
+
+    The window is a product of one window per axis, so it can be applied one axis after the other,
+    with one-dimensional transforms; the result is the same as kspace_window's.
+    """
+    for axis, n in enumerate(volume.shape):
+        frequency = fft.rfftfreq(n) / 0.5
+        ramp = np.clip((keep - frequency) / (keep * taper), 0, 1)
+        window = (0.5 - 0.5 * np.cos(np.pi * ramp)).astype(np.float32)
+        window = window.reshape([-1 if a == axis else 1 for a in range(volume.ndim)])
+        along = (axis + 1) % volume.ndim                     # cut the volume into slabs across another axis
+        for start in range(0, volume.shape[along], chunk):
+            part = [slice(None)] * volume.ndim
+            part[along] = slice(start, start + chunk)
+            part = tuple(part)
+            spectrum = fft.rfft(volume[part], axis=axis, workers=-1)
+            spectrum *= window
+            volume[part] = fft.irfft(spectrum, n=n, axis=axis, workers=-1)
 
 
 def bias_field(shape, gradient, curvature: float) -> np.ndarray:

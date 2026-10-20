@@ -31,6 +31,8 @@ from scan_simulation import (Scan, edge_coverage, ellipsoid_distance, gradient_n
 
 VOXEL_MM = 0.55                    # 0.55 x 0.55 x 0.715 mm voxels: the onion fills the frame like the head
 CENTER_Z = 6.0                     # the onion's origin sits this far above the middle of the field of view
+DTYPE = np.uint8                   # 8 bits, one of the three sizes the assignment allows; ...
+SCALE = 1.8                        # ... the head scan's values times 1.8 use its range, up to about 230
 RNG_SEED = 2027
 TILT_DEG, TILT_TOWARD_DEG = 7.0, 40.0
 
@@ -227,5 +229,5 @@ def build() -> Scan:
 
     signal += (GRAIN * smooth_noise(head_style.GRID, 0.8, rng)
                + PATCHY * head_style.noise(rng, 4.0, VOXEL_MM)) * tissue
-    image = head_style.acquire(np.maximum(signal, 0), rng)
+    image = head_style.acquire(np.maximum(signal, 0), rng, DTYPE, SCALE)
     return Scan(image, head_style.spacing(VOXEL_MM))
