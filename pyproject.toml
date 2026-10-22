@@ -2,6 +2,9 @@
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-m 'not slow'"
+filterwarnings = [
+    "ignore:datetime.datetime.utcnow:DeprecationWarning:nrrd",
+]
 markers = [
     "slow: reads the large files of the data set or writes long videos (run with -m slow)",
 ]
