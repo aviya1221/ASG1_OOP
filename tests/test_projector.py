@@ -82,7 +82,8 @@ def test_plane_far_away_gives_zeros_without_numpy_warnings():
     """FR-20, NFR-8"""
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        image = project(index_volume((5, 5, 5)) + 1, (1e9, 0, 0), (1e9 - 5, 9, 1e9), (1e9 + 5, 9, 1e9))
+        image = project(index_volume((5, 5, 5)) + 1, (1e9, 1e9, 1e9), (1e9 - 5, 1e9 + 9, 1e9), (1e9 + 5, 1e9 + 9, 1e9))
+    assert image.shape == (10, 11)
     assert not image.any()
 
 
