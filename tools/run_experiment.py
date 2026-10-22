@@ -99,6 +99,84 @@ def run_demos() -> None:
     print(f"wrote {results / 'demo_runs.txt'} and {images / 'demo_frames.png'}")
 
 
+# ----- part 2: speed
+
+ROUNDS = 5
+THREADS = (1, 2, 4, 8)
+SIZES = (100, 200, 300, 400, 500, 700)      # base and height of the triangles, in voxels
+
+
+def resized(planes, size: int):
+    """The benchmark triangles with another base and height, around the same middle and in the same directions."""
+    from plane_projection.planes import Plane
+    found = []
+    for plane in planes:
+        a, b, c = plane.points
+        right = (c - b) / np.linalg.norm(c - b)
+        down = (b + c) / 2 - a
+        middle = a + down / 2
+        down /= np.linalg.norm(down)
+        half = size / 2
+        points = (middle - half * down, middle + half * down - half * right, middle + half * down + half * right)
+        found.append(Plane(plane.line, plane.frame, points))
+    return found
+
+
+def power() -> str:
+    """Whether the laptop runs on its charger, and the processor clock: both change the speed a lot."""
+    if platform.system() != "Windows":
+        return "power state unknown"
+    command = ("$b = Get-CimInstance Win32_Battery; $p = Get-CimInstance Win32_Processor | Select-Object -First 1; "
+               "\"$($b.BatteryStatus) $($p.CurrentClockSpeed) $($p.MaxClockSpeed)\"")
+    result = subprocess.run(["powershell", "-NoProfile", "-Command", command], capture_output=True, text=True)
+    fields = result.stdout.split()
+    if len(fields) != 3:
+        return "power state unknown"
+    source = {"1": "on battery", "2": "on the charger"}.get(fields[0], f"battery status {fields[0]}")
+    return f"{source}, processor at {fields[1]} of {fields[2]} MHz"
+
+
+def run_speed() -> None:
+    """Every configuration runs once in each round, in turn, so changes of the clock over time affect all of them alike."""
+    import benchmark
+    volume = read_volume(DATA / "croissant.nrrd")
+    planes = read_planes(PROJECT_ROOT / "demo" / "croissant.csv")
+    copies = {np.dtype(t).name: Volume(np.asfortranarray(volume.data.astype(t))) for t in (np.uint16, np.uint32)}
+    copies["uint8"] = volume
+    configurations = (
+        [("threads", f"{n} thread{'s' if n > 1 else ''}", "uint8", planes, n) for n in THREADS]
+        + [("type", name, name, planes, 4) for name in ("uint8", "uint16", "uint32")]
+        + [("size", f"{s + 1} x {s + 1}", "uint8", resized(planes, s), 4) for s in SIZES])
+    found = {label: [] for _, label, *_ in configurations}
+    lines = [f"# Speed of the projection, commit {commit()}", f"# {machine()}", f"# at the start: {power()}",
+             f"# DATA/croissant.nrrd, the {len(planes)} planes of demo/croissant.csv (docs/SRS.md, NFR-4) and resized copies;",
+             f"# {ROUNDS} rounds, each running every configuration once, in turn;",
+             "# fps = planes / time of plane_setup and Projector.project (NFR-3)"]
+    for round_number in range(ROUNDS):
+        for _, label, dtype, chosen, threads in configurations:
+            found[label] += benchmark.rates(copies[dtype], chosen, 1, threads)
+        print(f"round {round_number + 1} of {ROUNDS} done")
+    lines.append(f"# at the end: {power()}")
+
+    titles = {"threads": "threads (uint8, images of 501 x 501)", "type": "value type (4 threads, images of 501 x 501)",
+              "size": "image size (uint8, 4 threads): triangles with this base and height"}
+    for group, title in titles.items():
+        lines += ["", f"## {title}"]
+        for kind, label, _, chosen, _ in configurations:
+            if kind != group:
+                continue
+            median = statistics.median(found[label])
+            text = (f"{label:12s} {median:6.0f} fps median {1000 / median:6.2f} ms per frame   "
+                    f"rounds {min(found[label]):.0f} to {max(found[label]):.0f}")
+            if group == "size":
+                side = int(label.split(" x ")[0])
+                text += f"   {1e9 / median / (side * side / 2):6.1f} ns per pixel of the triangle"
+            lines.append(text)
+    (OUT / "results").mkdir(parents=True, exist_ok=True)
+    (OUT / "results" / "speed.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print("\n".join(lines))
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the experiment and write its results into experiment/.")
     parser.add_argument("--only", choices=["demos", "speed", "slicer"], help="run one part only")
@@ -111,6 +189,9 @@ def main(argv=None) -> None:
     args = parse_args(argv)
     if args.only in (None, "demos"):
         run_demos()
+    if args.only in (None, "speed"):
+        sys.path.insert(0, str(PROJECT_ROOT / "tools"))
+        run_speed()
 
 
 if __name__ == "__main__":

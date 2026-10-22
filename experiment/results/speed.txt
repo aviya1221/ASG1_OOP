@@ -1,0 +1,26 @@
+# Speed of the projection, commit c3d7ade
+# Intel64 Family 6 Model 142 Stepping 12, GenuineIntel, 8 logical processors, Windows-11-10.0.26200-SP0, Python 3.13.15, NumPy 2.5.4
+# at the start: on battery, processor at 1502 of 2304 MHz
+# DATA/croissant.nrrd, the 100 planes of demo/croissant.csv (docs/SRS.md, NFR-4) and resized copies;
+# 5 rounds, each running every configuration once, in turn;
+# fps = planes / time of plane_setup and Projector.project (NFR-3)
+# at the end: on battery, processor at 1803 of 2304 MHz
+
+## threads (uint8, images of 501 x 501)
+1 thread         53 fps median  19.02 ms per frame   rounds 33 to 62
+2 threads        82 fps median  12.15 ms per frame   rounds 45 to 96
+4 threads        90 fps median  11.12 ms per frame   rounds 56 to 119
+8 threads        59 fps median  16.89 ms per frame   rounds 41 to 129
+
+## value type (4 threads, images of 501 x 501)
+uint8            92 fps median  10.87 ms per frame   rounds 72 to 99
+uint16           68 fps median  14.74 ms per frame   rounds 62 to 108
+uint32           62 fps median  16.15 ms per frame   rounds 51 to 73
+
+## image size (uint8, 4 threads): triangles with this base and height
+101 x 101       242 fps median   4.13 ms per frame   rounds 107 to 405    809.2 ns per pixel of the triangle
+201 x 201       334 fps median   2.99 ms per frame   rounds 89 to 360    148.1 ns per pixel of the triangle
+301 x 301       252 fps median   3.97 ms per frame   rounds 79 to 338     87.5 ns per pixel of the triangle
+401 x 401       154 fps median   6.51 ms per frame   rounds 67 to 256     81.0 ns per pixel of the triangle
+501 x 501        71 fps median  14.03 ms per frame   rounds 64 to 88    111.8 ns per pixel of the triangle
+701 x 701        46 fps median  21.93 ms per frame   rounds 40 to 65     89.2 ns per pixel of the triangle
