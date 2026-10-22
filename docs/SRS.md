@@ -177,5 +177,102 @@ Example with a header, a comment, a triangle and a trapezoid:
 ```
 ax,ay,az,bx,by,bz,cx,cy,cz
 # axial cut through the middle of a 256 x 256 x 130 volume
-128,0,65, 0,255,65, 255,255,65
+127.5,0,65, 0,255,65, 255,255,65
 60,40,20, 190,40,20, 20,200,110, 230,200,110
+```
+
+### 3.4 Projection geometry
+
+These requirements define the image of a valid plane exactly. They hold for the triangle and the trapezoid alike.
+`P0` is the first point of the plane: `a` for a triangle, `a'` for a trapezoid.
+
+**FR-15. Directions in the plane.**
+
+```
+right = (c − b) / |c − b|
+w     = (b − P0) − ((b − P0) · right) · right
+down  = w / |w|
+```
+
+`right` runs along the base from `b` to `c`. `down` lies in the plane, perpendicular to the base, and points from `P0` toward the base.
+Both have length 1 and are perpendicular to each other.
+
+**FR-16. Image size.** For every input point `v`, its position in the plane is `s(v) = (v − P0) · right` and `t(v) = (v − P0) · down`.
+With the smallest and largest of these over the input points:
+
+```
+cols = floor(s_max − s_min) + 1
+rows = floor(t_max − t_min) + 1
+```
+
+The floor is taken after adding `1e-6`, so that a length of `7.9999999` caused by rounding counts as 8.
+
+**FR-17. Pixel position.** Pixel `(r, c)`, row `r` and column `c`, sits at the point
+
+```
+corner = P0 + s_min · right + t_min · down
+p(r, c) = corner + c · right + r · down
+```
+
+Neighboring pixels are one voxel unit apart in both directions, so the image keeps the true proportions of the shape.
+
+**FR-18. Inside the shape.** In plane coordinates, pixel `(r, c)` is at `(s_min + c, t_min + r)`.
+It belongs to the shape if that point lies inside the triangle `a, b, c`, or inside the quadrilateral `a', a'', c, b`, or on its edge, with a tolerance of `1e-6`.
+
+**FR-19. Sampling.** The value at a point is the value of the nearest voxel: on each axis, `index = floor(p + 0.5)`, so halves round up.
+
+**FR-20. Pixel value.** `E[r][c] = M[index]` if the pixel belongs to the shape and `0 <= index < size` on all three axes. Otherwise `E[r][c] = 0`.
+
+**FR-21. Orientation.** Row 0 is at the top and holds the apex, or the top side of a trapezoid. The base is in the last row, with `b` on the left and `c` on the right.
+
+**FR-22. Slices along the axes.** For a plane perpendicular to an axis, with integer points, every pixel inside the shape equals the matching voxel exactly.
+For example, the triangle `a = (5, 0, z0)`, `b = (0, 10, z0)`, `c = (10, 10, z0)` gives `E[r][c] = M[c][r][z0]`.
+
+**Worked example.** The cake in the picture below is 10 × 10 × 10 voxels. The plane is the triangle `a = (5, 0, 8)`, `b = (1, 6, 0)`, `c = (9, 6, 0)`.
+
+| Step | Result |
+|---|---|
+| `right` | `(8, 0, 0) / 8 = (1, 0, 0)` |
+| `w` | `(−4, 6, −8) − (−4) · (1, 0, 0) = (0, 6, −8)` |
+| `down` | `(0, 6, −8) / 10 = (0, 0.6, −0.8)` |
+| `s` of `a, b, c` | `0, −4, 4` |
+| `t` of `a, b, c` | `0, 10, 10` |
+| image size | 9 columns, 11 rows |
+| `corner` | `(5, 0, 8) − 4 · (1, 0, 0) = (1, 0, 8)` |
+| pixel `(5, 2)` | `(1, 0, 8) + 2 · (1, 0, 0) + 5 · (0, 0.6, −0.8) = (3, 3, 4)`, in the cream layer |
+
+![The worked example: the triangle inside the cake, and the image it gives](../DATA/images/explain/how_a_cut_is_made.png)
+
+### 3.5 Input validation
+
+**FR-23.** Every plane line gives exactly one frame, in the order of the file, whatever it contains.
+
+**FR-24. Bad planes.** A plane that fails one of these checks gives a black frame and a warning:
+
+| Check | The plane is bad when |
+|---|---|
+| count | it does not have 9 or 12 numbers |
+| numbers | a field is not a number, or is infinite or not a number (`inf`, `nan`) |
+| base | `|c − b| < 1e-6` |
+| one line | `|w| < 1e-6`: `P0` lies on the line of the base |
+| flat trapezoid | `a''` is more than 0.5 from the plane through `a'`, `b` and `c` |
+| trapezoid shape | the quadrilateral `a', a'', c, b` is not convex, for example because its sides cross |
+| size | the image would have more than 4096 rows or columns |
+
+The size limit keeps a point that is very far away from producing a huge video.
+
+**FR-25. Doubtful planes.** A plane that passes the checks above but breaks a promise of the assignment is drawn as given, with a warning:
+
+| Check | Warning when |
+|---|---|
+| equal legs | the two legs differ by more than 0.5: `|ab|` and `|ac|`, or `|a'b|` and `|a''c|` |
+| parallel sides | in a trapezoid, `|t(a'')| > 0.5`, so the top side is not parallel to the base (`t(a')` is always 0) |
+
+**FR-26.** A valid plane that does not meet the volume at all gives a black image without a warning. It is valid input.
+
+**FR-27.** A warning names the line of the file and the frame, both counted from 1, the cause and the result:
+
+```
+warning: line 7, frame 5: points a, b and c are on one line; the frame is black
+warning: line 9, frame 7: the legs differ by 3.2 voxels; drawn as given
+```
