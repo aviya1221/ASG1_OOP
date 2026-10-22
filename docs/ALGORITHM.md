@@ -283,7 +283,7 @@ The 100 images hold about 25 million pixels in all.
 It ran at 184 to 194 frames per second, about 6 times the minimum of NFR-1 and almost twice the target of NFR-2, with exact rounding.
 
 - **Rectangle or pixel list.** On one thread the list is faster, because it skips the pixels outside the triangle.
-  But it gains little from threads, because building the list and scattering the values back into the image work pixel by pixel under Python's lock.
+  But it gains little from threads, probably because building the list and scattering the values back into the image keep Python's lock, so the threads wait for each other.
   Trimming gives the rectangle most of the saving of the list, and the rectangle splits well over threads.
 - **4 threads.** The processor has 4 cores. With 8 threads, two threads share each core and compete for memory, and every run was slower.
   Splitting the image into more bands than threads was slower too. The number of threads is a parameter of the projection, with a default of 4.
@@ -298,3 +298,82 @@ If the program falls short of the target on another machine:
 
 - Compile the inner loop with Numba, at the price of one more dependency.
 - Project several frames at the same time in separate processes, which share the volume in memory.
+
+---
+
+## 7. Frames and video
+
+### 7.1 Frame size
+
+`W` is the largest `cols` and `H` the largest `rows` among the valid planes, each rounded up to an even number.
+With no valid plane, the frames are 64 × 64 (FR-30). The sizes come from the setups, so no plane has to be projected first.
+
+### 7.2 Gray levels
+
+`GrayMap` turns an image of raw values into gray levels by the formula of FR-32:
+
+```
+gray(v) = floor(255 · (v − lo) / (hi − lo) + 0.5), clipped to 0 … 255
+```
+
+- **8 and 16-bit volumes.** The map is a lookup table with one entry for each value from 0 to `hi`, at most 65,536 entries, built once.
+  Converting an image is then a single read per pixel: `table[E]`.
+- **32-bit volumes.** A table would be too large, so the formula is computed per pixel, in `float32`.
+- **Black stays black.** A value of 0 gives 0: if `lo` is 0 by the formula, and if `lo` is above 0 by the clipping.
+- **All values equal** (`hi = lo`): every value above 0 maps to 255.
+
+Negative values were already set to 0 when the volume was read ([3.1](#31-volume)), so every value in `E` is 0 or more.
+
+### 7.3 Placement
+
+One frame buffer of `H × W` gray levels is kept for the whole run. For each plane it is set to 0, and the image is copied in at
+column `(W − cols) // 2` and row `(H − rows) // 2` (FR-31). A bad plane leaves the buffer all black.
+
+### 7.4 Encoding
+
+The video is written with [imageio-ffmpeg](https://github.com/imageio/imageio-ffmpeg), whose `pip` package carries its own copy of the FFmpeg encoder (NFR-11).
+
+| Setting | Value | Why |
+|---|---|---|
+| codec | `libx264` (H.264) | FR-28 |
+| input pixels | `gray`, one byte per pixel | the frames are gray levels |
+| output pixels | `yuv420p` | plays in common players and browsers (FR-28) |
+| frame rate | `--fps` | FR-33 |
+| `macro_block_size` | 1 | by default the library resizes frames to a multiple of 16; even sizes are enough for `yuv420p` |
+
+Frames go to the encoder one at a time, as they are made, so the video is never held in memory (NFR-7).
+The encoder starts only after all the checks have passed, so a fatal error never leaves a video behind (FR-3).
+OpenCV was considered and rejected: its `pip` package cannot write H.264.
+
+---
+
+## 8. Errors and the run report
+
+### 8.1 Errors
+
+| Problem | Where it is found | What happens |
+|---|---|---|
+| wrong arguments | `argparse`, at the start | usage message, exit code 2 (FR-3) |
+| missing output folder | at the start | fatal error |
+| unreadable or invalid volume | `read_volume` | fatal error |
+| missing planes file, or no plane lines | `read_planes` | fatal error |
+| bad plane | `read_planes` or `plane_setup` | a black frame and a warning (FR-24) |
+| doubtful plane | `plane_setup` | drawn, with a warning (FR-25) |
+| unexpected error while projecting one plane | around `project` | a black frame and a warning naming the plane (NFR-8) |
+| unexpected error while writing the video | around the encoder | fatal error, and the unfinished file is deleted |
+
+A fatal error is an `InputError` that carries the file and the cause. The main function catches it,
+prints `error: <file>: <cause>` to the standard error without a traceback, and exits with code 1 (FR-4).
+A warning is printed to the standard error as soon as it is found, in the format of FR-27.
+
+### 8.2 Run report
+
+Three timers use `time.perf_counter`:
+
+| Timer | Covers |
+|---|---|
+| load | reading the volume and the planes file |
+| projection | `plane_setup` and `project` for every plane: the time of NFR-3 |
+| video | gray levels, placement, encoding and closing the file |
+
+At the end the program prints the summary of FR-35 to the standard output, with the projection rate as the number of planes divided by the projection time.
