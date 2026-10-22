@@ -37,13 +37,14 @@ Starting from the image gives every pixel exactly one value, and the work grows 
 ```
 volume = read_volume(nrrd_path)                          # once
 planes = read_planes(csv_path)                           # once
-setups = [plane_setup(plane, volume) for plane in planes]  # geometry and checks, per plane
+setups = [plane_setup(plane) for plane in planes]        # geometry and checks, per plane
 W, H   = frame_size(setups)
 gray   = GrayMap(volume.lo, volume.hi)
+projector = Projector(volume, threads=4)
 
 with VideoWriter(mp4_path, W, H, fps) as video:
     for setup in setups:
-        E = project(volume, setup) if setup.valid else black image
+        E = projector.project(setup) if setup.valid else black image
         video.write(place(gray(E), W, H))
 
 print_report()
@@ -73,7 +74,8 @@ the frame size depends on the largest valid plane (FR-30), and every fatal error
 | `Plane` | the line number, the frame number, and either the 3 or 4 points or the reason the line could not be read | `read_planes` |
 | `PlaneSetup` | `valid`, the reason when it is not, the warnings, and for a valid plane: `corner`, `right`, `down`, `rows`, `cols`, and the column span `c0[r]`, `c1[r]` of the shape on every row | `plane_setup` |
 | `GrayMap` | `lo`, `hi`, and a lookup table for 8 and 16-bit volumes | `GrayMap(lo, hi)` |
-| image `E` | `rows × cols` array of raw values, in the type of the volume | `project` |
+| `Projector` | the volume and a pool of threads, kept for the whole run | `Projector(volume, threads)` |
+| image `E` | `rows × cols` array of raw values, in the type of the volume | `Projector.project` |
 | frame | `H × W` array of `uint8` gray levels | `place` |
 
 All points and vectors are 3-element `float64` arrays. Every image and frame is indexed `[row, column]`.
@@ -177,7 +179,8 @@ A row that misses the shape gets `c0[r] > c1[r]`.
 
 ## 5. Projection
 
-`project(volume, setup)` turns a valid plane into its image `E`. It reads no files (NFR-12).
+`Projector.project(setup)` turns a valid plane into its image `E`. The projector holds the volume and a pool of threads,
+made once for the whole run. It reads no files (NFR-12).
 
 ### 5.1 Early exit
 
@@ -343,7 +346,7 @@ The video is written with [imageio-ffmpeg](https://github.com/imageio/imageio-ff
 
 Frames go to the encoder one at a time, as they are made, so the video is never held in memory (NFR-7).
 The encoder starts only after all the checks have passed, so a fatal error never leaves a video behind (FR-3).
-OpenCV was considered and rejected: its `pip` package cannot write H.264.
+OpenCV was considered and rejected: its `pip` package does not write H.264 without extra files.
 
 ---
 
@@ -359,7 +362,7 @@ OpenCV was considered and rejected: its `pip` package cannot write H.264.
 | missing planes file, or no plane lines | `read_planes` | fatal error |
 | bad plane | `read_planes` or `plane_setup` | a black frame and a warning (FR-24) |
 | doubtful plane | `plane_setup` | drawn, with a warning (FR-25) |
-| unexpected error while projecting one plane | around `project` | a black frame and a warning naming the plane (NFR-8) |
+| unexpected error while projecting one plane | around `Projector.project` | a black frame and a warning naming the plane (NFR-8) |
 | unexpected error while writing the video | around the encoder | fatal error, and the unfinished file is deleted |
 
 A fatal error is an `InputError` that carries the file and the cause. The main function catches it,
@@ -373,7 +376,50 @@ Three timers use `time.perf_counter`:
 | Timer | Covers |
 |---|---|
 | load | reading the volume and the planes file |
-| projection | `plane_setup` and `project` for every plane: the time of NFR-3 |
+| projection | `plane_setup` and `Projector.project` for every plane: the time of NFR-3 |
 | video | gray levels, placement, encoding and closing the file |
 
 At the end the program prints the summary of FR-35 to the standard output, with the projection rate as the number of planes divided by the projection time.
+
+---
+
+## 9. Program structure
+
+Each step of the pipeline is its own module (NFR-13), in a package named `plane_projection`.
+Only `Ex0.py` talks to the user; the modules return results or raise `InputError`, and never print.
+
+| Module | Contents | Uses | Requirements |
+|---|---|---|---|
+| `Ex0.py` | command line, main flow, warnings, report, exit codes | all the modules below | FR-1 to FR-4, FR-35, FR-36 |
+| `plane_projection/errors.py` | `InputError` | | FR-4 |
+| `plane_projection/volume.py` | `Volume`, `read_volume` | `errors`, `pynrrd` | FR-5 to FR-9 |
+| `plane_projection/planes.py` | `Plane`, `read_planes` | `errors` | FR-10 to FR-14 |
+| `plane_projection/geometry.py` | `PlaneSetup`, `plane_setup` | `planes` | FR-15 to FR-18, FR-21, FR-23 to FR-27 |
+| `plane_projection/projector.py` | `Projector` | `volume`, `geometry` | FR-19, FR-20, FR-22, NFR-1 to NFR-3, NFR-12 |
+| `plane_projection/frames.py` | `frame_size`, `GrayMap`, `place` | `geometry` | FR-29 to FR-32 |
+| `plane_projection/video.py` | `VideoWriter` | `errors`, `imageio-ffmpeg` | FR-28, FR-33, FR-34, NFR-7 |
+| `tests/` | one test file for each module | | NFR-14 |
+| `tools/benchmark.py` | the benchmark of NFR-4 | `geometry`, `projector` | NFR-1 to NFR-5 |
+
+`Volume`, `Plane` and `PlaneSetup` are frozen data classes: once made, they do not change.
+`Projector` and `VideoWriter` are classes because they hold something for the whole run, a pool of threads and an open encoder.
+`VideoWriter` is a context manager, so the file is closed, or deleted after a fatal error, whatever happens.
+
+The projection depends only on `Volume` and `PlaneSetup`, never on files, so the tests can build a small volume in memory,
+such as the cake of the worked example, and check every pixel (NFR-12).
+
+---
+
+## 10. Complexity
+
+`V` is the number of voxels, `P` the number of planes, `n` the number of pixels in one image, and `W × H` the frame size.
+
+| Step | Time | Extra memory |
+|---|---|---|
+| read the volume | `O(V)`, once | `V` values, the only copy of the volume |
+| read the planes | `O(P)` | `O(P)` |
+| set up one plane | `O(rows)` | `O(rows)` |
+| project one plane | `O(n)` | `O(n)` |
+| gray levels, placement, encoding of one frame | `O(W × H)` | `O(W × H)` |
+
+The work for one frame does not depend on the size of the volume. Only reading the file does.
