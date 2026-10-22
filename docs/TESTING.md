@@ -397,3 +397,45 @@ A GitHub Actions workflow, `.github/workflows/tests.yml`, runs the tests on ever
 A fresh install on three systems shows that the program runs on all of them (NFR-10),
 and that every dependency, the video encoder included, comes from `pip` (NFR-11).
 The data set is part of the repository, so the slow tests have their files. A badge in the README shows the result of the last run.
+
+---
+
+## 9. Workflow and done criteria
+
+### 9.1 Workflow
+
+1. The package is built module by module, in the order of the pipeline. For each module, the tests of its table are written first and seen to fail,
+   then the module is written until they pass. Tests and code are committed in small steps.
+2. Before every commit, `pytest` runs. Before every push, all the tests run, the slow ones included.
+3. A bug found later first gets a test that shows it, and only then the fix.
+4. An item of the roadmap in the README is marked done only when the tests pass on the continuous integration.
+
+### 9.2 Requirements and their tests
+
+| Requirements | Sections of this document |
+|---|---|
+| FR-1 to FR-4 | [5](#5-command-line-tests), [6.2](#62-automatic-checks) |
+| FR-5 to FR-9 | [4.1](#41-volumepy-reading-the-volume), [3.4](#34-slices-along-the-axes) |
+| FR-10 to FR-14 | [4.2](#42-planespy-reading-the-planes) |
+| FR-15 to FR-18 | [4.3](#43-geometrypy-plane-setup-and-checks), [3.1](#31-results-worked-out-by-hand), [3.2](#32-a-slow-reference) |
+| FR-19 to FR-22 | [4.4](#44-projectorpy-the-projection), [3.2](#32-a-slow-reference) to [3.6](#36-label-volumes) |
+| FR-23 to FR-27 | [4.2](#42-planespy-reading-the-planes), [4.3](#43-geometrypy-plane-setup-and-checks), [5](#5-command-line-tests), [6.2](#62-automatic-checks) |
+| FR-28 to FR-34 | [4.5](#45-framespy-frame-size-gray-levels-placement), [4.6](#46-videopy-writing-the-video), [5](#5-command-line-tests), [6](#6-the-demo) |
+| FR-35, FR-36 | [5](#5-command-line-tests), [6.2](#62-automatic-checks) |
+| NFR-1 to NFR-5 | [7.1](#71-speed) |
+| NFR-6, NFR-7 | [7.2](#72-memory) |
+| NFR-8, NFR-9 | [7.3](#73-robustness), [4.4](#44-projectorpy-the-projection), [5](#5-command-line-tests) |
+| NFR-10, NFR-11 | [8](#8-portability-and-continuous-integration) |
+| NFR-12 | [4.4](#44-projectorpy-the-projection) |
+| NFR-13, NFR-14 | [2](#2-test-levels-and-tools), [8](#8-portability-and-continuous-integration): one test file per module, and the coverage report |
+| NFR-15 | [5](#5-command-line-tests) |
+
+### 9.3 Done criteria
+
+The testing is complete when:
+
+- all the tests pass on the continuous integration, on all three systems;
+- the tests reach 90% or more of the lines of the package and of `Ex0.py`;
+- the benchmark reaches 30 fps or more, and its result, against the target of 100, is written in the experiment report;
+- all six demo videos are made, checked by eye, and compared with 3D Slicer in screenshots;
+- every requirement in the table above has its tests.
