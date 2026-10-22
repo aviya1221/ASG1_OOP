@@ -177,6 +177,96 @@ def run_speed() -> None:
     print("\n".join(lines))
 
 
+# ----- part 3: comparison with vtkImageReslice in 3D Slicer
+
+SLICER_SETS = [("MRHead_1.nrrd", "head"), ("swiss_roll.nrrd", "swiss_roll"), ("synthetic/dice.nrrd", "edge_cases")]
+FIGURE_FRAMES = [(66, "slice z = 65"), (160, "square turned 58°"), (250, "turning triangle")]   # frames of head.csv
+
+
+def inside(setup) -> np.ndarray:
+    columns = np.arange(setup.cols)[None, :]
+    return (columns >= setup.c0[:, None]) & (columns <= setup.c1[:, None])
+
+
+def halfway(setup, rows, cols) -> np.ndarray:
+    """Pixels whose point lies halfway between two voxels on some axis, within 1e-5 of a voxel.
+
+    There the nearest voxel is a tie: this program rounds exactly by floor(p + 0.5) (FR-19), while VTK rounds with
+    a small tolerance, so the two may pick different neighbors.
+    """
+    p = setup.corner + cols[:, None] * setup.right + rows[:, None] * setup.down + 0.5
+    return (np.abs(p - np.round(p)) < 1e-5).any(axis=1)
+
+
+def resliced_by_slicer(slicer_exe: Path, volume_path: Path, setups, folder: Path, name: str):
+    planes = [{"corner": s.corner.tolist(), "right": s.right.tolist(), "down": s.down.tolist(),
+               "rows": s.rows, "cols": s.cols} for s in setups]
+    planes_path, out_path = folder / f"{name}.json", folder / f"{name}.npz"
+    planes_path.write_text(json.dumps(planes), encoding="utf-8")
+    command = [str(slicer_exe), "--no-splash", "--no-main-window", "--python-script",
+               str(PROJECT_ROOT / "tools" / "slicer_reslice.py"), str(volume_path), str(planes_path), str(out_path)]
+    process = subprocess.run(command, capture_output=True, text=True, timeout=600)
+    report = next((line for line in process.stdout.splitlines() if line.startswith("resliced")), None)
+    if report is None or not out_path.exists():
+        raise RuntimeError(f"3D Slicer failed on {volume_path.name}:\n{process.stdout}\n{process.stderr}")
+    with np.load(out_path) as images:
+        return report, [images[f"nearest{i}"] for i in range(len(setups))], [images[f"linear{i}"] for i in range(len(setups))]
+
+
+def run_slicer(slicer_exe: Path) -> None:
+    if not slicer_exe.exists():
+        print(f"3D Slicer was not found at {slicer_exe}; the slicer part is skipped")
+        return
+    lines = [f"# Comparison with vtkImageReslice in 3D Slicer, commit {commit()}", f"# {machine()}",
+             "# For every valid plane, the pixels inside the shape are compared with vtkImageReslice using the nearest voxel.",
+             ""]
+    figure = []
+    with tempfile.TemporaryDirectory() as folder:
+        for volume_name, name in SLICER_SETS:
+            volume = read_volume(DATA / volume_name)
+            setups = [setup for setup in map(plane_setup, read_planes(PROJECT_ROOT / "demo" / f"{name}.csv")) if setup.valid]
+            report, nearest, linear = resliced_by_slicer(slicer_exe, DATA / volume_name, setups, Path(folder), name)
+            with Projector(volume) as projector:
+                ours = [projector.project(setup) for setup in setups]
+            compared = identical = differ_halfway = 0
+            for setup, image, theirs in zip(setups, ours, nearest):
+                mask = inside(setup)
+                same = image == theirs
+                compared += int(mask.sum())
+                identical += int((same & mask).sum())
+                rows, cols = np.nonzero(mask & ~same)
+                differ_halfway += int(halfway(setup, rows, cols).sum())
+            differ = compared - identical
+            lines += [f"{volume_name} with demo/{name}.csv: {report}",
+                      f"    {len(setups)} planes, {compared} pixels inside the shapes",
+                      f"    identical: {identical} ({100 * identical / compared:.4f}%)",
+                      f"    different: {differ}, of which {differ_halfway} lie halfway between two voxels, within 1e-5 of a voxel", ""]
+            print("\n".join(lines[-5:]))
+            if name == "head":
+                for frame, what in FIGURE_FRAMES:
+                    i = frame - 1
+                    mask = inside(setups[i])
+                    figure.append((frame, what, ours[i], np.where(mask, nearest[i], 0), np.where(mask, linear[i], 0),
+                                   mask & (ours[i] != nearest[i]), volume))
+    (OUT / "results" / "slicer_comparison.txt").write_text("\n".join(lines), encoding="utf-8")
+
+    columns = ["this program: nearest voxel", "vtkImageReslice: nearest voxel",
+               "vtkImageReslice: linear, as 3D Slicer shows", "pixels that differ (white)"]
+    fig, axes = plt.subplots(len(figure), 4, figsize=(14, 3.6 * len(figure)))
+    for row, (frame, what, ours_image, near, lin, differ, volume) in zip(axes, figure):
+        for ax, image, title in zip(row, (ours_image, near, lin), columns):
+            ax.imshow(image, cmap="gray", vmin=volume.lo, vmax=volume.hi)
+            ax.set_title(f"{title}\nhead.csv frame {frame}, {what}", fontsize=9)
+        row[3].imshow(differ, cmap="gray", vmin=0, vmax=1)
+        row[3].set_title(f"{columns[3]}\n{int(differ.sum())} of {differ.size} pixels", fontsize=9)
+        for ax in row:
+            ax.axis("off")
+    fig.tight_layout()
+    fig.savefig(OUT / "images" / "slicer_comparison.png", dpi=80)
+    plt.close(fig)
+    print(f"wrote {OUT / 'results' / 'slicer_comparison.txt'} and {OUT / 'images' / 'slicer_comparison.png'}")
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the experiment and write its results into experiment/.")
     parser.add_argument("--only", choices=["demos", "speed", "slicer"], help="run one part only")
@@ -192,6 +282,8 @@ def main(argv=None) -> None:
     if args.only in (None, "speed"):
         sys.path.insert(0, str(PROJECT_ROOT / "tools"))
         run_speed()
+    if args.only in (None, "slicer"):
+        run_slicer(args.slicer)
 
 
 if __name__ == "__main__":
