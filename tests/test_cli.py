@@ -53,7 +53,8 @@ def test_help(capsys):
         Ex0.main(["--help"])
     assert stop.value.code == 0
     text = capsys.readouterr().out
-    for words in ("file.nrrd", "file.csv", "file.mp4", "--fps", "9 numbers", "12 numbers", "header"):
+    for words in ("file.nrrd", "file.csv", "file.mp4", "--fps", "9 numbers", "12 numbers", "header",
+                  "Example", "127.5,0,65, 0,255,65, 255,255,65"):
         assert words in text
 
 

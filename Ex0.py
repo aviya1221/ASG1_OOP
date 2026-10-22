@@ -28,6 +28,13 @@ The planes file has one plane per line: comma-separated numbers, in voxel indice
   12 numbers  a trapezoid a', a'', b, c: the top side from a' to a'', and the base from b to c
 Blank lines and lines starting with # are skipped, and so is a first line that is not
 numbers (a header). A line that is not a plane gives a black frame and a warning.
+
+Example, with a header, a comment, a triangle and a trapezoid:
+
+  ax,ay,az,bx,by,bz,cx,cy,cz
+  # a triangle in the slice z = 65 of a 256 x 256 x 130 volume, then a tilted trapezoid
+  127.5,0,65, 0,255,65, 255,255,65
+  60,40,20, 190,40,20, 20,200,110, 230,200,110
 """
 
 
