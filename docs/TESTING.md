@@ -145,7 +145,9 @@ shows ganache everywhere inside the cake, and a plane through the tomato shows i
 ### 3.7 3D Slicer
 
 The Reformat module of 3D Slicer shows any plane of a volume. It smooths between voxels instead of taking the nearest one,
-so its images are compared with ours by eye, not pixel for pixel.
+so its view is compared with ours by eye. The filter behind it, `vtkImageReslice`, can also take the nearest voxel:
+`tools/slicer_reslice.py` runs it inside 3D Slicer on our pixel grid, and the experiment compares the two images pixel for pixel
+([experiment, section 2](../experiment/README.md#2-comparison-with-3d-slicer)).
 
 ---
 
@@ -364,7 +366,7 @@ A few frames of each video are then compared with the same plane in the Reformat
 - The program's pixels are voxel units (FR-13, FR-17), while 3D Slicer draws millimeters. The voxels of `MRHead_1.nrrd` are 1.3 times longer along `z`,
   so a cut that contains the `z` axis looks 1.3 times shorter along it than in 3D Slicer. The foods have the same voxel shape as the head; the croissant and the die have cubic voxels.
 
-Screenshots of the frames side by side go into the experiment report.
+The experiment report shows frames of the program next to `vtkImageReslice` with the nearest voxel and with linear interpolation, as 3D Slicer shows them.
 
 ---
 
@@ -465,5 +467,5 @@ The testing is complete when:
 - all the tests pass on the continuous integration, on all three systems;
 - the tests reach 90% or more of the lines of the package and of `Ex0.py`;
 - the benchmark reaches 30 fps or more, and its result, against the target of 100, is written in the experiment report;
-- all six demo videos are made, checked by eye, and compared with 3D Slicer in screenshots;
+- all six demo videos are made, checked by eye, and compared with the reslicing filter of 3D Slicer;
 - every requirement in the table above has its tests.

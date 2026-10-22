@@ -165,4 +165,4 @@ On the development laptop the benchmark gives about 300 frames per second, again
 - [x] Testing strategy, including the demo ([docs/TESTING.md](docs/TESTING.md))
 - [x] Implementation ([plane_projection/](plane_projection/), [tests/](tests/))
 - [x] Demo: `python Ex0.py file.nrrd file.csv file.mp4` ([Ex0.py](Ex0.py), planes files in [demo/](demo/))
-- [ ] Experiment and a short description of its results, with the output video
+- [x] Experiment and a short description of its results, with the output videos ([experiment/](experiment/README.md))
