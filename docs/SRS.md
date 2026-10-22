@@ -426,7 +426,7 @@ The algorithm in the assignment is a description, and it leaves points open. Whe
 
 ## 7. Verification
 
-How each requirement is checked. The testing strategy document will describe the tests in detail.
+How each requirement is checked. The [testing strategy](TESTING.md) describes the tests in detail.
 
 | Method | Meaning |
 |---|---|
