@@ -25,7 +25,7 @@ The problem itself and the scope of the project are described in the [README](..
 
 The assignment says the problem is not well defined for implementation.
 This document closes the gaps: it fixes the input formats, the exact geometry of the output image, the behavior on bad input,
-the video format and the speed target. The design, the algorithm document and the tests are built on it.
+the video format and the speed target. The design, the [algorithm document](ALGORITHM.md) and the tests are built on it.
 
 ### 1.2 Scope
 

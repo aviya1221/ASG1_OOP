@@ -52,7 +52,8 @@ return E
 
 The assignment states that this problem is **not well defined for implementation**:
 the pseudo-code leaves open questions that a detailed design has to answer (see [Open questions](#open-questions)).
-The exact requirements are in the [Software Requirements Specification](docs/SRS.md).
+The exact requirements are in the [Software Requirements Specification](docs/SRS.md),
+and the way the program meets them is in the [algorithm document](docs/ALGORITHM.md).
 
 ## The program
 
@@ -125,7 +126,7 @@ pip install -r requirements.txt
 
 - [x] Create a repository, define the problem and the scope (this README)
 - [x] Software Requirements Specification ([docs/SRS.md](docs/SRS.md))
-- [ ] Detailed description of the main algorithm
+- [x] Detailed description of the main algorithm ([docs/ALGORITHM.md](docs/ALGORITHM.md))
 - [x] Data set of NRRD files (first version, see [DATA/README.md](DATA/README.md))
 - [ ] Testing strategy, including the demo
 - [ ] Implementation
