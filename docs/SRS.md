@@ -404,3 +404,51 @@ The data set is described in full in [DATA/README.md](../DATA/README.md). This t
 | `DATA/real_scans/` | `uint8`, `uint16` | various | extra runs on real CT scans |
 
 The planes files for the tests and the demo are part of the testing strategy.
+
+---
+
+## 6. Deviations from the assignment text
+
+The algorithm in the assignment is a description, and it leaves points open. Where this document differs from it, this is why.
+
+| Topic | Assignment | This project | Reason |
+|---|---|---|---|
+| computation | two points walk down the legs, and a third walks along each row between them | a direct formula for every pixel (FR-17) | all the pixels of an image can be computed at once, which is what makes the speed target reachable in Python; for an isosceles triangle it covers the same shape |
+| row spacing | each row moves one unit along the legs | each row moves one unit along the height (FR-17) | in the assignment, rows are only `height / Dab` apart while pixels in a row are 1 apart, so the image is squeezed vertically; here both are 1 apart and the proportions are true. In the worked example `Dab = √116 ≈ 10.77` and the height is 10 |
+| apex row | skipped, because `a1` and `a2` move before the first row is read | row 0 (FR-21) | the apex is part of the triangle |
+| image size | `Dab × Dbc` | `floor(height) + 1` rows and `floor(Dbc) + 1` columns for a triangle (FR-16) | follows from the row spacing, and from counting both ends of each side |
+| indexing | `E[x][y]` | `E[r][c]` | the same picture, written in the row-first order of NumPy |
+| triangle shape | isosceles | any triangle, with a warning (FR-25) | the description of the CSV file in the assignment does not promise isosceles triangles, and rounding makes the legs slightly unequal anyway |
+| sampling | `M[p]` for a point `p` with fractions, not specified further | the nearest voxel (FR-19) | the fastest choice, and the user's decision |
+| value types | unsigned 8, 16 and 32 bits | signed types too (FR-6) | the lecturer's `MRHead_1.nrrd` is `int16` |
+
+---
+
+## 7. Verification
+
+How each requirement is checked. The testing strategy document will describe the tests in detail.
+
+| Method | Meaning |
+|---|---|
+| T | automated test |
+| D | demo run, looked at by a person |
+| B | benchmark run |
+| I | inspection of the code or the documents |
+
+| Requirements | Method | How |
+|---|---|---|
+| FR-1 to FR-4 | T, D | run the program with good and broken arguments and files; check the exit code, the message, and that no video is written after a fatal error |
+| FR-5 to FR-9 | T | read every file of the data set, and small NRRD files written by the tests for each value type, encoding and size limit |
+| FR-10 to FR-14 | T | planes files with a header, comments, blank lines, spaces, decimals and wrong counts |
+| FR-15 to FR-21 | T | results computed by hand: the worked example, and a small volume whose every voxel holds its own index, `x + 1000·y + 1000000·z`, so each pixel shows which voxel it read |
+| FR-22 | T | planes along the axes compared with NumPy slices of the data set volumes |
+| FR-23 to FR-27 | T | one planes file for each bad and doubtful case; check the frame count, the black frames and the warning text |
+| FR-28 to FR-34 | T, D | read the video back and check the codec, frame count, frame size and rate; compare the frames before encoding exactly |
+| FR-35, FR-36 | T | capture the standard output and the standard error |
+| NFR-1 to NFR-5 | B | run the benchmark on the croissant and record the result in the experiment report |
+| NFR-6, NFR-7 | B | measure the peak memory during the benchmark and during a demo with many planes |
+| NFR-8 | T | random and malformed plane lines; the program must finish and write one frame per line |
+| NFR-9 | T | run twice and compare the images and frames |
+| NFR-10, NFR-11 | D | install into a new virtual environment from `requirements.txt` and run the demo, on Windows and on macOS or Linux when available |
+| NFR-12 to NFR-14 | I, T | review the code; the projection tests use arrays only, with no files |
+| NFR-15 | I | read `--help` and the messages |
