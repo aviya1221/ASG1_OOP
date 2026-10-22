@@ -276,3 +276,49 @@ The size limit keeps a point that is very far away from producing a huge video.
 warning: line 7, frame 5: points a, b and c are on one line; the frame is black
 warning: line 9, frame 7: the legs differ by 3.2 voxels; drawn as given
 ```
+
+### 3.6 Video output
+
+**FR-28. Format.** The output is an MP4 file with H.264 video in the `yuv420p` pixel format, which plays in common players and web browsers.
+
+**FR-29. Frames.** The video has one frame per plane line, in the order of the file (FR-23).
+
+**FR-30. Frame size.** All frames have the same size: the largest number of columns and the largest number of rows among the valid planes,
+each rounded up to an even number. If no plane is valid, the frames are 64 × 64.
+The size is known from the checks of [3.5](#35-input-validation), before any plane is projected.
+
+**FR-31. Placement.** Each image is placed in the middle of its frame, at column `(W − cols) // 2` and row `(H − rows) // 2`,
+where `W × H` is the frame size. The rest of the frame is black.
+
+**FR-32. Gray levels.** Values become gray levels by one linear map for the whole video, so the brightness does not jump between frames.
+`lo` and `hi` are the smallest and largest values of `M`, found once when the volume is read.
+
+```
+gray(v) = round(255 · (v − lo) / (hi − lo)), clipped to 0 … 255
+```
+
+A value of 0, such as a pixel outside the shape or outside the volume, is always black.
+If all values of `M` are equal (`hi = lo`), every value above 0 is white.
+
+**FR-33. Frame rate.** The video plays at the rate set by `--fps` (FR-2), so it lasts `frames / fps` seconds.
+
+**FR-34. Output file.** An existing output file is overwritten. An output folder that does not exist is a fatal error (FR-4).
+
+H.264 compresses with some loss, so the gray levels in the video are close to those of FR-32 but not always equal.
+Exact values are checked on the images `E` and on the frames before encoding.
+
+### 3.7 Run report
+
+**FR-35. Summary.** When the video is written, the program prints a summary:
+
+```
+volume:      DATA/croissant.nrrd, 500 x 500 x 500, uint8
+frames:      120 (2 black, 3 warnings)
+load:        1.42 s
+projection:  0.95 s total, 7.9 ms per frame, 126 fps
+video:       3.10 s
+```
+
+`projection` is the time defined in NFR-3. `load` covers reading both input files, and `video` covers the gray levels, the placement and the encoding.
+
+**FR-36. Output streams.** The summary goes to the standard output. Warnings and errors go to the standard error, as they happen.
