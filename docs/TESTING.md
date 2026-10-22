@@ -222,3 +222,51 @@ Each table lists the cases of one module, with the requirements they check. Smal
 | slow: the label volumes of [3.6](#36-label-volumes) | the expected materials | FR-19, FR-20 |
 
 All the tests in this table, except the slow ones, build their volume in memory and open no file (NFR-12).
+
+### 4.5 `frames.py`: frame size, gray levels, placement
+
+| Case | Expected | Requirements |
+|---|---|---|
+| valid planes of 101 × 57 and 80 × 90 (columns × rows) | frames of 102 × 90 | FR-30 |
+| no valid plane | frames of 64 × 64 | FR-30 |
+| an image of 5 × 3 in a frame of 8 × 6 | placed at column 1, row 1, with black around it | FR-31 |
+| a bad plane | an all-black frame | FR-24, FR-31 |
+| `uint8`, `lo = 0`, `hi = 200`: the values 0, 100, 200 | 0, 128, 255 | FR-32 |
+| every value from 0 to `hi` of a `uint16` volume | the table gives exactly the formula of FR-32 | FR-32 |
+| `uint32` values up to `4·10⁹` | exactly the formula of FR-32 | FR-32 |
+| `lo` above 0 | the value 0 is still black | FR-32 |
+| all values equal | values above 0 are white, 0 is black | FR-32 |
+| any input type | the frame is `uint8` | FR-32 |
+
+### 4.6 `video.py`: writing the video
+
+Each test writes a short video into a temporary folder and reads it back with `imageio-ffmpeg`.
+
+| Case | Expected | Requirements |
+|---|---|---|
+| 10 frames of 64 × 48 at 30 fps | 10 frames of 64 × 48, codec `h264`, pixel format `yuv420p`, 30 fps | FR-28, FR-29, FR-33 |
+| frames of different brightness | read back in the same order | FR-29 |
+| a test pattern of stripes and steps | each frame within 2 gray levels of the original on average, since H.264 loses a little | FR-28 |
+| `fps = 12.5` | a rate of 12.5 | FR-33 |
+| an output file that already exists | replaced | FR-34 |
+| an error raised while frames are being written | the unfinished file is deleted | FR-3 |
+| an odd frame size | refused, since the frame size is always even by FR-30 | FR-30 |
+
+---
+
+## 5. Command-line tests
+
+`tests/test_cli.py` calls `Ex0.main(argv)` in the same process, on small files in a temporary folder,
+and captures the exit code, the standard output and the standard error.
+
+| Case | Expected | Requirements |
+|---|---|---|
+| no arguments, two arguments, an unknown option, `--fps 0`, `--fps abc` | exit code 2 and the usage on the standard error | FR-1 to FR-3 |
+| `--help` | exit code 0, and text that explains the three arguments and the planes file | FR-2, NFR-15 |
+| a good run: a 20 × 20 × 20 volume and 5 planes | exit code 0, a video of 5 frames, the summary on the standard output, nothing on the standard error | FR-1, FR-29, FR-35, FR-36 |
+| a missing volume, an invalid volume, a missing planes file, a planes file without planes, a missing output folder | exit code 1, one line `error: <file>: <cause>`, no traceback, and no video file | FR-3, FR-4 |
+| one bad and one doubtful plane among good ones | exit code 0; two warnings in the format of FR-27, with the right line and frame numbers; one frame per plane line, the bad one black | FR-23 to FR-27 |
+| planes of different sizes | the frame size is that of the largest valid plane, rounded up to even | FR-30 |
+| the summary | counts the frames, the black frames and the warnings correctly | FR-35 |
+| an error forced inside the projection of one plane | a black frame and a warning, exit code 0 | NFR-8 |
+| an error forced inside the encoder | exit code 1, and no file left behind | FR-3 |

@@ -321,7 +321,7 @@ gray(v) = floor(255 · (v − lo) / (hi − lo) + 0.5), clipped to 0 … 255
 
 - **8 and 16-bit volumes.** The map is a lookup table with one entry for each value from 0 to `hi`, at most 65,536 entries, built once.
   Converting an image is then a single read per pixel: `table[E]`.
-- **32-bit volumes.** A table would be too large, so the formula is computed per pixel, in `float32`.
+- **32-bit volumes.** A table would be too large, so the formula is computed per pixel, in `float64`, which keeps it exact.
 - **Black stays black.** A value of 0 gives 0: if `lo` is 0 by the formula, and if `lo` is above 0 by the clipping.
 - **All values equal** (`hi = lo`): every value above 0 maps to 255.
 
