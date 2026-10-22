@@ -337,3 +337,63 @@ A few frames of each video are then compared with the same plane in the Reformat
   so a cut that contains the `z` axis looks 1.3 times shorter along it than in 3D Slicer. The foods have the same voxel shape as the head; the croissant and the die have cubic voxels.
 
 Screenshots of the frames side by side go into the experiment report.
+
+---
+
+## 7. Speed, memory and robustness
+
+### 7.1 Speed
+
+`tools/benchmark.py` measures what NFR-3 defines, on the benchmark of NFR-4:
+
+1. Read `DATA/croissant.nrrd`, and the 100 planes of `demo/croissant.csv`.
+2. For every plane, time `plane_setup` and `Projector.project` together.
+3. Repeat the 100 planes 3 times, and report the median rate, with the processor, memory, system and versions.
+
+| Result | Meaning |
+|---|---|
+| 30 fps or more | NFR-1 is met |
+| 100 fps or more | the target of NFR-2 is met |
+
+The benchmark also runs on copies of the croissant in `uint16` and `uint32`, made in memory, to show how the value type changes the speed.
+These rows are for information only; NFR-4 sets the target on `uint8`.
+
+Speed depends on the machine, so the benchmark is not part of `pytest`. It runs whenever the projection changes, and on the final code before submission,
+and its result goes into the experiment report. A quick test in the suite runs it on a small volume, so the script itself keeps working.
+
+### 7.2 Memory
+
+`tracemalloc` follows the arrays that NumPy allocates.
+
+| Case | Expected | Requirements |
+|---|---|---|
+| the memory after reading a volume | at most 10% above the size of its data: one copy only | NFR-6 |
+| the same 200 × 200 plane projected from volumes of 100³ and 400³ | the same peak memory for both, within 10%: it grows with the image, not the volume | NFR-6 |
+| a full run with 10 planes and with 200 planes of the same size | the same peak memory, within 10%: frames are not kept | NFR-7 |
+| slow: a full run on the croissant | peak memory recorded in the experiment report | NFR-6 |
+
+### 7.3 Robustness
+
+| Case | Expected | Requirements |
+|---|---|---|
+| 1000 random lines from a fixed seed: good planes, wrong counts, words, empty fields, `±1e300`, `nan`, `inf`, repeated points, points on one line, lines of commas only, very long lines | exit code 0, 1000 frames, no traceback | NFR-8, FR-23 |
+| the same file with no good plane at all | exit code 0 and 64 × 64 black frames | FR-30, NFR-8 |
+| the demo planes projected twice | the images `E`, and the frames before encoding, identical byte for byte | NFR-9 |
+
+---
+
+## 8. Portability and continuous integration
+
+A GitHub Actions workflow, `.github/workflows/tests.yml`, runs the tests on every push to the repository:
+
+| Item | Value |
+|---|---|
+| systems | Windows, Ubuntu and macOS |
+| Python | 3.12 and 3.13 |
+| install | a new environment each time, from `requirements.txt` and `requirements-dev.txt` only |
+| tests | the everyday suite on every system; the slow tests and the demo on Ubuntu with Python 3.13 |
+| coverage | `pytest-cov` reports the lines of the package and of `Ex0.py` that the tests reach; the goal is 90% or more |
+
+A fresh install on three systems shows that the program runs on all of them (NFR-10),
+and that every dependency, the video encoder included, comes from `pip` (NFR-11).
+The data set is part of the repository, so the slow tests have their files. A badge in the README shows the result of the last run.
