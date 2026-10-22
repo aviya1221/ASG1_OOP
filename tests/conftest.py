@@ -1,7 +1,10 @@
 """Shared fixtures: small volumes built in memory, and a writer for small NRRD files (docs/TESTING.md, section 2)."""
 
+import re
+import subprocess
 from pathlib import Path
 
+import imageio_ffmpeg
 import nrrd
 import numpy as np
 import pytest
@@ -47,6 +50,28 @@ def index_volume(shape) -> np.ndarray:
 def decode(value: int) -> tuple[int, int, int]:
     """The voxel that a value of the index volume came from."""
     return value % 1000, value // 1000 % 1000, value // 1000000
+
+
+def video_info(path) -> dict:
+    """Codec, pixel format, size and rate of a video, as FFmpeg reports them."""
+    result = subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-hide_banner", "-i", str(path)],
+                            capture_output=True, text=True)
+    stream = next(line for line in result.stderr.splitlines() if "Video:" in line)
+    width, height = re.search(r", (\d+)x(\d+)", stream).groups()
+    return {
+        "codec": re.search(r"Video: (\w+)", stream).group(1),
+        "pixels": re.search(r"Video: [^,]+, (\w+)", stream).group(1),
+        "width": int(width),
+        "height": int(height),
+        "fps": float(re.search(r", ([\d.]+) fps", stream).group(1)),
+    }
+
+
+def video_frames(path) -> list[np.ndarray]:
+    """Every frame of a video, decoded to gray levels."""
+    reader = imageio_ffmpeg.read_frames(str(path), pix_fmt="gray")
+    width, height = next(reader)["size"]
+    return [np.frombuffer(frame, dtype=np.uint8).reshape(height, width) for frame in reader]
 
 
 @pytest.fixture
