@@ -347,7 +347,7 @@ The videos go to `demo/output/`, which git ignores. The ones chosen for the expe
 | standard error | empty for the five clean files; for `edge_cases.csv`, exactly the expected list of warnings, with their line and frame numbers | FR-24 to FR-27, FR-36 |
 | summary | printed, with the number of frames and the projection rate | FR-35 |
 | black frames | in `edge_cases.mp4`, the frames of the bad lines and of the plane outside the volume are black | FR-24, FR-26 |
-| known frames | frame 66 of `head.mp4` matches the slice `z = 65` of the volume after the gray map, within the loss of H.264 | FR-22, FR-32 |
+| known frames | frame 66 of `head.mp4` is within 3 gray levels on average of the slice `z = 65` after the gray map, and closer to it than to the slices around it; on the noise of the MRI, H.264 loses about 2.5 gray levels, and the next slices are 6 or more away | FR-22, FR-32 |
 
 ### 6.3 Checks by eye
 
@@ -396,15 +396,15 @@ and its result goes into the experiment report. A quick test in the suite runs i
 | Case | Expected | Requirements |
 |---|---|---|
 | the memory after reading a volume | at most 10% above the size of its data: one copy only | NFR-6 |
-| the same 200 × 200 plane projected from volumes of 100³ and 400³ | the same peak memory for both, within 10%: it grows with the image, not the volume | NFR-6 |
-| a full run with 10 planes and with 200 planes of the same size | the same peak memory, within 10%: frames are not kept | NFR-7 |
+| the same 200 × 200 plane projected from volumes of 100³ and 400³, on one thread | the same peak memory for both, within 10%: it grows with the image, not the volume. With several threads the peak depends on how the bands overlap in time, so one thread gives a stable measure | NFR-6 |
+| a full run with 10 planes and with 200 planes of 256 × 256 | each extra plane adds less than a quarter of a frame to the peak memory, so frames are not kept. The setup of each plane is kept, a few kB, as the complexity table of the algorithm document allows | NFR-7 |
 | slow: a full run on the croissant | peak memory recorded in the experiment report | NFR-6 |
 
 ### 7.3 Robustness
 
 | Case | Expected | Requirements |
 |---|---|---|
-| 1000 random lines from a fixed seed: good planes, wrong counts, words, empty fields, `±1e300`, `nan`, `inf`, repeated points, points on one line, lines of commas only, very long lines | exit code 0, 1000 frames, no traceback | NFR-8, FR-23 |
+| 1000 random lines from a fixed seed, the first of them a good plane so that it is not taken for a header: good planes, wrong counts, words, empty fields, `±1e300`, `nan`, `inf`, repeated points, points on one line, lines of commas only, very long lines | exit code 0, 1000 frames, no traceback | NFR-8, FR-23 |
 | the same file with no good plane at all | exit code 0 and 64 × 64 black frames | FR-30, NFR-8 |
 | the demo planes projected twice | the images `E`, and the frames before encoding, identical byte for byte | NFR-9 |
 
