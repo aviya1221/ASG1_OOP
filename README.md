@@ -70,6 +70,9 @@ python Ex0.py file.nrrd file.csv file.mp4
 | `file.csv` | a list of planes, each given by the coordinates of 3 or 4 points |
 | `file.mp4` | the output video: one frame per plane, in the order of the CSV |
 
+The planes files of the demo, one for each volume of the main data set and one of edge cases, are in [demo/](demo/).
+They are made by `tools/make_demo_planes.py` and described in the [testing strategy](docs/TESTING.md#61-demo-planes-files).
+
 **Performance:** on a volume of 500³ bytes the projection must run at **30 frames per second at least**, and **100 is expected**.
 
 ## Scope
