@@ -6,6 +6,9 @@ same files:
 
     head.csv           DATA/MRHead_1.nrrd        280 frames: 130 slices along z, a square turning around the y axis,
                                                  and a triangle turning within an oblique plane
+    onion.csv          DATA/onion.nrrd           120 frames: a square turning around an axis tilted 30 degrees
+    biscuit_cake.csv   DATA/biscuit_cake.nrrd    from upright; the same planes in all three files
+    swiss_roll.csv     DATA/swiss_roll.nrrd
 
 After writing a file, the script reads it back as the program will, checks every plane by the rules of docs/SRS.md,
 sections 3.4 and 3.5, and prints the number of frames and the frame size of the video (FR-30).
@@ -24,6 +27,8 @@ import numpy as np
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 HEAD_GRID = (256, 256, 130)                 # the head and the three smaller foods share this grid
 X, Y, Z = np.eye(3)
+TRIANGLE_HEADER = "ax,ay,az,bx,by,bz,cx,cy,cz"                     # the first line of a file may name the numbers (FR-11)
+TRAPEZOID_HEADER = "a1x,a1y,a1z,a2x,a2y,a2z,bx,by,bz,cx,cy,cz"
 DECIMALS = 8                                # rounding stays far below the tolerance of 1e-6 in the image size (FR-16)
 
 
@@ -98,6 +103,28 @@ def head_lines():
         right = np.cross(normal, down)
         apex = center - 2 / 3 * height * down
         lines.append(plane_line(triangle(apex, right, down, side, height)))
+    return lines
+
+
+def food_lines(name: str, value_type: str):
+    """onion.csv, biscuit_cake.csv, swiss_roll.csv: the same square turning around an axis tilted 30 degrees from upright.
+
+    The foods share the grid of the head, so the same planes fit all three.
+    """
+    center = (np.array(HEAD_GRID) - 1) / 2
+    down = turned(Y, Z, 30)                    # the axis, pointing down: y leans 30 degrees toward the front (-x)
+    first_right = turned(X, Z, 30)
+    lines = [
+        TRAPEZOID_HEADER,
+        f"# Demo planes for DATA/{name}.nrrd: 256 x 256 x 130 voxels of {value_type} (docs/TESTING.md, section 6.1).",
+        "# The same planes are used for the onion, the biscuit cake and the Swiss roll, which share the grid of the head.",
+        run_comment(f"DATA/{name}.nrrd", f"{name}.csv"),
+        "",
+        "# frames 1 to 120: a 256 x 256 square through the middle, turning 3 degrees per frame around an axis",
+        "# that leans 30 degrees from upright toward the front; the axis runs down the middle of the image",
+    ]
+    for step in range(120):
+        lines.append(plane_line(rectangle(center, turned(first_right, down, 3 * step), down, 255, 255)))
     return lines
 
 
@@ -199,6 +226,9 @@ def main(argv=None) -> None:
     args.out.mkdir(parents=True, exist_ok=True)
     files = [  # (file name, lines, grid of the volume, expected results or None for a clean file)
         ("head.csv", head_lines(), HEAD_GRID, None),
+        ("onion.csv", food_lines("onion", "uint8"), HEAD_GRID, None),
+        ("biscuit_cake.csv", food_lines("biscuit_cake", "uint16"), HEAD_GRID, None),
+        ("swiss_roll.csv", food_lines("swiss_roll", "uint32"), HEAD_GRID, None),
     ]
     for name, lines, grid, expected in files:
         path = args.out / name
