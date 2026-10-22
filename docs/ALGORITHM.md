@@ -187,11 +187,12 @@ If on some axis all four lie below `−0.5`, or all lie at `size − 0.5` or abo
 
 ### 5.2 Sampling
 
-All the pixels of the image rectangle are computed at once with NumPy arrays, in bands of rows:
+`E` starts as an array of zeros. Its rows are split into bands, and the pixels of each band are computed at once with NumPy arrays.
+A band computes only the columns that the shape reaches in its rows: it is trimmed.
 
 ```
-R  = rows of the band, as a column        (shape: band × 1)
-C  = 0 … cols − 1, as a row               (shape: 1 × cols)
+R  = rows of the band, as a column                             (shape: band × 1)
+C  = min c0[R] … max c1[R], as a row                           (shape: 1 × width)
 ok = (C >= c0[R]) & (C <= c1[R])                              # inside the shape, FR-18
 flat_index = 0
 for axis k in x, y, z, with stride 1, sx, sx·sy:
@@ -201,7 +202,7 @@ for axis k in x, y, z, with stride 1, sx, sx·sy:
     flat_index += i_k · stride_k
 values = flat[flat_index]
 values[~ok] = 0                                                # FR-20
-E[band] = values
+E[R, C] = values
 ```
 
 - **Direct, not stepped.** Each pixel's point is computed from `corner` in one formula, not by adding a step again and again as in the assignment's
@@ -211,9 +212,11 @@ E[band] = values
 - **Clamping.** After `ok` is known, each index is clamped into the volume. The read is then always a real voxel, even for pixels that are masked out,
   and the flat index always fits in `int32`: the largest is `1023³ − 1`, about `1.07 · 10⁹`, below `2³¹`.
 - **`int32` indices** take half the memory traffic of `int64`.
+- **Trimmed bands.** Near the apex of a triangle, the shape covers only a few columns. Trimming each band to the columns of its rows
+  skips most of the empty corners of the rectangle: with 4 bands, about a third of the pixels of a triangle's rectangle.
 - **Bands in threads.** NumPy releases Python's global lock inside its array operations, so bands of rows run at the same time on different cores.
   Each band writes its own rows of `E`, so no locking is needed, and the result does not depend on the number of bands.
-  The default is 4 bands ([6](#6-speed)).
+  The default is 4 threads with one band each ([6](#6-speed)).
 
 The memory used grows with `rows × cols`, never with the volume (NFR-6).
 
@@ -239,3 +242,59 @@ In row 5, `4 − 0.4·5 = 2` exactly, and the tolerance keeps column 2 inside th
 | row 3, column 4 | `(1.5, 0.5, 8.5) + (4, 0, 0) + (0, 1.8, −2.4) = (5.5, 2.3, 6.1)` | `(5, 2, 6)` | cream |
 
 Every point of this triangle is inside the volume, so `ok` depends on the row spans alone.
+
+---
+
+## 6. Speed
+
+### 6.1 Measurements
+
+The design of [section 5](#5-projection) was chosen by measuring a prototype, [tools/prototype_speed.py](../tools/prototype_speed.py),
+on the benchmark of NFR-4: `DATA/croissant.nrrd` and 100 triangles of 501 × 501 pixels in random directions.
+It times the sampling only, as NFR-3 defines, and counts the pixels that differ from the exact rounding of FR-19.
+
+| Machine | |
+|---|---|
+| processor | Intel Core i7-10610U, 1.8 GHz, 4 cores, 8 threads |
+| memory | 16 GB |
+| system | Windows 11, Python 3.13.15, NumPy 2.5.4 |
+
+This is a laptop, and the times change from run to run. The table shows the range of two runs of the final script.
+"Threads / bands" is the number of threads working at the same time, and the number of bands the image is split into.
+
+| Variant | Threads / bands | ms per frame | Frames per second | Pixels that differ |
+|---|---|---|---|---|
+| pixel list: only the pixels inside the triangle, gathered into one list and scattered back | 1 / 1 | 10.4 to 10.8 | 92 to 97 | 0 |
+| pixel list | 4 / 4 | 8.4 to 8.7 | 115 to 118 | 0 |
+| rectangle: every pixel of the image, with masks | 1 / 1 | 14.0 to 15.6 | 64 to 72 | 0 |
+| rectangle | 4 / 4 | 6.9 to 8.1 | 124 to 144 | 0 |
+| rectangle | 8 / 8 | 9.4 to 9.7 | 103 to 106 | 0 |
+| **trimmed rectangle** | **4 / 4** | **5.2 to 5.4** | **184 to 194** | **0** |
+| trimmed rectangle | 8 / 8 | 7.8 to 8.0 | 124 to 129 | 0 |
+| trimmed rectangle | 4 / 16 | 12.9 to 13.1 | 76 to 78 | 0 |
+| trimmed rectangle in `float32` | 4 / 4 | 5.2 to 5.6 | 180 to 194 | 620 |
+| trimmed rectangle in fixed point, integers with 16 bits of fraction | 4 / 4 | 5.1 to 5.4 | 187 to 195 | 46,393 |
+
+The 100 images hold about 25 million pixels in all.
+
+### 6.2 The choice
+
+**The trimmed rectangle in `float64`, with `int32` indices, 4 threads and 4 bands.**
+It ran at 184 to 194 frames per second, about 6 times the minimum of NFR-1 and almost twice the target of NFR-2, with exact rounding.
+
+- **Rectangle or pixel list.** On one thread the list is faster, because it skips the pixels outside the triangle.
+  But it gains little from threads, because building the list and scattering the values back into the image work pixel by pixel under Python's lock.
+  Trimming gives the rectangle most of the saving of the list, and the rectangle splits well over threads.
+- **4 threads.** The processor has 4 cores. With 8 threads, two threads share each core and compete for memory, and every run was slower.
+  Splitting the image into more bands than threads was slower too. The number of threads is a parameter of the projection, with a default of 4.
+- **`float64`.** In this measurement, 32-bit floats and fixed point are no faster, and they round some points to a different voxel than FR-19 requires:
+  620 and 46,393 pixels. So the exact `float64` stays.
+
+The real program will be measured again on the same benchmark, and the result written in the experiment report.
+
+### 6.3 Kept in reserve
+
+If the program falls short of the target on another machine:
+
+- Compile the inner loop with Numba, at the price of one more dependency.
+- Project several frames at the same time in separate processes, which share the volume in memory.
