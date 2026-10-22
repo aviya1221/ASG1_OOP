@@ -1,0 +1,48 @@
+ax,ay,az,bx,by,bz,cx,cy,cz
+# Edge cases on DATA/synthetic/dice.nrrd: 200 x 180 x 160 voxels of uint32 (docs/TESTING.md, section 6.1).
+# The die is the cube x = 40 ... 159, y = 30 ... 149, z = 20 ... 139, with the value 100000; its pips have 200000.
+# The line above is a header (FR-11). A triangle has 9 numbers, a, b, c; a trapezoid has 12, a', a'', b, c (FR-12).
+# python Ex0.py DATA/synthetic/dice.nrrd demo/edge_cases.csv demo/output/edge_cases.mp4
+# Expected: 16 frames; black: frames 6, 9 to 16; a warning for frames 7 to 16.
+
+# Good planes, whose images are known in advance (docs/TESTING.md, section 3.5)
+# frame 1: the top face, z = 139, as a rectangle over the whole slice: a 120 x 120 square with one pip
+0,0,139, 199,0,139, 0,179,139, 199,179,139
+# frame 2: the bottom face, z = 20, in an isosceles trapezoid around it: a square with six pips
+30,20,20, 169,20,20, 0,160,20, 199,160,20
+# frame 3: the front face, y = 30, as a rectangle with the top of the die at the top: a square with four pips.
+# Spaces around the numbers, and 1.59e2 for 159, are allowed (FR-10)
+ 0 , 30 , 1.59e2 ,  199 , 30 , 159 ,  0 , 30 , 0 ,  199 , 30 , 0
+# frame 4: the plane x + y + z = 268.5 through the center: a regular hexagon with sides of 84.9 in a triangle
+33.50336709,23.50336709,211.49326582, 231.49326582,23.50336709,13.50336709, 33.50336709,221.49326582,13.50336709
+# frame 5: the plane x + y + z = 408.5: the corner (159, 149, 139) cut off as an equilateral triangle
+# with sides of 56.6, upside down in a larger triangle
+113.16835021,103.16835021,192.16329958, 212.16329958,103.16835021,93.16835021, 113.16835021,202.16329958,93.16835021
+
+# A valid plane that misses the volume: a black frame without a warning (FR-26)
+# frame 6: a triangle above the die, at z = 300
+99.5,0,300, 0,179,300, 199,179,300
+
+# Doubtful planes: drawn as given, with a warning (FR-25)
+# frame 7: legs of 188.8 and 226.6
+60,0,80, 0,179,80, 199,179,80
+# frame 8: equal legs of 130, but a'' is 16 lower than a', so the top side is not parallel to the base
+100,40,150, 100,112,134, 100,-10,30, 100,190,30
+
+# Bad planes: a black frame and a warning (FR-24)
+# frame 9: 8 numbers
+99.5,0,139, 0,179,139, 199,179
+# frame 10: a word
+99.5,0,139, 0,179,139, 199,179,abc
+# frame 11: an infinite number
+99.5,0,139, 0,179,inf, 199,179,139
+# frame 12: b and c are the same point
+99.5,0,80, 150,179,80, 150,179,80
+# frame 13: a, b and c are on one line
+0,0,80, 100,90,80, 200,180,80
+# frame 14: a'' is 10 above the plane through a', b and c
+30,20,20, 169,20,30, 0,160,20, 199,160,20
+# frame 15: a' and a'' swapped, so the sides cross
+169,20,20, 30,20,20, 0,160,20, 199,160,20
+# frame 16: a base of 10199, so an image of 10200 columns
+99.5,0,80, -5000,179,80, 5199,179,80

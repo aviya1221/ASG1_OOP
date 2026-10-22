@@ -11,10 +11,13 @@ same files:
     swiss_roll.csv     DATA/swiss_roll.nrrd
     croissant.csv      DATA/croissant.nrrd       the 100 triangles of the speed benchmark (docs/SRS.md, NFR-4),
                                                  the same planes that tools/prototype_speed.py measured
+    edge_cases.csv     DATA/synthetic/dice.nrrd  16 frames: images of the die known in advance, a plane outside the
+                                                 volume, and one line for each bad and doubtful case of FR-24 and FR-25
 
 After writing a file, the script reads it back as the program will, checks every plane by the rules of docs/SRS.md,
 sections 3.4 and 3.5, and prints the number of frames and the frame size of the video (FR-30).
-A clean file must have no bad plane, no warning, and no plane that misses the volume.
+A clean file must have no bad plane, no warning, and no plane that misses the volume;
+each plane of edge_cases.csv must give the result that its comment names.
 
 Usage:
     python tools/make_demo_planes.py [--out FOLDER]
@@ -31,6 +34,7 @@ import prototype_speed
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 HEAD_GRID = (256, 256, 130)                 # the head and the three smaller foods share this grid
 CROISSANT_GRID = (500, 500, 500)
+DICE_GRID = (200, 180, 160)
 X, Y, Z = np.eye(3)
 TRIANGLE_HEADER = "ax,ay,az,bx,by,bz,cx,cy,cz"                     # the first line of a file may name the numbers (FR-11)
 TRAPEZOID_HEADER = "a1x,a1y,a1z,a2x,a2y,a2z,bx,by,bz,cx,cy,cz"
@@ -156,6 +160,87 @@ def croissant_lines():
     return lines
 
 
+def frame_list(frames) -> str:
+    """Frame numbers with runs joined: [6, 9, 10, 11] gives "frames 6, 9 to 11"."""
+    runs = []
+    for frame in frames:
+        if runs and frame == runs[-1][1] + 1:
+            runs[-1][1] = frame
+        else:
+            runs.append([frame, frame])
+    return "frames " + ", ".join(str(a) if a == b else f"{a} to {b}" for a, b in runs)
+
+
+def dice_triangle(centroid, side: float):
+    """An equilateral triangle around centroid in a plane x + y + z = constant, with its apex toward +z."""
+    normal = np.ones(3) / math.sqrt(3)
+    down = np.array([1.0, 1.0, -2.0]) / math.sqrt(6)           # in the plane, as near to -z as the plane allows
+    height = side * math.sqrt(3) / 2
+    return triangle(centroid - 2 / 3 * height * down, np.cross(normal, down), down, side, height)
+
+
+def edge_case_lines():
+    """edge_cases.csv: known images of the die, a plane outside it, and each bad and doubtful case of FR-24 and FR-25.
+
+    Returns the lines, and the expected result of every plane for check_file.
+    """
+    hexagon = dice_triangle(np.array([99.5, 89.5, 79.5]), 280)
+    corner = dice_triangle(np.array([159.5, 149.5, 139.5]) - 40 / 3, 140)    # around the middle of the cut corner
+    sections = [
+        ("Good planes, whose images are known in advance (docs/TESTING.md, section 3.5)", [
+            ("ok", "the top face, z = 139, as a rectangle over the whole slice: a 120 x 120 square with one pip",
+             "0,0,139, 199,0,139, 0,179,139, 199,179,139"),
+            ("ok", "the bottom face, z = 20, in an isosceles trapezoid around it: a square with six pips",
+             "30,20,20, 169,20,20, 0,160,20, 199,160,20"),
+            ("ok", "the front face, y = 30, as a rectangle with the top of the die at the top: a square with four pips.\n"
+                   "Spaces around the numbers, and 1.59e2 for 159, are allowed (FR-10)",
+             " 0 , 30 , 1.59e2 ,  199 , 30 , 159 ,  0 , 30 , 0 ,  199 , 30 , 0"),
+            ("ok", "the plane x + y + z = 268.5 through the center: a regular hexagon with sides of 84.9 in a triangle",
+             plane_line(hexagon)),
+            ("ok", "the plane x + y + z = 408.5: the corner (159, 149, 139) cut off as an equilateral triangle\n"
+                   "with sides of 56.6, upside down in a larger triangle",
+             plane_line(corner)),
+        ]),
+        ("A valid plane that misses the volume: a black frame without a warning (FR-26)", [
+            ("outside", "a triangle above the die, at z = 300", "99.5,0,300, 0,179,300, 199,179,300"),
+        ]),
+        ("Doubtful planes: drawn as given, with a warning (FR-25)", [
+            ("warning: legs", "legs of 188.8 and 226.6", "60,0,80, 0,179,80, 199,179,80"),
+            ("warning: parallel sides", "equal legs of 130, but a'' is 16 lower than a', so the top side is not parallel"
+             " to the base", "100,40,150, 100,112,134, 100,-10,30, 100,190,30"),
+        ]),
+        ("Bad planes: a black frame and a warning (FR-24)", [
+            ("bad: count", "8 numbers", "99.5,0,139, 0,179,139, 199,179"),
+            ("bad: numbers", "a word", "99.5,0,139, 0,179,139, 199,179,abc"),
+            ("bad: numbers", "an infinite number", "99.5,0,139, 0,179,inf, 199,179,139"),
+            ("bad: base", "b and c are the same point", "99.5,0,80, 150,179,80, 150,179,80"),
+            ("bad: one line", "a, b and c are on one line", "0,0,80, 100,90,80, 200,180,80"),
+            ("bad: flat", "a'' is 10 above the plane through a', b and c", "30,20,20, 169,20,30, 0,160,20, 199,160,20"),
+            ("bad: shape", "a' and a'' swapped, so the sides cross", "169,20,20, 30,20,20, 0,160,20, 199,160,20"),
+            ("bad: size", "a base of 10199, so an image of 10200 columns", "99.5,0,80, -5000,179,80, 5199,179,80"),
+        ]),
+    ]
+    cases = [case for _, section in sections for case in section]
+    black = [frame for frame, (result, _, _) in enumerate(cases, start=1) if result.startswith("bad") or result == "outside"]
+    warned = [frame for frame, (result, _, _) in enumerate(cases, start=1) if result.startswith(("bad", "warning"))]
+    lines = [
+        TRIANGLE_HEADER,
+        "# Edge cases on DATA/synthetic/dice.nrrd: 200 x 180 x 160 voxels of uint32 (docs/TESTING.md, section 6.1).",
+        "# The die is the cube x = 40 ... 159, y = 30 ... 149, z = 20 ... 139, with the value 100000; its pips have 200000.",
+        "# The line above is a header (FR-11). A triangle has 9 numbers, a, b, c; a trapezoid has 12, a', a'', b, c (FR-12).",
+        run_comment("DATA/synthetic/dice.nrrd", "edge_cases.csv"),
+        f"# Expected: {len(cases)} frames; black: {frame_list(black)}; a warning for {frame_list(warned)}.",
+    ]
+    frame = 0
+    for title, section in sections:
+        lines += ["", f"# {title}"]
+        for _, description, line in section:
+            frame += 1
+            first, *more = description.split("\n")
+            lines += [f"# frame {frame}: {first}", *(f"# {text}" for text in more), line]
+    return lines, [result for result, _, _ in cases]
+
+
 def is_number(field: str) -> bool:
     try:
         float(field)
@@ -252,12 +337,14 @@ def parse_args(argv=None) -> argparse.Namespace:
 def main(argv=None) -> None:
     args = parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
+    edge_lines, edge_results = edge_case_lines()
     files = [  # (file name, lines, grid of the volume, expected results or None for a clean file)
         ("head.csv", head_lines(), HEAD_GRID, None),
         ("onion.csv", food_lines("onion", "uint8"), HEAD_GRID, None),
         ("biscuit_cake.csv", food_lines("biscuit_cake", "uint16"), HEAD_GRID, None),
         ("swiss_roll.csv", food_lines("swiss_roll", "uint32"), HEAD_GRID, None),
         ("croissant.csv", croissant_lines(), CROISSANT_GRID, None),
+        ("edge_cases.csv", edge_lines, DICE_GRID, edge_results),
     ]
     for name, lines, grid, expected in files:
         path = args.out / name
