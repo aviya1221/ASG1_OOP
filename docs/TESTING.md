@@ -82,3 +82,67 @@ pytest -m slow             # tests that read the data set files or write long vi
 pytest -m "slow or not slow"   # everything
 python tools/benchmark.py  # the speed benchmark, which depends on the machine and is not a pass-or-fail test of the suite
 ```
+
+---
+
+## 3. Where the expected results come from
+
+A test is only as good as its expected result. These are the sources, from the simplest to the broadest.
+
+### 3.1 Results worked out by hand
+
+The worked example of [SRS 3.4](SRS.md#34-projection-geometry) is a 10 × 10 × 10 cake of three layers, with chocolate, cream and biscuit as the values 1, 2 and 3.
+Its image for the triangle `a = (5, 0, 8)`, `b = (1, 6, 0)`, `c = (9, 6, 0)` is written out in the test as an 11 × 9 matrix,
+copied from the [picture](../DATA/images/explain/how_a_cut_is_made.png) square by square.
+The setup values, `right`, `down`, `corner` and the row spans, are written out too, from [ALGORITHM 5.3](ALGORITHM.md#53-worked-example).
+
+### 3.2 A slow reference
+
+`tests/reference.py` projects a plane the slowest and plainest way: one pixel at a time, in Python floats, following the text of SRS 3.4 line by line.
+It shares no code with the package, and it decides "inside the shape" in a different way:
+
+| | The package | The reference |
+|---|---|---|
+| speed | NumPy arrays, bands, threads | a Python loop over pixels |
+| inside the shape | the row spans `c0[r]`, `c1[r]` ([ALGORITHM 4.3](ALGORITHM.md#43-row-spans)) | the point is on the inner side of every edge, by cross products |
+| nearest voxel | `floor` on a whole array | `math.floor(p + 0.5)` for each axis |
+
+The two must give the same image, pixel for pixel. Because they reach it in different ways, a mistake in one shows up as a difference.
+The reference is slow, so it is used on images of up to about 60 × 60 pixels.
+
+### 3.3 Volumes that show where each value came from
+
+The **index volume** holds in each voxel its own position, `M[x][y][z] = x + 1000·y + 1000000·z`, in `uint32`.
+Any pixel of any image can then be decoded back to the voxel it read, so a test sees not only that a pixel is wrong, but which voxel it took instead.
+This is how the rounding of FR-19 and the edges of FR-20 are checked: the voxel is compared with `floor(p + 0.5)` computed separately.
+
+### 3.4 Slices along the axes
+
+For a plane perpendicular to an axis, with integer points, the image must equal a slice that NumPy cuts directly from the array (FR-22).
+For example, the rectangle `(0, 0, z), (sx − 1, 0, z), (0, sy − 1, z), (sx − 1, sy − 1, z)`, written as a trapezoid, gives `M[:, :, z]` turned so that `x` runs along the columns.
+This checks the axis order of FR-8 on the real files of the data set.
+
+### 3.5 Shapes known in advance
+
+`DATA/synthetic/dice.nrrd` holds exact values, 100000 for the body and 200000 for the pips, so some images are known before they are computed
+([DATA/README.md](../DATA/README.md#syntheticdicenrrd)):
+
+| Plane | Expected image |
+|---|---|
+| axial, `z = 139` | a 120 × 120 square of 100000, with one pip of 200000 in the middle |
+| axial, `z = 20` | the same square with six pips |
+| through the center, perpendicular to the main diagonal | a regular hexagon with a side of about 84.9, so an area of about 18,700 pixels |
+| `x + y + z = 408.5` | an equilateral triangle with a side of about 56.6, cut off the corner `(159, 149, 139)` |
+
+The number of body pixels, the number of pips and the area of each shape are checked, with a margin of one pixel along the edge.
+
+### 3.6 Label volumes
+
+The cake and the tomato of `DATA/synthetic/` come with a `.seg.nrrd` file that gives the material of every voxel.
+Projecting the label file with a plane gives the material of every pixel. For example, a horizontal plane in the middle of the ganache layer of the cake
+shows ganache everywhere inside the cake, and a plane through the tomato shows its gel brighter than its seeds in the scan.
+
+### 3.7 3D Slicer
+
+The Reformat module of 3D Slicer shows any plane of a volume. It smooths between voxels instead of taking the nearest one,
+so its images are compared with ours by eye, not pixel for pixel.
