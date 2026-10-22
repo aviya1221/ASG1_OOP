@@ -185,3 +185,40 @@ Each table lists the cases of one module, with the requirements they check. Smal
 | a file with three planes and one bad line | four planes with frame numbers 1 to 4 and their line numbers | FR-23, FR-27 |
 | an empty file, or one with only a header and comments | fatal error | FR-4, FR-14 |
 | a missing file | fatal error naming the file | FR-4 |
+
+### 4.3 `geometry.py`: plane setup and checks
+
+| Case | Expected | Requirements |
+|---|---|---|
+| the worked example | `right = (1, 0, 0)`, `down = (0, 0.6, −0.8)`, `corner = (1, 0, 8)`, 9 columns, 11 rows, and the row spans of ALGORITHM 5.3 | FR-15 to FR-17 |
+| the same triangle with `b` and `c` swapped | `right` reversed, so the image is mirrored | FR-21 |
+| a rectangle written as a trapezoid | every row spans all the columns | FR-16, FR-18 |
+| the apex | in row 0, at the column of its own `s` | FR-21 |
+| a base of length `7.9999999` | counted as 8, so 9 columns | FR-16 |
+| `b = c` | bad: base | FR-24 |
+| three points on one line | bad: one line | FR-24 |
+| `a''` 0.6 off the plane, and 0.4 off | bad, and valid | FR-24 |
+| a trapezoid with `a'` and `a''` swapped, so its sides cross | bad: shape | FR-24 |
+| a trapezoid with `a' = a''` | valid, with the same image as the triangle `a', b, c` | FR-24 |
+| an image of 4097 columns, and of 4096 | bad: size, and valid | FR-24 |
+| legs that differ by 0.6, and by 0.4 | a warning, and none | FR-25 |
+| a trapezoid whose top side is tilted by 0.6 | valid, with a warning | FR-25 |
+| 1000 random triangles and trapezoids | for every pixel, the row spans agree with the inside test of the reference | FR-18 |
+
+### 4.4 `projector.py`: the projection
+
+| Case | Expected | Requirements |
+|---|---|---|
+| the cake of the worked example | exactly the 11 × 9 matrix of [3.1](#31-results-worked-out-by-hand) | FR-17 to FR-21 |
+| 1000 random planes on index volumes from 1 × 1 × 1 to 40 × 30 × 20, some partly or fully outside | the same image as the reference, pixel for pixel | FR-19, FR-20 |
+| a point at exactly 2.5 on an axis | voxel 3: halves round up | FR-19 |
+| a point at −0.5, and at `size − 0.5` | inside, and outside | FR-20 |
+| a plane that misses the volume | all zeros, through the early exit | FR-26 |
+| a plane with points near `10⁹` | all zeros, and no warning from NumPy about overflow | FR-20, NFR-8 |
+| each value type | `E` has the type of the volume, and `uint32` values above 65535 are kept | FR-6, FR-20 |
+| 1, 2, 4 and 8 threads | the same image every time | NFR-9 |
+| slow: axis slices of `MRHead_1.nrrd`, the foods and the die | equal to NumPy slices ([3.4](#34-slices-along-the-axes)) | FR-8, FR-22 |
+| slow: the planes of the die in [3.5](#35-shapes-known-in-advance) | the counts and areas listed there | FR-19, FR-20 |
+| slow: the label volumes of [3.6](#36-label-volumes) | the expected materials | FR-19, FR-20 |
+
+All the tests in this table, except the slow ones, build their volume in memory and open no file (NFR-12).
