@@ -69,7 +69,7 @@ def video_info(path) -> dict:
 
 def video_frames(path) -> list[np.ndarray]:
     """Every frame of a video, decoded to gray levels."""
-    reader = imageio_ffmpeg.read_frames(str(path), pix_fmt="gray")
+    reader = imageio_ffmpeg.read_frames(str(path), pix_fmt="gray", bpp=1)
     width, height = next(reader)["size"]
     return [np.frombuffer(frame, dtype=np.uint8).reshape(height, width) for frame in reader]
 
