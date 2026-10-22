@@ -9,6 +9,8 @@ same files:
     onion.csv          DATA/onion.nrrd           120 frames: a square turning around an axis tilted 30 degrees
     biscuit_cake.csv   DATA/biscuit_cake.nrrd    from upright; the same planes in all three files
     swiss_roll.csv     DATA/swiss_roll.nrrd
+    croissant.csv      DATA/croissant.nrrd       the 100 triangles of the speed benchmark (docs/SRS.md, NFR-4),
+                                                 the same planes that tools/prototype_speed.py measured
 
 After writing a file, the script reads it back as the program will, checks every plane by the rules of docs/SRS.md,
 sections 3.4 and 3.5, and prints the number of frames and the frame size of the video (FR-30).
@@ -24,8 +26,11 @@ from pathlib import Path
 
 import numpy as np
 
+import prototype_speed
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 HEAD_GRID = (256, 256, 130)                 # the head and the three smaller foods share this grid
+CROISSANT_GRID = (500, 500, 500)
 X, Y, Z = np.eye(3)
 TRIANGLE_HEADER = "ax,ay,az,bx,by,bz,cx,cy,cz"                     # the first line of a file may name the numbers (FR-11)
 TRAPEZOID_HEADER = "a1x,a1y,a1z,a2x,a2y,a2z,bx,by,bz,cx,cy,cz"
@@ -125,6 +130,29 @@ def food_lines(name: str, value_type: str):
     ]
     for step in range(120):
         lines.append(plane_line(rectangle(center, turned(first_right, down, 3 * step), down, 255, 255)))
+    return lines
+
+
+def croissant_lines():
+    """croissant.csv: the 100 planes of the speed benchmark (docs/SRS.md, NFR-4).
+
+    They are the planes that tools/prototype_speed.py measured: isosceles triangles with a base and a height of 500,
+    so each image is 501 x 501 pixels, with the point halfway between the apex and the middle of the base at the
+    center of the volume, turned in random directions with a fixed seed.
+    """
+    size = prototype_speed.SIZE
+    lines = [
+        TRIANGLE_HEADER,
+        "# The speed benchmark of docs/SRS.md, NFR-4, on DATA/croissant.nrrd: 500 x 500 x 500 voxels of uint8.",
+        f"# {prototype_speed.PLANES} isosceles triangles with a base and a height of {size}, so each image is "
+        f"{size + 1} x {size + 1} pixels.",
+        "# The point halfway between the apex and the middle of the base is at the center, (249.5, 249.5, 249.5),",
+        f"# and the directions are random, spread evenly over all directions, with the seed {prototype_speed.SEED}.",
+        run_comment("DATA/croissant.nrrd", "croissant.csv"),
+        "",
+    ]
+    for corner, right, down in prototype_speed.benchmark_planes(np.full(3, (size - 1) / 2)):
+        lines.append(plane_line(triangle(corner + size / 2 * right, right, down, size, size)))
     return lines
 
 
@@ -229,6 +257,7 @@ def main(argv=None) -> None:
         ("onion.csv", food_lines("onion", "uint8"), HEAD_GRID, None),
         ("biscuit_cake.csv", food_lines("biscuit_cake", "uint16"), HEAD_GRID, None),
         ("swiss_roll.csv", food_lines("swiss_roll", "uint32"), HEAD_GRID, None),
+        ("croissant.csv", croissant_lines(), CROISSANT_GRID, None),
     ]
     for name, lines, grid, expected in files:
         path = args.out / name
