@@ -270,3 +270,70 @@ and captures the exit code, the standard output and the standard error.
 | the summary | counts the frames, the black frames and the warnings correctly | FR-35 |
 | an error forced inside the projection of one plane | a black frame and a warning, exit code 0 | NFR-8 |
 | an error forced inside the encoder | exit code 1, and no file left behind | FR-3 |
+
+---
+
+## 6. The demo
+
+The assignment asks for a demo run as `python Ex0.py file.nrrd file.csv file.mp4`. The demo is tested twice:
+automatically, to check that every run produces the right video, and by eye, to check that the videos show what they should.
+
+### 6.1 Demo planes files
+
+The planes files of the demo are made by `tools/make_demo_planes.py`, with fixed numbers and seeds, and kept in `demo/`.
+
+| Planes file | Volume | Frames | What the video shows |
+|---|---|---|---|
+| `demo/head.csv` | `DATA/MRHead_1.nrrd` | 280 | 130 slices `z = 0 … 129`, from one side of the head to the other; then 90 frames of a 256 × 256 square through the center, turning 2° per frame around the `y` axis, so the cut sweeps through oblique angles; then 60 frames of a triangle turning 6° per frame within one oblique plane |
+| `demo/onion.csv` | `DATA/onion.nrrd` (`uint8`) | 120 | a square through the center, turning 3° per frame around an axis tilted 30° from upright |
+| `demo/biscuit_cake.csv` | `DATA/biscuit_cake.nrrd` (`uint16`) | 120 | the same movement |
+| `demo/swiss_roll.csv` | `DATA/swiss_roll.nrrd` (`uint32`) | 120 | the same movement |
+| `demo/croissant.csv` | `DATA/croissant.nrrd` | 100 | the 100 planes of the speed benchmark (NFR-4) |
+| `demo/edge_cases.csv` | `DATA/synthetic/dice.nrrd` | 16 | a header, comments, good triangles and trapezoids, a plane outside the volume, and one line for each bad and doubtful case of FR-24 and FR-25 |
+
+The three foods use the three value types of the assignment, so together they show that the demo handles all of them.
+
+The commands, from the project folder:
+
+```
+python Ex0.py DATA/MRHead_1.nrrd demo/head.csv demo/output/head.mp4
+python Ex0.py DATA/onion.nrrd demo/onion.csv demo/output/onion.mp4
+python Ex0.py DATA/biscuit_cake.nrrd demo/biscuit_cake.csv demo/output/biscuit_cake.mp4
+python Ex0.py DATA/swiss_roll.nrrd demo/swiss_roll.csv demo/output/swiss_roll.mp4
+python Ex0.py DATA/croissant.nrrd demo/croissant.csv demo/output/croissant.mp4
+python Ex0.py DATA/synthetic/dice.nrrd demo/edge_cases.csv demo/output/edge_cases.mp4
+```
+
+The videos go to `demo/output/`, which git ignores. The ones chosen for the experiment report are copied next to it.
+
+### 6.2 Automatic checks
+
+`tests/test_demo.py` (marked slow) runs each command above as a separate process, as a user would, and then reads the video back.
+
+| Check | Expected | Requirements |
+|---|---|---|
+| exit code | 0 | FR-3 |
+| the video | exists, is H.264 in `yuv420p`, and plays at 30 fps | FR-28, FR-33 |
+| frames | one per plane line: 280, 120, 120, 120, 100 and 16 | FR-23, FR-29 |
+| frame size | the largest valid plane of the file, rounded up to even | FR-30 |
+| standard error | empty for the five clean files; for `edge_cases.csv`, exactly the expected list of warnings, with their line and frame numbers | FR-24 to FR-27, FR-36 |
+| summary | printed, with the number of frames and the projection rate | FR-35 |
+| black frames | in `edge_cases.mp4`, the frames of the bad lines and of the plane outside the volume are black | FR-24, FR-26 |
+| known frames | frame 66 of `head.mp4` matches the slice `z = 65` of the volume after the gray map, within the loss of H.264 | FR-22, FR-32 |
+
+### 6.3 Checks by eye
+
+A person watches every video and checks that:
+
+- the motion is smooth, with no frame that jumps out of place;
+- the brightness does not flicker between frames, since one gray map is used for the whole video (FR-32);
+- the apex or top side of every shape is at the top of the frame, with `b` on the left (FR-21);
+- the parts of a plane outside the volume are black (FR-20).
+
+A few frames of each video are then compared with the same plane in the Reformat module of 3D Slicer ([3.7](#37-3d-slicer)). Two differences are expected:
+
+- 3D Slicer smooths between voxels, while the program takes the nearest one (FR-19), so its images look softer.
+- The program's pixels are voxel units (FR-13, FR-17), while 3D Slicer draws millimeters. The voxels of `MRHead_1.nrrd` are 1.3 times longer along `z`,
+  so a cut that contains the `z` axis looks 1.3 times shorter along it than in 3D Slicer. The foods have the same voxel shape as the head; the croissant and the die have cubic voxels.
+
+Screenshots of the frames side by side go into the experiment report.
