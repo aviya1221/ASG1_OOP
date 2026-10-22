@@ -419,7 +419,7 @@ The algorithm in the assignment is a description, and it leaves points open. Whe
 | image size | `Dab × Dbc` | `floor(height) + 1` rows and `floor(Dbc) + 1` columns for a triangle (FR-16) | follows from the row spacing, and from counting both ends of each side |
 | indexing | `E[x][y]` | `E[r][c]` | the same picture, written in the row-first order of NumPy |
 | triangle shape | isosceles | any triangle, with a warning (FR-25) | the description of the CSV file in the assignment does not promise isosceles triangles, and rounding makes the legs slightly unequal anyway |
-| sampling | `M[p]` for a point `p` with fractions, not specified further | the nearest voxel (FR-19) | the fastest choice, and the user's decision |
+| sampling | `M[p]` for a point `p` with fractions, not specified further | the nearest voxel (FR-19) | the fastest choice; interpolation between voxels can be added later as an option |
 | value types | unsigned 8, 16 and 32 bits | signed types too (FR-6) | the lecturer's `MRHead_1.nrrd` is `int16` |
 
 ---
