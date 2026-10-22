@@ -322,3 +322,85 @@ video:       3.10 s
 `projection` is the time defined in NFR-3. `load` covers reading both input files, and `video` covers the gray levels, the placement and the encoding.
 
 **FR-36. Output streams.** The summary goes to the standard output. Warnings and errors go to the standard error, as they happen.
+
+---
+
+## 4. Non-functional requirements
+
+### 4.1 Speed
+
+**NFR-1.** On the benchmark of NFR-4, the projection runs at **30 frames per second at least**.
+
+**NFR-2.** The target is **100 frames per second**.
+
+**NFR-3. What is measured.** The time from the points of a plane to its image `E`, including the setup of FR-15 to FR-17 for that plane.
+Reading the files, the gray levels, the placement in the frame and the video encoding are not included.
+The rate is the number of planes divided by the total of these times.
+
+**NFR-4. Benchmark.**
+
+| Item | Value |
+|---|---|
+| volume | `DATA/croissant.nrrd`, 500 × 500 × 500 voxels of `uint8` |
+| planes | 100 isosceles triangles with a base of 500 and a height of 500, so each image is 501 × 501 pixels |
+| position | the point halfway between the apex and the middle of the base is at the center of the volume, `(249.5, 249.5, 249.5)` |
+| directions | spread evenly over all directions, made with a fixed random seed, and kept in the repository as a CSV file |
+| record | the result is written down with the processor, memory, operating system, and Python and NumPy versions |
+
+**NFR-5.** The time to read the files and to write the video is measured and reported (FR-35), without a target,
+because the assignment sets its target on the projection.
+
+### 4.2 Memory
+
+**NFR-6.** The volume is held in memory once, in its own value type: 125 MB for the benchmark volume, and 4.3 GB for the largest volume allowed,
+1023 × 1023 × 1023 voxels of 32 bits. The extra memory for a plane grows with the size of its image, not with the size of the volume.
+
+**NFR-7.** Frames are written to the video as they are made. Memory use does not grow with the number of planes.
+
+### 4.3 Reliability
+
+**NFR-8.** No content of a plane line can stop the program (FR-23).
+
+**NFR-9.** The same inputs always give the same images `E` and the same frames before encoding.
+
+### 4.4 Portability
+
+**NFR-10.** The program runs on Python 3.12 or newer, on Windows, macOS and Linux.
+
+**NFR-11.** Every dependency is listed in `requirements.txt` and installs with `pip`, the video encoder included. No other program has to be installed.
+
+### 4.5 Design and code quality
+
+The assignment puts the design and the quality of the code before the implementation.
+
+**NFR-12.** The projection is a function of a volume array and a plane, with no file access, so tests can run it on small arrays they build themselves.
+
+**NFR-13.** Reading the volume, reading and checking the planes, the plane geometry, the sampling, the frame placement, the video writing and the command line are separate units.
+Each one can be tested on its own.
+
+**NFR-14.** The code has type hints and docstrings. The tests are automated and run with `pytest`.
+Every requirement that a program can check has at least one test ([section 7](#7-verification)).
+
+### 4.6 Usability
+
+**NFR-15.** `--help` explains the three arguments and the format of the planes file.
+Every warning and error says which file and line it is about, and what happened (FR-4, FR-27).
+
+---
+
+## 5. Data
+
+The data set is described in full in [DATA/README.md](../DATA/README.md). This table shows what each part is used to check.
+
+| Data | Value type | Size | Used for |
+|---|---|---|---|
+| small arrays built inside the tests, such as the cake of the worked example | any | a few voxels | exact checks of the geometry, FR-15 to FR-22 |
+| `DATA/synthetic/dice.nrrd` | `uint32` | 200 × 180 × 160 | values above 65535, and images known in advance: a square face with its pips, a hexagon through the center, a triangle cut off a corner |
+| `DATA/synthetic/cake_3layers.nrrd` and `.seg.nrrd` | `uint8` | 256 × 180 × 96 | the label file gives the exact material of every pixel |
+| `DATA/synthetic/tomato.nrrd` and `.seg.nrrd` | `uint16` | 204 × 196 × 184 | a tilted object that no axis lines up with |
+| `DATA/MRHead_1.nrrd` | `int16` | 256 × 256 × 130 | the lecturer's file: a signed type (FR-6), and the main demo |
+| `DATA/onion.nrrd`, `biscuit_cake.nrrd`, `swiss_roll.nrrd` | `uint8`, `uint16`, `uint32` | 256 × 256 × 130 | demo videos in all three value types of the assignment |
+| `DATA/croissant.nrrd` | `uint8` | 500 × 500 × 500 | the speed benchmark, NFR-1 to NFR-4 |
+| `DATA/real_scans/` | `uint8`, `uint16` | various | extra runs on real CT scans |
+
+The planes files for the tests and the demo are part of the testing strategy.
