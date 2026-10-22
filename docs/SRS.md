@@ -253,8 +253,8 @@ For example, the triangle `a = (5, 0, z0)`, `b = (0, 10, z0)`, `c = (10, 10, z0)
 |---|---|
 | count | it does not have 9 or 12 numbers |
 | numbers | a field is not a number, or is infinite or not a number (`inf`, `nan`) |
-| base | `|c − b| < 1e-6` |
-| one line | `|w| < 1e-6`: `P0` lies on the line of the base |
+| base | `\|c − b\| < 1e-6` |
+| one line | `\|w\| < 1e-6`: `P0` lies on the line of the base |
 | flat trapezoid | `a''` is more than 0.5 from the plane through `a'`, `b` and `c` |
 | trapezoid shape | the quadrilateral `a', a'', c, b` is not convex, for example because its sides cross |
 | size | the image would have more than 4096 rows or columns |
@@ -265,8 +265,8 @@ The size limit keeps a point that is very far away from producing a huge video.
 
 | Check | Warning when |
 |---|---|
-| equal legs | the two legs differ by more than 0.5: `|ab|` and `|ac|`, or `|a'b|` and `|a''c|` |
-| parallel sides | in a trapezoid, `|t(a'')| > 0.5`, so the top side is not parallel to the base (`t(a')` is always 0) |
+| equal legs | the two legs differ by more than 0.5: `\|ab\|` and `\|ac\|`, or `\|a'b\|` and `\|a''c\|` |
+| parallel sides | in a trapezoid, `\|t(a'')\| > 0.5`, so the top side is not parallel to the base (`t(a')` is always 0) |
 
 **FR-26.** A valid plane that does not meet the volume at all gives a black image without a warning. It is valid input.
 
