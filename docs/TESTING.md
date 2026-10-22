@@ -146,3 +146,42 @@ shows ganache everywhere inside the cake, and a plane through the tomato shows i
 
 The Reformat module of 3D Slicer shows any plane of a volume. It smooths between voxels instead of taking the nearest one,
 so its images are compared with ours by eye, not pixel for pixel.
+
+---
+
+## 4. Unit tests
+
+Each table lists the cases of one module, with the requirements they check. Small NRRD and CSV files are written by the tests into a temporary folder.
+
+### 4.1 `volume.py`: reading the volume
+
+| Case | Expected | Requirements |
+|---|---|---|
+| a small volume of each type `uint8`, `uint16`, `uint32` | read with its type and values unchanged | FR-5, FR-6 |
+| `int8`, `int16`, `int32` with some negative values | read, with the negative values set to 0 | FR-6 |
+| `float32`, `float64`, `int64`, `uint64` | fatal error naming the type | FR-4, FR-6 |
+| `raw` and `gzip` encodings | both read to the same array | FR-5 |
+| `ascii` encoding, or a detached header (`.nhdr`) | fatal error | FR-4, FR-5 |
+| 2 or 4 dimensions | fatal error | FR-4, FR-5 |
+| a size of 1 on every axis, and 1023 on one axis | read | FR-7 |
+| a size of 1024 on one axis | fatal error | FR-4, FR-7 |
+| a volume whose values are `x + 10·y + 100·z` | `data[x, y, z]` holds that value: the first axis is `x` | FR-8 |
+| the flat view | shares memory with the array, and `flat[x + sx·(y + sy·z)]` equals `data[x, y, z]` | FR-8, NFR-6 |
+| a header with an unusual origin and spacing | the same array as without them | FR-9 |
+| `lo` and `hi` | the smallest and largest values, after negatives were set to 0 | FR-32 |
+| a missing file, a file that is not NRRD, a cut-off gzip file | fatal error naming the file | FR-4 |
+
+### 4.2 `planes.py`: reading the planes
+
+| Case | Expected | Requirements |
+|---|---|---|
+| a triangle line and a trapezoid line | 3 and 4 points, in the order of the line | FR-10, FR-12 |
+| integers, decimals, `-3e2`, spaces around the fields | read as numbers | FR-10 |
+| blank lines and `#` comments between planes | skipped; line numbers still count them | FR-11, FR-27 |
+| a first line with a word in it | skipped as a header | FR-11 |
+| the same line on line 2 | a bad plane, not a header | FR-11, FR-24 |
+| 8, 10 or 13 numbers | a bad plane, with the count in its reason | FR-24 |
+| a field `abc`, an empty field, `nan`, `inf` | a bad plane | FR-24 |
+| a file with three planes and one bad line | four planes with frame numbers 1 to 4 and their line numbers | FR-23, FR-27 |
+| an empty file, or one with only a header and comments | fatal error | FR-4, FR-14 |
+| a missing file | fatal error naming the file | FR-4 |
