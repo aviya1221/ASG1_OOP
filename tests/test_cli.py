@@ -1,5 +1,7 @@
 """The command line, Ex0.main() on small files in a temporary folder (docs/TESTING.md, section 5)."""
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -14,7 +16,7 @@ GOOD = [
     "4.5,2,3, 0,11,3, 9,11,3",              # a triangle of 10 x 10
 ]
 ON_ONE_LINE = "0,0,0, 1,1,1, 2,2,2"
-UNEQUAL_LEGS = "0,0,0, 0,10,0, 3.5157,10,0"   # legs of 10 and 10.6
+UNEQUAL_LEGS = "0,0,15, 0,10,15, 3.5157,10,15"   # legs of 10 and 10.6, high up where the volume is bright
 
 
 @pytest.fixture
@@ -153,4 +155,4 @@ def test_error_while_writing_the_video(files, monkeypatch, capsys):
     code, out, err = run(argv, capsys)
     assert code == 1
     assert err.startswith(f"error: {argv[2]}: ") and "the disk is full" in err
-    assert not (Ex0.Path(argv[2])).exists()
+    assert not Path(argv[2]).exists()
