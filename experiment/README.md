@@ -18,7 +18,7 @@ python tools/run_experiment.py            # or --only demos, --only speed, --onl
 | [images/](images/) | chosen frames, and the comparison with 3D Slicer |
 
 **Machine:** a laptop with an Intel Core i7-10610U (4 cores, 8 threads), 16 GB of memory, Windows 11, Python 3.13.15, NumPy 2.5.4.
-The speed measurements of [section 3](#3-speed) ran on battery, while Windows reported the processor clock at 1.5 to 1.8 GHz of the 2.3 GHz it reports as the maximum.
+The speed measurements of [section 3](#3-speed) ran on the charger, while Windows reported the processor clock at 1.8 GHz of the 2.3 GHz it reports as the maximum.
 
 ---
 
@@ -85,46 +85,50 @@ The third column shows linear interpolation, as 3D Slicer shows a slice by defau
 The benchmark of [NFR-4](../docs/SRS.md#41-speed) is the 100 triangles of `demo/croissant.csv` through the 500 × 500 × 500 croissant, each an image of 501 × 501 pixels.
 The time of a plane is that of `plane_setup` and `Projector.project` together ([NFR-3](../docs/SRS.md#41-speed)).
 Each configuration ran 5 rounds, every round running all configurations in turn, so that changes of the processor clock affect them alike
-([results/speed.txt](results/speed.txt)). The laptop was on battery.
+([results/speed.txt](results/speed.txt)). The laptop was on the charger.
 
 **Threads** (`uint8`, 501 × 501):
 
-| Threads | Median fps | Rounds |
-|---|---|---|
-| 1 | 53 | 33 to 62 |
-| 2 | 82 | 45 to 96 |
-| **4** | **90** | 56 to 119 |
-| 8 | 59 | 41 to 129 |
+| Threads | Median fps | ms per frame | Rounds |
+|---|---|---|---|
+| 1 | 86 | 11.6 | 82 to 96 |
+| 2 | 188 | 5.3 | 148 to 205 |
+| **4** | **317** | **3.2** | 265 to 324 |
+| 8 | 215 | 4.7 | 205 to 217 |
 
 **Value type** (4 threads, 501 × 501):
 
-| Type | Median fps | Rounds |
-|---|---|---|
-| `uint8` | 92 | 72 to 99 |
-| `uint16` | 68 | 62 to 108 |
-| `uint32` | 62 | 51 to 73 |
+| Type | Median fps | ms per frame | Rounds |
+|---|---|---|---|
+| `uint8` | 316 | 3.2 | 277 to 319 |
+| `uint16` | 306 | 3.3 | 294 to 307 |
+| `uint32` | 278 | 3.6 | 266 to 293 |
 
 **Image size** (`uint8`, 4 threads, triangles of the same directions with another base and height):
 
 | Image | Median fps | ms per frame | ns per pixel of the triangle |
 |---|---|---|---|
-| 101 × 101 | 242 | 4.1 | 809 |
-| 201 × 201 | 334 | 3.0 | 148 |
-| 301 × 301 | 252 | 4.0 | 88 |
-| 401 × 401 | 154 | 6.5 | 81 |
-| 501 × 501 | 71 | 14.0 | 112 |
-| 701 × 701 | 46 | 21.9 | 89 |
+| 101 × 101 | 634 | 1.6 | 310 |
+| 201 × 201 | 523 | 1.9 | 95 |
+| 301 × 301 | 470 | 2.1 | 47 |
+| 401 × 401 | 375 | 2.7 | 33 |
+| 501 × 501 | 308 | 3.3 | 26 |
+| 701 × 701 | 173 | 5.8 | 24 |
 
 **Results**
 
-- **The minimum of 30 fps (NFR-1) is met in every measurement**, the slowest round included (33 fps, on one thread).
-- **The target of 100 fps (NFR-2) depends on the power of the laptop.** On battery, the median of the benchmark was 90 to 92 fps.
-  An earlier run of `tools/benchmark.py` the same day, whose power state was not recorded, gave a median of 304 fps (`uint8`), 297 (`uint16`) and 253 (`uint32`).
-- **4 threads are the fastest**, about 1.7 times one thread. With 8, two threads share each of the 4 cores and the run is slower, as the prototype showed
+- **The target of 100 fps (NFR-2) is met: 317 fps**, about 3 times the target and 10 times the minimum of 30 fps (NFR-1).
+  An earlier run of `tools/benchmark.py` the same day gave 304 fps, in agreement.
+- **Even one thread meets the minimum**, at 86 fps, and every round of every configuration was above 80 fps.
+- **4 threads are the fastest**, 3.7 times one thread. With 8, two threads share each of the 4 cores and the run is slower, as the prototype showed
   ([ALGORITHM 6](../docs/ALGORITHM.md#6-speed)).
-- **Wider values are slower**, since each pixel reads more memory.
-- **The time grows with the number of pixels**, at about 80 to 110 ns per pixel of the triangle for images from 301 pixels up.
-  Small images are held back by a fixed cost of 3 to 4 ms per plane, for the setup and the work of starting the threads.
+- **Wider values are a little slower**, since each pixel reads more memory: 278 fps for `uint32`.
+- **The time grows with the number of pixels**: for images from 401 pixels up, about 24 to 33 ns per pixel of the triangle.
+  Small images are held back by a fixed cost of about 1.5 ms per plane, for the setup and the work of starting the threads.
+
+**On battery** the same measurement was much slower and less steady ([results/speed_on_battery.txt](results/speed_on_battery.txt)):
+90 fps median with 4 threads, rounds from 56 to 119, while Windows reported the processor at 1.5 to 1.8 GHz.
+That is still 3 times the minimum, but below the target: the speed of the program depends on the power of the laptop.
 
 In the full demo runs, reading the croissant took 2.4 s and writing its video 0.7 s ([results/demo_runs.txt](results/demo_runs.txt)); the requirements
 set no target for these.
@@ -135,7 +139,7 @@ set no target for these.
 
 - The program does what the requirements define: every demo run gave the expected number and size of frames and the expected warnings,
   and its images agree with the reslicing filter of 3D Slicer on every pixel except exact ties between two voxels.
-- It meets the minimum speed with a wide margin in every measurement. It met the target of 100 fps in the benchmark run of 304 fps, but not on battery,
-  where the median was about 90.
+- It meets the speed target: 317 fps on the benchmark, about 3 times the target of 100 and 10 times the minimum of 30.
+  On battery the laptop slows down, and the median fell to 90 fps, still 3 times the minimum.
 - **Limitations.** Speed was measured on one laptop. The nearest voxel makes oblique cuts look blocky next to 3D Slicer's smooth view, and pixels in voxel units
   make volumes with long voxels look shorter. Interpolation between voxels and coordinates in millimeters would be natural next steps.
