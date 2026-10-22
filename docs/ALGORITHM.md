@@ -115,3 +115,60 @@ for line_no, text in enumerate(file, start=1):
 A field is a number if Python's `float()` accepts it, so `12`, `12.5` and `-3e2` are all numbers (FR-10).
 A bad line is not an error of the whole file: it becomes a `Plane` that carries its reason, and later a black frame (FR-23).
 If the file has no plane lines at all, the program stops with a fatal error (FR-14).
+
+---
+
+## 4. Plane setup and checks
+
+`plane_setup` runs once per plane, before any projection. It does a fixed amount of work, plus one short pass over the rows of the image.
+The steps run in this order, and the first check that fails makes the plane bad, with that reason (FR-24).
+
+### 4.1 Names
+
+| Shape | `P0` | `Q`, the start of the second leg | Corners in order around the shape |
+|---|---|---|---|
+| triangle `a, b, c` | `a` | `a` | `a, c, b` |
+| trapezoid `a', a'', b, c` | `a'` | `a''` | `a', a'', c, b` |
+
+### 4.2 Steps
+
+1. **Base.** `base = c − b`. If its length is below `1e-6`, the plane is bad. Otherwise `right = base / |base|` (FR-15).
+2. **Down.** `w = (b − P0) − ((b − P0) · right) · right`, the part of `b − P0` that is perpendicular to the base.
+   If its length is below `1e-6`, `P0` is on the line of the base and the plane is bad. Otherwise `down = w / |w|` (FR-15).
+3. **Flat trapezoid.** `n = right × down` is the unit normal of the plane. If `|(a'' − a') · n| > 0.5`, the plane is bad (FR-24).
+4. **Plane coordinates.** For each corner `v`: `s = (v − P0) · right` and `t = (v − P0) · down` (FR-16).
+   This drops the small part of `a''` that is off the plane.
+5. **Convex trapezoid.** Going around the corners `a', a'', c, b` in plane coordinates, the cross product of each edge with the next one
+   must keep one sign: all `≥ −1e-6`, or all `≤ 1e-6`. Otherwise the sides cross or the shape is dented, and the plane is bad (FR-24).
+   A cross product near 0 is allowed, so a trapezoid with `a' = a''`, which is really a triangle, passes.
+6. **Size.** `cols = floor(s_max − s_min + 1e-6) + 1` and `rows = floor(t_max − t_min + 1e-6) + 1` (FR-16).
+   If either is above 4096, the plane is bad (FR-24).
+7. **Corner.** `corner = P0 + s_min · right + t_min · down` (FR-17).
+8. **Warnings** (FR-25). The plane stays valid.
+   - Equal legs: `abs(|b − P0| − |c − Q|) > 0.5`.
+   - Parallel sides, trapezoid only: `abs(t(a'')) > 0.5`. `t(a')` is always 0, because `a'` is `P0`.
+9. **Row spans** ([4.3](#43-row-spans)).
+
+For a triangle, `t(a) = 0` and `t(b) = t(c) = |w|`, so the apex is in row 0 and the base in the last row (FR-21).
+
+### 4.3 Row spans
+
+Row `r` of the image lies on the line `t = t_min + r` of the plane. The shape is convex, so it meets that line in one interval, `[s_lo(r), s_hi(r)]`.
+The interval comes from intersecting the line with each edge of the shape, at most 4 edges, for all the rows at once:
+
+```
+for each edge from p to q (in plane coordinates):
+    if t_p != t_q:  where t lies between t_p and t_q (within 1e-6):  s = s_p + (t − t_p) · (s_q − s_p) / (t_q − t_p)
+    else:           where t is within 1e-6 of t_p:                   both s_p and s_q
+s_lo(r) = smallest s found on row r,  s_hi(r) = largest
+```
+
+The span is then turned into columns, with the tolerance of FR-18:
+
+```
+c0[r] = ceil(s_lo(r) − s_min − 1e-6)
+c1[r] = floor(s_hi(r) − s_min + 1e-6)
+```
+
+A pixel `(r, c)` belongs to the shape exactly when `c0[r] <= c <= c1[r]`, which is the test of FR-18.
+A row that misses the shape gets `c0[r] > c1[r]`.
