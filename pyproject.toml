@@ -1,0 +1,7 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-m 'not slow'"
+markers = [
+    "slow: reads the large files of the data set or writes long videos (run with -m slow)",
+]
