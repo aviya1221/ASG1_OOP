@@ -77,3 +77,41 @@ the frame size depends on the largest valid plane (FR-30), and every fatal error
 | frame | `H × W` array of `uint8` gray levels | `place` |
 
 All points and vectors are 3-element `float64` arrays. Every image and frame is indexed `[row, column]`.
+
+---
+
+## 3. Reading the inputs
+
+### 3.1 Volume
+
+1. Read the header and the data with `pynrrd` (`nrrd.read`).
+2. Check the header, and stop with a fatal error (FR-4) on the first failure:
+   3 dimensions and an attached data part (FR-5), `raw` or `gzip` encoding (FR-5), a value type from the table of FR-6, every size from 1 to 1023 (FR-7).
+3. Keep the array as it comes. `pynrrd` returns it indexed `[x, y, z]` with `x` fastest in memory (Fortran order), which is exactly how NRRD stores it (FR-8).
+   There is no copy and no transpose.
+4. Make the flat view `flat = data.reshape(-1, order="F")`. It shares the memory of `data`, and voxel `(x, y, z)` is
+   `flat[x + sx·(y + sy·z)]`. The sampling step reads voxels through this view.
+5. For a signed type, set negative values to 0 in place, `np.maximum(data, 0, out=data)` (FR-6). This needs no second copy of the volume (NFR-6).
+6. Find `lo = data.min()` and `hi = data.max()` for the gray levels (FR-32).
+
+The `space origin` and `space directions` fields are not used (FR-9).
+
+### 3.2 Planes
+
+The file is read as text, one line at a time, so every plane keeps its line number for the warnings (FR-27).
+
+```
+frame = 0
+for line_no, text in enumerate(file, start=1):
+    if text is blank, or starts with "#":                      skip            # FR-11
+    fields = [field.strip() for field in text.split(",")]
+    if line_no == 1 and some field is not a number:              skip            # header, FR-11
+    frame = frame + 1
+    if some field is not a number, or is inf or nan:             bad plane       # FR-24
+    elif the number of fields is not 9 or 12:                    bad plane       # FR-24
+    else:                                                        points = the numbers in groups of 3
+```
+
+A field is a number if Python's `float()` accepts it, so `12`, `12.5` and `-3e2` are all numbers (FR-10).
+A bad line is not an error of the whole file: it becomes a `Plane` that carries its reason, and later a black frame (FR-23).
+If the file has no plane lines at all, the program stops with a fatal error (FR-14).
