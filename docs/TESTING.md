@@ -281,17 +281,45 @@ automatically, to check that every run produces the right video, and by eye, to 
 ### 6.1 Demo planes files
 
 The planes files of the demo are made by `tools/make_demo_planes.py`, with fixed numbers and seeds, and kept in `demo/`.
+After writing a file, the script reads it back and checks every plane by the rules of [SRS 3.4 and 3.5](SRS.md#34-projection-geometry):
+the five clean files must give no warning and no black frame, and each line of `edge_cases.csv` must give the result listed below.
 
-| Planes file | Volume | Frames | What the video shows |
-|---|---|---|---|
-| `demo/head.csv` | `DATA/MRHead_1.nrrd` | 280 | 130 slices `z = 0 … 129`, from one side of the head to the other; then 90 frames of a 256 × 256 square through the center, turning 2° per frame around the `y` axis, so the cut sweeps through oblique angles; then 60 frames of a triangle turning 6° per frame within one oblique plane |
-| `demo/onion.csv` | `DATA/onion.nrrd` (`uint8`) | 120 | a square through the center, turning 3° per frame around an axis tilted 30° from upright |
-| `demo/biscuit_cake.csv` | `DATA/biscuit_cake.nrrd` (`uint16`) | 120 | the same movement |
-| `demo/swiss_roll.csv` | `DATA/swiss_roll.nrrd` (`uint32`) | 120 | the same movement |
-| `demo/croissant.csv` | `DATA/croissant.nrrd` | 100 | the 100 planes of the speed benchmark (NFR-4) |
-| `demo/edge_cases.csv` | `DATA/synthetic/dice.nrrd` | 16 | a header, comments, good triangles and trapezoids, a plane outside the volume, and one line for each bad and doubtful case of FR-24 and FR-25 |
+```
+python tools/make_demo_planes.py
+```
+
+| Planes file | Volume | Frames | Frame size | What the video shows |
+|---|---|---|---|---|
+| `demo/head.csv` | `DATA/MRHead_1.nrrd` | 280 | 256 × 256 | 130 slices `z = 0 … 129`, from one side of the head to the other; then 90 frames of a 256 × 256 square through the center, turning 2° per frame around the `y` axis, so the cut sweeps through oblique angles; then 60 frames of an equilateral triangle with sides of 180, turning 6° per frame around its middle within a plane tilted 40° from the axial plane |
+| `demo/onion.csv` | `DATA/onion.nrrd` (`uint8`) | 120 | 256 × 256 | a square through the center, turning 3° per frame around an axis tilted 30° from upright |
+| `demo/biscuit_cake.csv` | `DATA/biscuit_cake.nrrd` (`uint16`) | 120 | 256 × 256 | the same planes |
+| `demo/swiss_roll.csv` | `DATA/swiss_roll.nrrd` (`uint32`) | 120 | 256 × 256 | the same planes |
+| `demo/croissant.csv` | `DATA/croissant.nrrd` | 100 | 502 × 502 | the 100 planes of the speed benchmark (NFR-4), the same that `tools/prototype_speed.py` measured |
+| `demo/edge_cases.csv` | `DATA/synthetic/dice.nrrd` | 16 | 282 × 244 | a header, comments, good triangles and trapezoids, a plane outside the volume, and one line for each bad and doubtful case of FR-24 and FR-25 |
 
 The three foods use the three value types of the assignment, so together they show that the demo handles all of them.
+All the files except `head.csv` start with a header line, and all of them have comments and blank lines (FR-11).
+
+The lines of `edge_cases.csv`, with the frame and line numbers that the warnings must name (FR-27):
+
+| Frame | Line | Plane | Expected |
+|---|---|---|---|
+| 1 | 10 | the top face, `z = 139`, as a rectangle | a 120 × 120 square with one pip |
+| 2 | 12 | the bottom face, `z = 20`, in an isosceles trapezoid | the square with six pips |
+| 3 | 15 | the front face, `y = 30`, as a rectangle, written with spaces around the numbers and `1.59e2` | the square with four pips |
+| 4 | 17 | a triangle in the plane `x + y + z = 268.5` | a regular hexagon with sides of 84.9 |
+| 5 | 20 | a triangle in the plane `x + y + z = 408.5` | an equilateral triangle with sides of 56.6, upside down |
+| 6 | 24 | a triangle at `z = 300`, above the volume | black, without a warning (FR-26) |
+| 7 | 28 | a triangle with legs of 188.8 and 226.6 | drawn, with a warning: equal legs (FR-25) |
+| 8 | 30 | a trapezoid whose top side is not parallel to its base | drawn, with a warning: parallel sides (FR-25) |
+| 9 | 34 | 8 numbers | black, with a warning: count (FR-24) |
+| 10 | 36 | a word | black, with a warning: numbers |
+| 11 | 38 | `inf` | black, with a warning: numbers |
+| 12 | 40 | `b = c` | black, with a warning: base |
+| 13 | 42 | `a`, `b` and `c` on one line | black, with a warning: one line |
+| 14 | 44 | `a''` 10 voxels off the plane of `a'`, `b` and `c` | black, with a warning: flat trapezoid |
+| 15 | 46 | `a'` and `a''` swapped, so the sides cross | black, with a warning: trapezoid shape |
+| 16 | 48 | a base of 10199, so 10200 columns | black, with a warning: size |
 
 The commands, from the project folder:
 
