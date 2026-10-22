@@ -52,6 +52,7 @@ return E
 
 The assignment states that this problem is **not well defined for implementation**:
 the pseudo-code leaves open questions that a detailed design has to answer (see [Open questions](#open-questions)).
+The exact requirements are in the [Software Requirements Specification](docs/SRS.md).
 
 ## The program
 
@@ -91,24 +92,20 @@ python Ex0.py file.nrrd file.csv file.mp4
 
 ## Open questions
 
-The design (SRS and algorithm document) has to settle these:
+The assignment leaves these questions open. The [Software Requirements Specification](docs/SRS.md) answers each of them:
 
-1. **Coordinate system.** Are the points in voxel indices, or in the physical space of the NRRD header
-   (origin, spacing and direction, as 3D Slicer shows them)? The lecturer's `MRHead_1.nrrd` has voxels of 1 × 1 × 1.3 mm.
-2. **Sampling between voxels.** `p` is almost never on a whole voxel: take the nearest voxel, or interpolate between neighbours?
-3. **Rounding.** `Dab`, `Dbc`, `d12` and `x` are real numbers; how are they rounded to sizes and indices of `E`?
-   The loop moves `a1` and `a2` before the first row, so the apex row is skipped; is that intended?
-4. **Pixels outside the triangle.** `E` is a rectangle and the triangle covers about half of it; what value do the other pixels get?
-5. **The trapezoid.** In which order are its 4 points written, and which of them are `a'`, `a''`, `b` and `c`?
-6. **Invalid input.** What to do when the triangle is not isosceles (up to what tolerance), when the points are on one line,
-   or when two points are the same?
-7. **CSV format.** One plane per line? A header line? How are the 3 and 4 point planes told apart?
-8. **Video frames.** Each plane gives an image of a different size, but an MP4 needs one frame size:
-   pad, scale, or fix the size? How are 16 and 32-bit values mapped to the 8-bit gray levels of a video? At what frame rate?
-9. **Axis order and signed data.** NRRD stores `x` fastest; how does that map to `M[x][y][z]`?
-   `MRHead_1.nrrd` is signed 16-bit (all its values are positive) though the assignment speaks of unsigned values.
-10. **What the speed target measures.** The projection alone, or also reading the file and writing the video?
-    For which planes (the largest plane through a 500³ cube is about 866 voxels across)?
+| # | Question | Answer |
+|---|---|---|
+| 1 | Are the points voxel indices, or physical positions from the NRRD header (as 3D Slicer shows them)? | voxel indices ([FR-13](docs/SRS.md#33-planes-file)) |
+| 2 | `p` is almost never on a whole voxel: take the nearest one, or interpolate? | the nearest voxel ([FR-19](docs/SRS.md#34-projection-geometry)) |
+| 3 | `Dab`, `Dbc`, `d12` and `x` are real numbers: how are they rounded? The loop skips the apex row: is that intended? | an exact image geometry with square pixels and the apex in row 0 ([3.4](docs/SRS.md#34-projection-geometry), [section 6](docs/SRS.md#6-deviations-from-the-assignment-text)) |
+| 4 | `E` is a rectangle and the triangle covers about half of it: what do the other pixels get? | 0 ([FR-20](docs/SRS.md#34-projection-geometry)) |
+| 5 | In which order are the 4 points of a trapezoid written? | `a', a'', b, c` ([FR-12](docs/SRS.md#33-planes-file)) |
+| 6 | What if the triangle is not isosceles, the points are on one line, or two points are the same? | a black frame and a warning for bad planes, a warning for doubtful ones ([3.5](docs/SRS.md#35-input-validation)) |
+| 7 | What does the CSV file look like? | one plane per line, 9 or 12 numbers, optional header and comments ([3.3](docs/SRS.md#33-planes-file)) |
+| 8 | Each image has its own size, but a video needs one frame size; how are 16 and 32-bit values shown; at what rate? | images centered in a fixed frame, one gray-level map for the whole video, 30 fps by default ([3.6](docs/SRS.md#36-video-output)) |
+| 9 | How do NRRD axes map to `M[x][y][z]`? `MRHead_1.nrrd` is signed. | `x` is the fastest axis on disk; signed types are accepted ([3.2](docs/SRS.md#32-volume-file)) |
+| 10 | Does the speed target cover the projection alone, and for which planes? | the projection alone, on a fixed benchmark of 100 planes of 501 × 501 pixels ([4.1](docs/SRS.md#41-speed)) |
 
 ## Data
 
@@ -127,7 +124,7 @@ pip install -r requirements.txt
 ## Roadmap
 
 - [x] Create a repository, define the problem and the scope (this README)
-- [ ] Software Requirements Specification (SRS)
+- [x] Software Requirements Specification ([docs/SRS.md](docs/SRS.md))
 - [ ] Detailed description of the main algorithm
 - [x] Data set of NRRD files (first version, see [DATA/README.md](DATA/README.md))
 - [ ] Testing strategy, including the demo
