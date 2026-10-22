@@ -1,5 +1,7 @@
 # Ex1: Plane projection of a 3D volume
 
+[![tests](https://github.com/aviya1221/ASG1_OOP/actions/workflows/tests.yml/badge.svg)](https://github.com/aviya1221/ASG1_OOP/actions/workflows/tests.yml)
+
 Introduction to Software Engineering (OOP, OOD), exercise 1.
 
 Given a 3D volume and a plane, produce the 2D image the volume shows on that plane:
@@ -69,6 +71,25 @@ python Ex0.py file.nrrd file.csv file.mp4
 | `file.nrrd` | the 3D volume |
 | `file.csv` | a list of planes, each given by the coordinates of 3 or 4 points |
 | `file.mp4` | the output video: one frame per plane, in the order of the CSV |
+| `--fps N` | frame rate of the video, 30 by default |
+
+For example, on the lecturer's head scan:
+
+```
+python Ex0.py DATA/MRHead_1.nrrd demo/head.csv demo/output/head.mp4
+```
+
+```
+volume:      DATA/MRHead_1.nrrd, 256 x 256 x 130, int16
+frames:      280 (0 black, 0 warnings)
+load:        0.09 s
+projection:  0.73 s total, 2.6 ms per frame, 384 fps
+video:       0.22 s
+```
+
+A line of the planes file that is not a valid plane gives a black frame and a warning that names the line;
+`python Ex0.py --help` describes the format. The code is in [plane_projection/](plane_projection/), one module for each step
+([algorithm document, section 9](docs/ALGORITHM.md#9-program-structure)).
 
 The planes files of the demo, one for each volume of the main data set and one of edge cases, are in [demo/](demo/).
 They are made by `tools/make_demo_planes.py` and described in the [testing strategy](docs/TESTING.md#61-demo-planes-files).
@@ -118,13 +139,22 @@ The data set is described in [DATA/README.md](DATA/README.md): the lecturer's MR
 simulated MRI scans of layered foods (including a 500³ file for the speed test), test volumes with known answers,
 and a few real CT scans. Preview images are in [DATA/images/](DATA/images/).
 
-The scripts that make the data are in [tools/](tools/). To set up:
+The scripts that make the data are in [tools/](tools/).
+
+## Setup, tests and benchmark
 
 ```
 python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
+.venv\Scripts\activate                 # on macOS and Linux: source .venv/bin/activate
+pip install -r requirements-dev.txt    # the program itself needs only requirements.txt
+
+pytest                                 # the everyday suite, under a minute
+pytest -m slow                         # the data set files and the six demos
+python tools/benchmark.py              # speed on the 500³ croissant (docs/SRS.md, NFR-4)
 ```
+
+The tests run on every push, on Windows, Ubuntu and macOS ([testing strategy, section 8](docs/TESTING.md#8-portability-and-continuous-integration)).
+On the development laptop the benchmark gives about 300 frames per second, against the target of 100.
 
 ## Roadmap
 
@@ -133,6 +163,6 @@ pip install -r requirements.txt
 - [x] Detailed description of the main algorithm ([docs/ALGORITHM.md](docs/ALGORITHM.md))
 - [x] Data set of NRRD files (first version, see [DATA/README.md](DATA/README.md))
 - [x] Testing strategy, including the demo ([docs/TESTING.md](docs/TESTING.md))
-- [ ] Implementation
-- [ ] Demo: `python Ex0.py file.nrrd file.csv file.mp4`
+- [x] Implementation ([plane_projection/](plane_projection/), [tests/](tests/))
+- [x] Demo: `python Ex0.py file.nrrd file.csv file.mp4` ([Ex0.py](Ex0.py), planes files in [demo/](demo/))
 - [ ] Experiment and a short description of its results, with the output video

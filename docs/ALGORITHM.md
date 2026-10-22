@@ -293,7 +293,9 @@ It ran at 184 to 194 frames per second, about 6 times the minimum of NFR-1 and a
 - **`float64`.** In this measurement, 32-bit floats and fixed point are no faster, and they round some points to a different voxel than FR-19 requires:
   620 and 46,393 pixels. So the exact `float64` stays.
 
-The real program will be measured again on the same benchmark, and the result written in the experiment report.
+The real program is measured on the same benchmark by `tools/benchmark.py`. Its first run on the same laptop, as the median of 3 rounds,
+gave 304 fps on the `uint8` croissant, and 297 and 253 fps on copies in `uint16` and `uint32`.
+The full result goes into the experiment report.
 
 ### 6.3 Kept in reserve
 
