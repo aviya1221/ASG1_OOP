@@ -172,3 +172,70 @@ c1[r] = floor(s_hi(r) − s_min + 1e-6)
 
 A pixel `(r, c)` belongs to the shape exactly when `c0[r] <= c <= c1[r]`, which is the test of FR-18.
 A row that misses the shape gets `c0[r] > c1[r]`.
+
+---
+
+## 5. Projection
+
+`project(volume, setup)` turns a valid plane into its image `E`. It reads no files (NFR-12).
+
+### 5.1 Early exit
+
+The four corners of the image rectangle are `corner`, `corner + (cols − 1)·right`, `corner + (rows − 1)·down` and the sum of both steps.
+If on some axis all four lie below `−0.5`, or all lie at `size − 0.5` or above, the plane misses the volume:
+`E` is all zeros and nothing is sampled (FR-26).
+
+### 5.2 Sampling
+
+All the pixels of the image rectangle are computed at once with NumPy arrays, in bands of rows:
+
+```
+R  = rows of the band, as a column        (shape: band × 1)
+C  = 0 … cols − 1, as a row               (shape: 1 × cols)
+ok = (C >= c0[R]) & (C <= c1[R])                              # inside the shape, FR-18
+flat_index = 0
+for axis k in x, y, z, with stride 1, sx, sx·sy:
+    i_k = floor((corner_k + 0.5) + R · down_k + C · right_k)  # nearest voxel, FR-19
+    ok &= (0 <= i_k) & (i_k < size_k)                          # inside M, FR-20
+    clamp i_k to 0 … size_k − 1
+    flat_index += i_k · stride_k
+values = flat[flat_index]
+values[~ok] = 0                                                # FR-20
+E[band] = values
+```
+
+- **Direct, not stepped.** Each pixel's point is computed from `corner` in one formula, not by adding a step again and again as in the assignment's
+  `p = p + dp`. Rounding errors do not pile up along a row; in `float64` they stay far below `1e-9` of a voxel for any image of up to 4096 pixels.
+  This keeps the rounding of FR-19 exact, and the result identical on every run (NFR-9).
+- **`+ 0.5` once.** `corner_k + 0.5` is computed once per plane, so rounding to the nearest voxel costs a single `floor`.
+- **Clamping.** After `ok` is known, each index is clamped into the volume. The read is then always a real voxel, even for pixels that are masked out,
+  and the flat index always fits in `int32`: the largest is `1023³ − 1`, about `1.07 · 10⁹`, below `2³¹`.
+- **`int32` indices** take half the memory traffic of `int64`.
+- **Bands in threads.** NumPy releases Python's global lock inside its array operations, so bands of rows run at the same time on different cores.
+  Each band writes its own rows of `E`, so no locking is needed, and the result does not depend on the number of bands.
+  The default is 4 bands ([6](#6-speed)).
+
+The memory used grows with `rows × cols`, never with the volume (NFR-6).
+
+### 5.3 Worked example
+
+The cake from [SRS 3.4](SRS.md#34-projection-geometry): a 10 × 10 × 10 volume and the triangle `a = (5, 0, 8)`, `b = (1, 6, 0)`, `c = (9, 6, 0)`.
+The setup gives `right = (1, 0, 0)`, `down = (0, 0.6, −0.8)`, `s_min = −4`, `t_min = 0`, `corner = (1, 0, 8)`, 11 rows and 9 columns.
+
+**Row spans.** The edges `a → b` and `a → c` give `s_lo(r) = −0.4·r` and `s_hi(r) = 0.4·r`, so `c0[r] = ceil(4 − 0.4·r − 1e-6)` and `c1[r] = floor(4 + 0.4·r + 1e-6)`:
+
+| Row | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| columns | 4 | 4 | 4 | 3 to 5 | 3 to 5 | 2 to 6 | 2 to 6 | 2 to 6 | 1 to 7 | 1 to 7 | 0 to 8 |
+
+These are exactly the colored squares of the image in the [picture](../DATA/images/explain/how_a_cut_is_made.png).
+In row 5, `4 − 0.4·5 = 2` exactly, and the tolerance keeps column 2 inside the triangle.
+
+**Two pixels.**
+
+| Pixel | `corner + 0.5 + c·right + r·down` | Voxel | Layer |
+|---|---|---|---|
+| row 5, column 2 | `(1.5, 0.5, 8.5) + (2, 0, 0) + (0, 3, −4) = (3.5, 3.5, 4.5)` | `(3, 3, 4)` | cream |
+| row 3, column 4 | `(1.5, 0.5, 8.5) + (4, 0, 0) + (0, 1.8, −2.4) = (5.5, 2.3, 6.1)` | `(5, 2, 6)` | cream |
+
+Every point of this triangle is inside the volume, so `ok` depends on the row spans alone.
