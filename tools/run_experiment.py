@@ -58,7 +58,7 @@ CHOSEN_FRAMES = [
     ("croissant", 1, "benchmark plane 1"), ("croissant", 50, "benchmark plane 50"),
     ("edge_cases", 1, "top face: one pip"), ("edge_cases", 4, "across the diagonal"),
     ("edge_cases", 5, "corner cut off"), ("edge_cases", 7, "unequal legs, warned"),
-    ("edge_cases", 8, "tilted top side, warned"), ("edge_cases", 9, "8 numbers: black"),
+    ("edge_cases", 8, "tilted top side, warned"), ("edge_cases", 9, "wrong count: black"),
 ]
 
 

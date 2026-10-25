@@ -177,13 +177,17 @@ Each table lists the cases of one module, with the requirements they check. Smal
 
 | Case | Expected | Requirements |
 |---|---|---|
-| a triangle line and a trapezoid line | 3 and 4 points, in the order of the line | FR-10, FR-12 |
+| a triangle line `a, b, c` and a trapezoid line `a', b, a'', c` | 3 points, and 4 points kept as `a', a'', b, c` | FR-10, FR-12 |
+| a triangle with and without the empty fields of the fourth point | the same points | FR-10, FR-12 |
+| the lecturer's example file, as it is | 4 planes; the second trapezoid has legs of the same length | FR-10 to FR-12 |
 | integers, decimals, `-3e2`, spaces around the fields | read as numbers | FR-10 |
 | blank lines and `#` comments between planes | skipped; line numbers still count them | FR-11, FR-27 |
-| a first line with a word in it | skipped as a header | FR-11 |
-| the same line on line 2 | a bad plane, not a header | FR-11, FR-24 |
-| 8, 10 or 13 numbers | a bad plane, with the count in its reason | FR-24 |
-| a field `abc`, an empty field, `nan`, `inf` | a bad plane | FR-24 |
+| the header of the lecturer's format on the first line | skipped as a header | FR-11 |
+| a triangle with its empty fields on the first line | a plane, not a header | FR-11 |
+| the header on line 2 | a bad plane, not a header | FR-11, FR-24 |
+| 0, 2, 5, `3.5`, `-3` or `1e300` points | a bad plane, with the number of points in its reason | FR-12, FR-24 |
+| 8 or 12 numbers for 3 points, 9, 11 or 13 for 4 | a bad plane, with the counts in its reason | FR-12, FR-24 |
+| a field `abc`, an empty field, `nan`, `inf`, a line of commas | a bad plane | FR-24 |
 | a file with three planes and one bad line | four planes with frame numbers 1 to 4 and their line numbers | FR-23, FR-27 |
 | an empty file, or one with only a header and comments | fatal error | FR-4, FR-14 |
 | a missing file | fatal error naming the file | FR-4 |
@@ -298,30 +302,33 @@ python tools/make_demo_planes.py
 | `demo/swiss_roll.csv` | `DATA/swiss_roll.nrrd` (`uint32`) | 120 | 256 × 256 | the same planes |
 | `demo/croissant.csv` | `DATA/croissant.nrrd` | 100 | 502 × 502 | the 100 planes of the speed benchmark (NFR-4), the same that `tools/prototype_speed.py` measured |
 | `demo/edge_cases.csv` | `DATA/synthetic/dice.nrrd` | 16 | 282 × 244 | a header, comments, good triangles and trapezoids, a plane outside the volume, and one line for each bad and doubtful case of FR-24 and FR-25 |
+| `demo/lecturer_example.csv` | `DATA/croissant.nrrd` | 4 | 454 × 502 | the example file the lecturer shared, unchanged: a triangle and a rectangle, then a triangle that is not isosceles and reaches out of the volume, and an isosceles trapezoid; the third line gives a warning for its legs (FR-25) |
 
 The three foods use the three value types of the assignment, so together they show that the demo handles all of them.
-All the files except `head.csv` start with a header line, and all of them have comments and blank lines (FR-11).
+All the files are in the format of the lecturer's example ([SRS 3.3](SRS.md#33-planes-file)), and start with its header line.
+The five clean files hold nothing but the header and the planes, like the lecturer's example; `edge_cases.csv` adds comments
+and blank lines (FR-11). `lecturer_example.csv` is not made by the script: it is the lecturer's file, kept as it is.
 
 The lines of `edge_cases.csv`, with the frame and line numbers that the warnings must name (FR-27):
 
 | Frame | Line | Plane | Expected |
 |---|---|---|---|
-| 1 | 10 | the top face, `z = 139`, as a rectangle | a 120 × 120 square with one pip |
-| 2 | 12 | the bottom face, `z = 20`, in an isosceles trapezoid | the square with six pips |
-| 3 | 15 | the front face, `y = 30`, as a rectangle, written with spaces around the numbers and `1.59e2` | the square with four pips |
-| 4 | 17 | a triangle in the plane `x + y + z = 268.5` | a regular hexagon with sides of 84.9 |
-| 5 | 20 | a triangle in the plane `x + y + z = 408.5` | an equilateral triangle with sides of 56.6, upside down |
-| 6 | 24 | a triangle at `z = 300`, above the volume | black, without a warning (FR-26) |
-| 7 | 28 | a triangle with legs of 188.8 and 226.6 | drawn, with a warning: equal legs (FR-25) |
-| 8 | 30 | a trapezoid whose top side is not parallel to its base | drawn, with a warning: parallel sides (FR-25) |
-| 9 | 34 | 8 numbers | black, with a warning: count (FR-24) |
-| 10 | 36 | a word | black, with a warning: numbers |
-| 11 | 38 | `inf` | black, with a warning: numbers |
-| 12 | 40 | `b = c` | black, with a warning: base |
-| 13 | 42 | `a`, `b` and `c` on one line | black, with a warning: one line |
-| 14 | 44 | `a''` 10 voxels off the plane of `a'`, `b` and `c` | black, with a warning: flat trapezoid |
-| 15 | 46 | `a'` and `a''` swapped, so the sides cross | black, with a warning: trapezoid shape |
-| 16 | 48 | a base of 10199, so 10200 columns | black, with a warning: size |
+| 1 | 11 | the top face, `z = 139`, as a rectangle | a 120 × 120 square with one pip |
+| 2 | 13 | the bottom face, `z = 20`, in an isosceles trapezoid | the square with six pips |
+| 3 | 16 | the front face, `y = 30`, as a rectangle, written with spaces around the numbers and `1.59e2` | the square with four pips |
+| 4 | 18 | a triangle in the plane `x + y + z = 268.5` | a regular hexagon with sides of 84.9 |
+| 5 | 21 | a triangle in the plane `x + y + z = 408.5` | an equilateral triangle with sides of 56.6, upside down |
+| 6 | 25 | a triangle at `z = 300`, above the volume | black, without a warning (FR-26) |
+| 7 | 29 | a triangle with legs of 188.8 and 226.6 | drawn, with a warning: equal legs (FR-25) |
+| 8 | 31 | a trapezoid whose top side is not parallel to its base | drawn, with a warning: parallel sides (FR-25) |
+| 9 | 35 | 4 points, but only the 9 numbers of a triangle | black, with a warning: count (FR-24) |
+| 10 | 37 | a word | black, with a warning: numbers |
+| 11 | 39 | `inf` | black, with a warning: numbers |
+| 12 | 41 | `b = c` | black, with a warning: base |
+| 13 | 43 | `a`, `b` and `c` on one line | black, with a warning: one line |
+| 14 | 45 | `a''` 10 voxels off the plane of `a'`, `b` and `c` | black, with a warning: flat trapezoid |
+| 15 | 47 | `a'` and `a''`, points 1 and 3, swapped, so the sides cross | black, with a warning: trapezoid shape |
+| 16 | 49 | a base of 10199, so 10200 columns | black, with a warning: size |
 
 The commands, from the project folder:
 
@@ -332,6 +339,7 @@ python Ex0.py DATA/biscuit_cake.nrrd demo/biscuit_cake.csv demo/output/biscuit_c
 python Ex0.py DATA/swiss_roll.nrrd demo/swiss_roll.csv demo/output/swiss_roll.mp4
 python Ex0.py DATA/croissant.nrrd demo/croissant.csv demo/output/croissant.mp4
 python Ex0.py DATA/synthetic/dice.nrrd demo/edge_cases.csv demo/output/edge_cases.mp4
+python Ex0.py DATA/croissant.nrrd demo/lecturer_example.csv demo/output/lecturer_example.mp4
 ```
 
 The videos go to `demo/output/`, which git ignores. The ones chosen for the experiment report are copied next to it.
@@ -346,7 +354,7 @@ The videos go to `demo/output/`, which git ignores. The ones chosen for the expe
 | the video | exists, is H.264 in `yuv420p`, and plays at 30 fps | FR-28, FR-33 |
 | frames | one per plane line: 280, 120, 120, 120, 100 and 16 | FR-23, FR-29 |
 | frame size | the largest valid plane of the file, rounded up to even | FR-30 |
-| standard error | empty for the five clean files; for `edge_cases.csv`, exactly the expected list of warnings, with their line and frame numbers | FR-24 to FR-27, FR-36 |
+| standard error | empty for the five clean files; for `edge_cases.csv` and `lecturer_example.csv`, exactly the expected list of warnings, with their line and frame numbers | FR-24 to FR-27, FR-36 |
 | summary | printed, with the number of frames and the projection rate | FR-35 |
 | black frames | in `edge_cases.mp4`, the frames of the bad lines and of the plane outside the volume are black | FR-24, FR-26 |
 | known frames | frame 66 of `head.mp4` is within 3 gray levels on average of the slice `z = 65` after the gray map, and closer to it than to the slices around it; on the noise of the MRI, H.264 loses about 2.5 gray levels, and the next slices are 6 or more away | FR-22, FR-32 |
@@ -406,7 +414,7 @@ and its result goes into the experiment report. A quick test in the suite runs i
 
 | Case | Expected | Requirements |
 |---|---|---|
-| 1000 random lines from a fixed seed, the first of them a good plane so that it is not taken for a header: good planes, wrong counts, words, empty fields, `±1e300`, `nan`, `inf`, repeated points, points on one line, lines of commas only, very long lines | exit code 0, 1000 frames, no traceback | NFR-8, FR-23 |
+| 1000 random lines from a fixed seed, the first of them a good plane so that it is not taken for a header: good planes, wrong numbers of points, wrong counts, words, empty fields, `±1e300`, `nan`, `inf`, repeated points, points on one line, lines of commas only, very long lines | exit code 0, 1000 frames, no traceback | NFR-8, FR-23 |
 | the same file with no good plane at all | exit code 0 and 64 × 64 black frames | FR-30, NFR-8 |
 | the demo planes projected twice | the images `E`, and the frames before encoding, identical byte for byte | NFR-9 |
 

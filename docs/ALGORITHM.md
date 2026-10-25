@@ -107,14 +107,20 @@ frame = 0
 for line_no, text in enumerate(file, start=1):
     if text is blank, or starts with "#":                      skip            # FR-11
     fields = [field.strip() for field in text.split(",")]
-    if line_no == 1 and some field is not a number:              skip            # header, FR-11
+    drop the empty fields at the end of fields                                   # FR-10
+    if line_no == 1 and some field is neither empty nor a number: skip           # header, FR-11
     frame = frame + 1
-    if some field is not a number, or is inf or nan:             bad plane       # FR-24
-    elif the number of fields is not 9 or 12:                    bad plane       # FR-24
-    else:                                                        points = the numbers in groups of 3
+    if some field is empty, not a number, or inf or nan:         bad plane       # FR-24
+    elif the first field n is not 3 or 4:                        bad plane       # FR-24
+    elif the other fields are not 3·n numbers:                   bad plane       # FR-24
+    else:                                                        points = the other fields in groups of 3
+                                                                 a trapezoid: a', b, a'', c becomes a', a'', b, c
 ```
 
 A field is a number if Python's `float()` accepts it, so `12`, `12.5` and `-3e2` are all numbers (FR-10).
+The empty fields at the end are the fourth point of a triangle, which the lecturer's example leaves empty (FR-12).
+A trapezoid line lists its legs one after the other, `a', b, a'', c`; the reading swaps the middle two points,
+so the rest of the program always sees `a', a'', b, c`, the order of the names in [4.1](#41-names).
 A bad line is not an error of the whole file: it becomes a `Plane` that carries its reason, and later a black frame (FR-23).
 If the file has no plane lines at all, the program stops with a fatal error (FR-14).
 
