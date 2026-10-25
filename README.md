@@ -126,9 +126,9 @@ The assignment leaves these questions open. The [Software Requirements Specifica
 | 2 | `p` is almost never on a whole voxel: take the nearest one, or interpolate? | the nearest voxel ([FR-19](docs/SRS.md#34-projection-geometry)) |
 | 3 | `Dab`, `Dbc`, `d12` and `x` are real numbers: how are they rounded? The loop skips the apex row: is that intended? | an exact image geometry with square pixels and the apex in row 0 ([3.4](docs/SRS.md#34-projection-geometry), [section 6](docs/SRS.md#6-deviations-from-the-assignment-text)) |
 | 4 | `E` is a rectangle and the triangle covers about half of it: what do the other pixels get? | 0 ([FR-20](docs/SRS.md#34-projection-geometry)) |
-| 5 | In which order are the 4 points of a trapezoid written? | `a', a'', b, c` ([FR-12](docs/SRS.md#33-planes-file)) |
+| 5 | In which order are the 4 points of a trapezoid written? | `a', b, a'', c`: the two legs one after the other, which makes the lecturer's example an isosceles trapezoid ([FR-12](docs/SRS.md#33-planes-file)) |
 | 6 | What if the triangle is not isosceles, the points are on one line, or two points are the same? | a black frame and a warning for bad planes, a warning for doubtful ones ([3.5](docs/SRS.md#35-input-validation)) |
-| 7 | What does the CSV file look like? | one plane per line, 9 or 12 numbers, optional header and comments ([3.3](docs/SRS.md#33-planes-file)) |
+| 7 | What does the CSV file look like? | the format of the lecturer's example: a header, then one plane per line, the number of points (3 or 4) and then `x, y, z` of each point; comments are allowed ([3.3](docs/SRS.md#33-planes-file)) |
 | 8 | Each image has its own size, but a video needs one frame size; how are 16 and 32-bit values shown; at what rate? | images centered in a fixed frame, one gray-level map for the whole video, 30 fps by default ([3.6](docs/SRS.md#36-video-output)) |
 | 9 | How do NRRD axes map to `M[x][y][z]`? `MRHead_1.nrrd` is signed. | `x` is the fastest axis on disk; signed types are accepted ([3.2](docs/SRS.md#32-volume-file)) |
 | 10 | Does the speed target cover the projection alone, and for which planes? | the projection alone, on a fixed benchmark of 100 planes of 501 × 501 pixels ([4.1](docs/SRS.md#41-speed)) |

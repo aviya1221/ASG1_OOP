@@ -156,29 +156,45 @@ This is the same index that 3D Slicer calls IJK.
 
 ### 3.3 Planes file
 
+The planes file has the format of the lecturer's example file,
+[demo/lecturer_example.csv](../demo/lecturer_example.csv), a copy of the
+[example the lecturer shared](https://docs.google.com/spreadsheets/d/1Tfy1yMYhAJjRBA8ZpRp_07pZXqGtxWhWoP02yZW1FQE/edit):
+
+```
+Number of Points (3 or 4),x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4
+3,200,200,0,0,200,400,400,200,400,,,
+4,200,0,0,200,0,500,200,400,0,200,400,500
+```
+
 **FR-10.** Every line that is not blank and not a comment is one plane. Its fields are separated by commas,
 spaces around a field are ignored, and each field is a number written as an integer or a decimal (`12`, `12.5`, `-3e2`).
+Empty fields at the end of a line are ignored.
 
-**FR-11.** Lines starting with `#` are comments. The first line is a header, and is skipped, if one of its fields is not a number.
+**FR-11.** Lines starting with `#` are comments. The first line is a header, and is skipped, if it has a field that is neither empty nor a number.
 
-**FR-12.** A plane has 9 or 12 numbers, three per point, in the order `x, y, z`:
+**FR-12.** The first field of a plane is the number of points, 3 or 4. Then come three numbers per point, in the order `x, y, z`.
+A triangle leaves the fields of the fourth point empty, or leaves them out.
 
-| Numbers | Shape | Point order |
-|---|---|---|
-| 9 | triangle | `a, b, c`: apex `a`, base `b → c` |
-| 12 | trapezoid | `a', a'', b, c`: top side `a' → a''`, base `b → c`, legs `a' → b` and `a'' → c` |
+| Points | Shape | Point order in the file | Sides |
+|---|---|---|---|
+| 3 | triangle | `a, b, c` | apex `a`, legs `a → b` and `a → c`, base `b → c` |
+| 4 | trapezoid | `a', b, a'', c` | legs `a' → b` and `a'' → c`, top side `a' → a''`, base `b → c` |
+
+In both shapes, the first leg runs from point 1 to point 2. In a trapezoid, points 1 and 3 make the top side and points 2 and 4 the base.
+The assignment names the legs of a trapezoid, the two vectors `a' → b` and `a'' → c` of the same length, and the file lists them one after the other.
+In the lecturer's example this order makes the second trapezoid an isosceles trapezoid, with a top side of 300, a base of 400 and legs of 502.5;
+read as `a', a'', b, c`, its legs would be 300 and 400 long, and its top side would not be parallel to its base.
 
 **FR-13.** Points are in voxel indices of `M` and may have fractions. They may lie outside `M`.
 
 **FR-14.** A planes file without any plane line is a fatal error.
 
-Example with a header, a comment, a triangle and a trapezoid:
+Example with the header, a triangle in the slice `z = 65` of a 256 × 256 × 130 volume, and a tilted trapezoid:
 
 ```
-ax,ay,az,bx,by,bz,cx,cy,cz
-# axial cut through the middle of a 256 x 256 x 130 volume
-127.5,0,65, 0,255,65, 255,255,65
-60,40,20, 190,40,20, 20,200,110, 230,200,110
+Number of Points (3 or 4),x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4
+3,127.5,0,65,0,255,65,255,255,65,,,
+4,60,40,20,20,200,110,190,40,20,230,200,110
 ```
 
 ### 3.4 Projection geometry
@@ -251,7 +267,7 @@ For example, the triangle `a = (5, 0, z0)`, `b = (0, 10, z0)`, `c = (10, 10, z0)
 
 | Check | The plane is bad when |
 |---|---|
-| count | it does not have 9 or 12 numbers |
+| count | its first field is not 3 or 4, or it does not have 3 numbers for each point |
 | numbers | a field is not a number, or is infinite or not a number (`inf`, `nan`) |
 | base | `\|c − b\| < 1e-6` |
 | one line | `\|w\| < 1e-6`: `P0` lies on the line of the base |
