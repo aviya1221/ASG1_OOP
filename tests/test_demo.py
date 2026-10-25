@@ -22,22 +22,29 @@ DEMOS = {                                   # name: volume, frames, frame size (
     "swiss_roll": ("swiss_roll.nrrd", 120, (256, 256)),
     "croissant": ("croissant.nrrd", 100, (502, 502)),
     "edge_cases": ("synthetic/dice.nrrd", 16, (282, 244)),
+    "lecturer_example": ("croissant.nrrd", 4, (454, 502)),
 }
 
-# The warnings of edge_cases.csv, as listed in docs/TESTING.md, section 6.1
-EDGE_CASE_WARNINGS = [
-    "warning: line 28, frame 7: the legs differ by 37.8 voxels; drawn as given",
-    "warning: line 30, frame 8: the top side a' a'' is not parallel to the base: its ends differ by 16 voxels; "
-    "drawn as given",
-    "warning: line 34, frame 9: 8 numbers instead of 9 (triangle) or 12 (trapezoid); the frame is black",
-    "warning: line 36, frame 10: field 9 is not a number: 'abc'; the frame is black",
-    "warning: line 38, frame 11: field 6 is not a finite number: 'inf'; the frame is black",
-    "warning: line 40, frame 12: b and c are the same point; the frame is black",
-    "warning: line 42, frame 13: points a, b and c are on one line; the frame is black",
-    "warning: line 44, frame 14: point a'' is 10 voxels off the plane of a', b and c; the frame is black",
-    "warning: line 46, frame 15: the sides of the trapezoid a', a'', c, b cross each other; the frame is black",
-    "warning: line 48, frame 16: the image would be 10200 x 180 pixels, more than 4096 on a side; the frame is black",
-]
+# The warnings of the files that are not clean, as listed in docs/TESTING.md, section 6.1
+WARNINGS = {
+    "edge_cases": [
+        "warning: line 29, frame 7: the legs differ by 37.8 voxels; drawn as given",
+        "warning: line 31, frame 8: the top side a' a'' is not parallel to the base: its ends differ by 16 voxels; "
+        "drawn as given",
+        "warning: line 35, frame 9: 9 numbers for 4 points instead of 12; the frame is black",
+        "warning: line 37, frame 10: field 10 is not a number: 'abc'; the frame is black",
+        "warning: line 39, frame 11: field 7 is not a finite number: 'inf'; the frame is black",
+        "warning: line 41, frame 12: b and c are the same point; the frame is black",
+        "warning: line 43, frame 13: points a, b and c are on one line; the frame is black",
+        "warning: line 45, frame 14: point a'' is 10 voxels off the plane of a', b and c; the frame is black",
+        "warning: line 47, frame 15: the sides of the trapezoid a', a'', c, b cross each other; the frame is black",
+        "warning: line 49, frame 16: the image would be 10200 x 180 pixels, more than 4096 on a side; "
+        "the frame is black",
+    ],
+    "lecturer_example": [
+        "warning: line 4, frame 3: the legs differ by 20.5 voxels; drawn as given",
+    ],
+}
 BLACK_FRAMES = [6] + list(range(9, 17))     # the plane outside the volume, and the bad lines
 
 
@@ -68,15 +75,16 @@ def test_one_frame_per_plane_line(demos, name):
     assert len(video_frames(demos[name][1])) == DEMOS[name][1]
 
 
-@pytest.mark.parametrize("name", [name for name in DEMOS if name != "edge_cases"])
+@pytest.mark.parametrize("name", [name for name in DEMOS if name not in WARNINGS])
 def test_clean_files_give_no_warnings(demos, name):
     """FR-36"""
     assert demos[name][0].stderr == ""
 
 
-def test_edge_case_warnings(demos):
+@pytest.mark.parametrize("name", WARNINGS)
+def test_expected_warnings(demos, name):
     """FR-24 to FR-27, FR-36"""
-    assert demos["edge_cases"][0].stderr.splitlines() == EDGE_CASE_WARNINGS
+    assert demos[name][0].stderr.splitlines() == WARNINGS[name]
 
 
 @pytest.mark.parametrize("name", DEMOS)

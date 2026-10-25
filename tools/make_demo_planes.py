@@ -1,8 +1,10 @@
 """Write the planes files of the demo into demo/ (docs/TESTING.md, section 6.1).
 
-Each file lists planes in the format of docs/SRS.md, section 3.3: one plane per line, 9 numbers for a triangle a, b, c
-or 12 for a trapezoid a', a'', b, c, in voxel indices of the volume. All the numbers are fixed, so every run writes the
-same files:
+Each file has the format of the lecturer's example file, demo/lecturer_example.csv (docs/SRS.md, section 3.3):
+its header, then one plane per line, the number of points and x, y, z of each point, in voxel indices of the volume:
+3 points a, b, c for a triangle, or 4 points a', b, a'', c for a trapezoid. The five clean files have nothing else,
+like the lecturer's example; edge_cases.csv adds comments and blank lines (FR-11).
+All the numbers are fixed, so every run writes the same files:
 
     head.csv           DATA/MRHead_1.nrrd        280 frames: 130 slices along z, a square turning around the y axis,
                                                  and a triangle turning within an oblique plane
@@ -36,8 +38,8 @@ HEAD_GRID = (256, 256, 130)                 # the head and the three smaller foo
 CROISSANT_GRID = (500, 500, 500)
 DICE_GRID = (200, 180, 160)
 X, Y, Z = np.eye(3)
-TRIANGLE_HEADER = "ax,ay,az,bx,by,bz,cx,cy,cz"                     # the first line of a file may name the numbers (FR-11)
-TRAPEZOID_HEADER = "a1x,a1y,a1z,a2x,a2y,a2z,bx,by,bz,cx,cy,cz"
+HEADER = "Number of Points (3 or 4),x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4"   # of the lecturer's example (FR-11)
+FILE_ORDER = {3: (0, 1, 2), 4: (0, 2, 1, 3)}  # a, b, c and a', a'', b, c as the file lists them: a, b, c and a', b, a'', c
 DECIMALS = 8                                # rounding stays far below the tolerance of 1e-6 in the image size (FR-16)
 
 
@@ -48,8 +50,13 @@ def number(value: float) -> str:
 
 
 def plane_line(points) -> str:
-    """One line of the file: the points one after the other, with a space between points."""
-    return ", ".join(",".join(number(value) for value in point) for point in points)
+    """One line of the file for the points a, b, c or a', a'', b, c (FR-12).
+
+    The line starts with the number of points, and lists them in the order of the file, a, b, c or a', b, a'', c.
+    A triangle leaves the fields of the fourth point empty, as the lecturer's example does.
+    """
+    fields = [number(value) for index in FILE_ORDER[len(points)] for value in points[index]]
+    return ",".join([str(len(points)), *fields, *[""] * (12 - len(fields))])
 
 
 def rectangle(center, right, down, width, height):
@@ -84,18 +91,14 @@ def head_lines():
     """head.csv: slices along z, a square turning around the y axis, and a triangle turning within an oblique plane."""
     sx, sy, sz = HEAD_GRID
     center = (np.array(HEAD_GRID) - 1) / 2                      # (127.5, 127.5, 64.5)
-    lines = [
-        "# Demo planes for DATA/MRHead_1.nrrd: 256 x 256 x 130 voxels of int16 (docs/TESTING.md, section 6.1).",
-        "# x runs from the front to the back of the head, y from the top to the bottom, and z from the left to the right.",
-        run_comment("DATA/MRHead_1.nrrd", "head.csv"),
-        "",
-        f"# frames 1 to {sz}: the slices z = 0 ... {sz - 1}, from one side of the head to the other,",
-        "# as rectangles over the whole slice: the front on the left, the top at the top",
-    ]
+    lines = [HEADER]
+    # frames 1 to 130: the slices z = 0 ... 129, from one side of the head to the other, as rectangles over the
+    # whole slice: the front on the left, the top at the top. x runs from the front to the back of the head,
+    # y from the top to the bottom, and z from the left to the right.
     for z in range(sz):
         lines.append(plane_line(rectangle(np.array([center[0], center[1], z]), X, Y, sx - 1, sy - 1)))
 
-    lines += ["", "# frames 131 to 220: a 256 x 256 square through the middle, turning 2 degrees per frame around the y axis"]
+    # frames 131 to 220: a 256 x 256 square through the middle, turning 2 degrees per frame around the y axis
     for step in range(90):
         lines.append(plane_line(rectangle(center, turned(X, Y, 2 * step), Y, 255, 255)))
 
@@ -105,8 +108,8 @@ def head_lines():
     first_down /= np.linalg.norm(first_down)
     side = 180
     height = side * math.sqrt(3) / 2
-    lines += ["", "# frames 221 to 280: an equilateral triangle with sides of 180, turning 6 degrees per frame around its middle,",
-              "# within a plane through the middle of the head, tilted 40 degrees from the axial plane"]
+    # frames 221 to 280: an equilateral triangle with sides of 180, turning 6 degrees per frame around its middle,
+    # within a plane through the middle of the head, tilted 40 degrees from the axial plane
     for step in range(60):
         down = turned(first_down, normal, 6 * step)
         right = np.cross(normal, down)
@@ -115,23 +118,17 @@ def head_lines():
     return lines
 
 
-def food_lines(name: str, value_type: str):
+def food_lines():
     """onion.csv, biscuit_cake.csv, swiss_roll.csv: the same square turning around an axis tilted 30 degrees from upright.
 
-    The foods share the grid of the head, so the same planes fit all three.
+    The foods share the grid of the head, so the same planes fit all three: 120 frames of a 256 x 256 square through
+    the middle, turning 3 degrees per frame around an axis that leans 30 degrees from upright toward the front.
+    The axis runs down the middle of the image.
     """
     center = (np.array(HEAD_GRID) - 1) / 2
     down = turned(Y, Z, 30)                    # the axis, pointing down: y leans 30 degrees toward the front (-x)
     first_right = turned(X, Z, 30)
-    lines = [
-        TRAPEZOID_HEADER,
-        f"# Demo planes for DATA/{name}.nrrd: 256 x 256 x 130 voxels of {value_type} (docs/TESTING.md, section 6.1).",
-        "# The same planes are used for the onion, the biscuit cake and the Swiss roll, which share the grid of the head.",
-        run_comment(f"DATA/{name}.nrrd", f"{name}.csv"),
-        "",
-        "# frames 1 to 120: a 256 x 256 square through the middle, turning 3 degrees per frame around an axis",
-        "# that leans 30 degrees from upright toward the front; the axis runs down the middle of the image",
-    ]
+    lines = [HEADER]
     for step in range(120):
         lines.append(plane_line(rectangle(center, turned(first_right, down, 3 * step), down, 255, 255)))
     return lines
@@ -145,16 +142,7 @@ def croissant_lines():
     center of the volume, turned in random directions with a fixed seed.
     """
     size = prototype_speed.SIZE
-    lines = [
-        TRIANGLE_HEADER,
-        "# The speed benchmark of docs/SRS.md, NFR-4, on DATA/croissant.nrrd: 500 x 500 x 500 voxels of uint8.",
-        f"# {prototype_speed.PLANES} isosceles triangles with a base and a height of {size}, so each image is "
-        f"{size + 1} x {size + 1} pixels.",
-        "# The point halfway between the apex and the middle of the base is at the center, (249.5, 249.5, 249.5),",
-        f"# and the directions are random, spread evenly over all directions, with the seed {prototype_speed.SEED}.",
-        run_comment("DATA/croissant.nrrd", "croissant.csv"),
-        "",
-    ]
+    lines = [HEADER]
     for corner, right, down in prototype_speed.benchmark_planes(np.full(3, (size - 1) / 2)):
         lines.append(plane_line(triangle(corner + size / 2 * right, right, down, size, size)))
     return lines
@@ -189,12 +177,12 @@ def edge_case_lines():
     sections = [
         ("Good planes, whose images are known in advance (docs/TESTING.md, section 3.5)", [
             ("ok", "the top face, z = 139, as a rectangle over the whole slice: a 120 x 120 square with one pip",
-             "0,0,139, 199,0,139, 0,179,139, 199,179,139"),
+             plane_line([(0, 0, 139), (199, 0, 139), (0, 179, 139), (199, 179, 139)])),
             ("ok", "the bottom face, z = 20, in an isosceles trapezoid around it: a square with six pips",
-             "30,20,20, 169,20,20, 0,160,20, 199,160,20"),
+             plane_line([(30, 20, 20), (169, 20, 20), (0, 160, 20), (199, 160, 20)])),
             ("ok", "the front face, y = 30, as a rectangle with the top of the die at the top: a square with four pips.\n"
                    "Spaces around the numbers, and 1.59e2 for 159, are allowed (FR-10)",
-             " 0 , 30 , 1.59e2 ,  199 , 30 , 159 ,  0 , 30 , 0 ,  199 , 30 , 0"),
+             " 4 ,  0 , 30 , 1.59e2 ,  0 , 30 , 0 ,  199 , 30 , 159 ,  199 , 30 , 0"),
             ("ok", "the plane x + y + z = 268.5 through the center: a regular hexagon with sides of 84.9 in a triangle",
              plane_line(hexagon)),
             ("ok", "the plane x + y + z = 408.5: the corner (159, 149, 139) cut off as an equilateral triangle\n"
@@ -202,32 +190,36 @@ def edge_case_lines():
              plane_line(corner)),
         ]),
         ("A valid plane that misses the volume: a black frame without a warning (FR-26)", [
-            ("outside", "a triangle above the die, at z = 300", "99.5,0,300, 0,179,300, 199,179,300"),
+            ("outside", "a triangle above the die, at z = 300", plane_line([(99.5, 0, 300), (0, 179, 300), (199, 179, 300)])),
         ]),
         ("Doubtful planes: drawn as given, with a warning (FR-25)", [
-            ("warning: legs", "legs of 188.8 and 226.6", "60,0,80, 0,179,80, 199,179,80"),
+            ("warning: legs", "legs of 188.8 and 226.6", plane_line([(60, 0, 80), (0, 179, 80), (199, 179, 80)])),
             ("warning: parallel sides", "equal legs of 130, but a'' is 16 lower than a', so the top side is not parallel"
-             " to the base", "100,40,150, 100,112,134, 100,-10,30, 100,190,30"),
+             " to the base", plane_line([(100, 40, 150), (100, 112, 134), (100, -10, 30), (100, 190, 30)])),
         ]),
         ("Bad planes: a black frame and a warning (FR-24)", [
-            ("bad: count", "8 numbers", "99.5,0,139, 0,179,139, 199,179"),
-            ("bad: numbers", "a word", "99.5,0,139, 0,179,139, 199,179,abc"),
-            ("bad: numbers", "an infinite number", "99.5,0,139, 0,179,inf, 199,179,139"),
-            ("bad: base", "b and c are the same point", "99.5,0,80, 150,179,80, 150,179,80"),
-            ("bad: one line", "a, b and c are on one line", "0,0,80, 100,90,80, 200,180,80"),
-            ("bad: flat", "a'' is 10 above the plane through a', b and c", "30,20,20, 169,20,30, 0,160,20, 199,160,20"),
-            ("bad: shape", "a' and a'' swapped, so the sides cross", "169,20,20, 30,20,20, 0,160,20, 199,160,20"),
-            ("bad: size", "a base of 10199, so an image of 10200 columns", "99.5,0,80, -5000,179,80, 5199,179,80"),
+            ("bad: count", "4 points, but only the 9 numbers of a triangle", "4,99.5,0,139,0,179,139,199,179,139,,,"),
+            ("bad: numbers", "a word", "3,99.5,0,139,0,179,139,199,179,abc,,,"),
+            ("bad: numbers", "an infinite number", "3,99.5,0,139,0,179,inf,199,179,139,,,"),
+            ("bad: base", "b and c are the same point", plane_line([(99.5, 0, 80), (150, 179, 80), (150, 179, 80)])),
+            ("bad: one line", "a, b and c are on one line", plane_line([(0, 0, 80), (100, 90, 80), (200, 180, 80)])),
+            ("bad: flat", "a'' is 10 above the plane through a', b and c",
+             plane_line([(30, 20, 20), (169, 20, 30), (0, 160, 20), (199, 160, 20)])),
+            ("bad: shape", "a' and a'', points 1 and 3, swapped, so the sides cross",
+             plane_line([(169, 20, 20), (30, 20, 20), (0, 160, 20), (199, 160, 20)])),
+            ("bad: size", "a base of 10199, so an image of 10200 columns",
+             plane_line([(99.5, 0, 80), (-5000, 179, 80), (5199, 179, 80)])),
         ]),
     ]
     cases = [case for _, section in sections for case in section]
     black = [frame for frame, (result, _, _) in enumerate(cases, start=1) if result.startswith("bad") or result == "outside"]
     warned = [frame for frame, (result, _, _) in enumerate(cases, start=1) if result.startswith(("bad", "warning"))]
     lines = [
-        TRIANGLE_HEADER,
+        HEADER,
         "# Edge cases on DATA/synthetic/dice.nrrd: 200 x 180 x 160 voxels of uint32 (docs/TESTING.md, section 6.1).",
         "# The die is the cube x = 40 ... 159, y = 30 ... 149, z = 20 ... 139, with the value 100000; its pips have 200000.",
-        "# The line above is a header (FR-11). A triangle has 9 numbers, a, b, c; a trapezoid has 12, a', a'', b, c (FR-12).",
+        "# The line above is the header of the lecturer's format (FR-11). Each plane starts with its number of points:",
+        "# 3 for a triangle a, b, c, or 4 for a trapezoid a', b, a'', c (FR-12).",
         run_comment("DATA/synthetic/dice.nrrd", "edge_cases.csv"),
         f"# Expected: {len(cases)} frames; black: {frame_list(black)}; a warning for {frame_list(warned)}.",
     ]
@@ -239,6 +231,14 @@ def edge_case_lines():
             first, *more = description.split("\n")
             lines += [f"# frame {frame}: {first}", *(f"# {text}" for text in more), line]
     return lines, [result for result, _, _ in cases]
+
+
+def fields_of(text: str) -> list[str]:
+    """The fields of a line, without spaces around them, and without the empty fields at its end (FR-10)."""
+    fields = [field.strip() for field in text.split(",")]
+    while len(fields) > 1 and not fields[-1]:
+        fields.pop()
+    return fields
 
 
 def is_number(field: str) -> bool:
@@ -258,9 +258,10 @@ def check_plane(fields, grid):
     numbers = [float(field) for field in fields] if all(is_number(field) for field in fields) else None
     if numbers is None or not all(math.isfinite(n) for n in numbers):
         return "bad: numbers", 0, 0
-    if len(numbers) not in (9, 12):
+    count, coordinates = numbers[0], numbers[1:]
+    if count not in FILE_ORDER or len(coordinates) != 3 * count:
         return "bad: count", 0, 0
-    points = np.array(numbers).reshape(-1, 3)
+    points = np.array(coordinates).reshape(-1, 3)[list(FILE_ORDER[int(count)])]    # a, b, c or a', a'', b, c
     p0, b, c = points[0], points[-2], points[-1]
     q = points[1] if len(points) == 4 else p0                  # the start of the second leg
     if np.linalg.norm(c - b) < 1e-6:
@@ -309,8 +310,8 @@ def check_file(path: Path, grid, expected=None) -> str:
     for line_no, text in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         if not text.strip() or text.startswith("#"):
             continue
-        fields = [field.strip() for field in text.split(",")]
-        if line_no == 1 and not all(is_number(field) for field in fields):
+        fields = fields_of(text)
+        if line_no == 1 and any(field and not is_number(field) for field in fields):
             continue                                            # the header
         result, cols, rows = check_plane(fields, grid)
         results.append(result)
@@ -340,9 +341,9 @@ def main(argv=None) -> None:
     edge_lines, edge_results = edge_case_lines()
     files = [  # (file name, lines, grid of the volume, expected results or None for a clean file)
         ("head.csv", head_lines(), HEAD_GRID, None),
-        ("onion.csv", food_lines("onion", "uint8"), HEAD_GRID, None),
-        ("biscuit_cake.csv", food_lines("biscuit_cake", "uint16"), HEAD_GRID, None),
-        ("swiss_roll.csv", food_lines("swiss_roll", "uint32"), HEAD_GRID, None),
+        ("onion.csv", food_lines(), HEAD_GRID, None),
+        ("biscuit_cake.csv", food_lines(), HEAD_GRID, None),
+        ("swiss_roll.csv", food_lines(), HEAD_GRID, None),
         ("croissant.csv", croissant_lines(), CROISSANT_GRID, None),
         ("edge_cases.csv", edge_lines, DICE_GRID, edge_results),
     ]
