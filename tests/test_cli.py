@@ -11,12 +11,12 @@ from plane_projection.projector import Projector
 from plane_projection.video import VideoWriter
 
 GOOD = [
-    "9.5,0,10, 0,19,10, 19,19,10",          # a triangle of 20 x 20 pixels
-    "0,0,5, 19,0,5, 0,19,5, 19,19,5",       # a rectangle of 20 x 20
-    "4.5,2,3, 0,11,3, 9,11,3",              # a triangle of 10 x 10
+    "3, 9.5,0,10, 0,19,10, 19,19,10,,,",    # a triangle of 20 x 20 pixels
+    "4, 0,0,5, 0,19,5, 19,0,5, 19,19,5",    # a rectangle of 20 x 20
+    "3, 4.5,2,3, 0,11,3, 9,11,3,,,",        # a triangle of 10 x 10
 ]
-ON_ONE_LINE = "0,0,0, 1,1,1, 2,2,2"
-UNEQUAL_LEGS = "0,0,15, 0,10,15, 3.5157,10,15"   # legs of 10 and 10.6, high up where the volume is bright
+ON_ONE_LINE = "3, 0,0,0, 1,1,1, 2,2,2"
+UNEQUAL_LEGS = "3, 0,0,15, 0,10,15, 3.5157,10,15"   # legs of 10 and 10.6, high up where the volume is bright
 
 
 @pytest.fixture
@@ -53,8 +53,8 @@ def test_help(capsys):
         Ex0.main(["--help"])
     assert stop.value.code == 0
     text = capsys.readouterr().out
-    for words in ("file.nrrd", "file.csv", "file.mp4", "--fps", "9 numbers", "12 numbers", "header",
-                  "Example", "127.5,0,65, 0,255,65, 255,255,65"):
+    for words in ("file.nrrd", "file.csv", "file.mp4", "--fps", "3 points", "4 points", "a', b, a'', c", "header",
+                  "Example", "Number of Points (3 or 4),x1,y1,z1", "3,127.5,0,65,0,255,65,255,255,65,,,"):
         assert words in text
 
 
@@ -121,7 +121,7 @@ def test_bad_and_doubtful_planes(files, capsys):
 
 def test_frame_size_is_the_largest_valid_plane_rounded_up(files, capsys):
     """FR-30"""
-    argv = files("10,0,10, 0,19,10, 20,19,10", GOOD[2], ON_ONE_LINE)     # 21 x 20, 10 x 10, bad
+    argv = files("3, 10,0,10, 0,19,10, 20,19,10", GOOD[2], ON_ONE_LINE)     # 21 x 20, 10 x 10, bad
     assert run(argv, capsys)[0] == 0
     info = video_info(argv[2])
     assert (info["width"], info["height"]) == (22, 20)

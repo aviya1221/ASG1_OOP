@@ -13,7 +13,7 @@ import benchmark  # noqa: E402
 
 def test_benchmark_runs(write_nrrd, write_csv, capsys):
     volume = write_nrrd(index_volume((40, 40, 40)))
-    planes = write_csv("19.5,0,20, 0,39,20, 39,39,20", "0,0,5, 39,0,5, 0,39,5, 39,39,5", "0,0,0, 1,1,1, 2,2,2")
+    planes = write_csv("3, 19.5,0,20, 0,39,20, 39,39,20", "4, 0,0,5, 0,39,5, 39,0,5, 39,39,5", "3, 0,0,0, 1,1,1, 2,2,2")
     assert benchmark.main(["--volume", str(volume), "--planes", str(planes), "--rounds", "2", "--types"]) == 0
     out = capsys.readouterr().out
     for words in ("machine:", "uint32", "uint16", "fps median", "result:"):

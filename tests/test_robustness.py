@@ -61,7 +61,7 @@ def test_projection_memory_does_not_grow_with_the_volume(traced):
 def test_run_memory_does_not_grow_with_the_number_of_planes(tmp_path, write_nrrd, write_csv, traced, capsys):
     """NFR-7: each extra plane adds far less memory than one frame, so frames are not kept"""
     volume = write_nrrd(np.ones((256, 256, 8), dtype=np.uint8))
-    line = "0,0,4, 255,0,4, 0,255,4, 255,255,4"          # a 256 x 256 frame of 64 KB
+    line = "4, 0,0,4, 0,255,4, 255,0,4, 255,255,4"       # a 256 x 256 frame of 64 KB
     peaks = {}
     for count in (10, 200):
         planes = write_csv(*[line] * count, name=f"planes{count}.csv")
@@ -78,10 +78,12 @@ def test_run_memory_does_not_grow_with_the_number_of_planes(tmp_path, write_nrrd
 def random_lines(rng, count):
     """Planes files are written by people and scripts: good planes mixed with every kind of mistake."""
     odd = ["1e300", "-1e300", "nan", "inf", "-inf", "", "abc", "1e5", "0x10", "--3", "1,5", "  "]
+    counts = ["3", "4", "0", "5", "3.5", "-4", "x", ""]
     lines = []
     for _ in range(count):
         kind = rng.integers(6)
-        size = int(rng.choice([9, 12])) if kind < 4 else int(rng.integers(0, 20))
+        points = int(rng.choice([3, 4]))
+        size = 3 * points if kind < 4 else int(rng.integers(0, 20))
         fields = [f"{rng.uniform(-10, 40):.3f}" for _ in range(size)]
         if kind == 1 and fields:                 # a strange field
             fields[rng.integers(len(fields))] = str(rng.choice(odd))
@@ -90,15 +92,19 @@ def random_lines(rng, count):
                                                                    for a, b in zip(fields[0:3], fields[3:6])]
         elif kind == 5:                          # a line of commas, or a very long line
             fields = [""] * size if rng.random() < 0.5 else fields * 50
-        lines.append(",".join(fields))
+        first = str(points) if kind < 4 else str(rng.choice(counts))     # the number of points, right or wrong
+        if fields and not any(fields):
+            first = ""
+        padding = [""] * (3 * (4 - points)) if rng.random() < 0.5 else []   # the empty fields of a missing point
+        lines.append(",".join([first, *fields, *padding]))
     return lines
 
 
 def test_random_lines(tmp_path, write_nrrd, write_csv, capsys):
     """NFR-8, FR-23: 1000 random lines give 1000 frames and no crash"""
     lines = random_lines(np.random.default_rng(2026), 1000)
-    lines[0] = "9.5,0,10, 0,19,10, 19,19,10"   # a first line that is not numbers would be a header (FR-11)
-    lines = ["1,2,3,4,5,6,7,8,9" if not line.strip() or line.lstrip().startswith("#") else line for line in lines]
+    lines[0] = "3, 9.5,0,10, 0,19,10, 19,19,10"   # a first line that is not numbers would be a header (FR-11)
+    lines = ["3,1,2,3,4,5,6,7,8,9" if not line.strip() or line.lstrip().startswith("#") else line for line in lines]
     video = tmp_path / "video.mp4"
     code = Ex0.main([str(write_nrrd(index_volume((30, 30, 30)))), str(write_csv(*lines)), str(video)])
     out, err = capsys.readouterr()
@@ -111,7 +117,7 @@ def test_random_lines(tmp_path, write_nrrd, write_csv, capsys):
 def test_file_without_a_good_plane(tmp_path, write_nrrd, write_csv, capsys):
     """FR-30, NFR-8: black frames of 64 x 64"""
     video = tmp_path / "video.mp4"
-    lines = ["1,2,3", "0,0,0, 1,1,1, 2,2,2", "abc,1,2,3,4,5,6,7,8"]
+    lines = ["1,2,3", "3, 0,0,0, 1,1,1, 2,2,2", "3,abc,1,2,3,4,5,6,7,8"]
     assert Ex0.main([str(write_nrrd(np.ones((4, 4, 4), np.uint8))), str(write_csv(*lines)), str(video)]) == 0
     capsys.readouterr()
     info = video_info(video)

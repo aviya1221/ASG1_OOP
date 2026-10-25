@@ -23,18 +23,21 @@ from plane_projection.video import VideoWriter
 from plane_projection.volume import read_volume
 
 PLANES_FORMAT = """\
-The planes file has one plane per line: comma-separated numbers, in voxel indices x, y, z.
-  9 numbers   a triangle a, b, c: the apex a, and the base from b to c
-  12 numbers  a trapezoid a', a'', b, c: the top side from a' to a'', and the base from b to c
-Blank lines and lines starting with # are skipped, and so is a first line that is not
-numbers (a header). A line that is not a plane gives a black frame and a warning.
+The planes file has one plane per line, in comma-separated fields: the number of points,
+3 or 4, and then x, y, z of each point, in voxel indices.
+  3 points  a triangle a, b, c: the apex a, and the base from b to c
+  4 points  a trapezoid a', b, a'', c: the legs from a' to b and from a'' to c,
+            the top side from a' to a'', and the base from b to c
+A triangle leaves the fields of the fourth point empty. Blank lines and lines starting
+with # are skipped, and so is a first line that is not numbers (a header). A line that
+is not a plane gives a black frame and a warning.
 
-Example, with a header, a comment, a triangle and a trapezoid:
+Example, with the header, a triangle in the slice z = 65 of a 256 x 256 x 130 volume,
+and a tilted trapezoid:
 
-  ax,ay,az,bx,by,bz,cx,cy,cz
-  # a triangle in the slice z = 65 of a 256 x 256 x 130 volume, then a tilted trapezoid
-  127.5,0,65, 0,255,65, 255,255,65
-  60,40,20, 190,40,20, 20,200,110, 230,200,110
+  Number of Points (3 or 4),x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4
+  3,127.5,0,65,0,255,65,255,255,65,,,
+  4,60,40,20,20,200,110,190,40,20,230,200,110
 """
 
 
