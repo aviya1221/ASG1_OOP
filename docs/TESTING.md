@@ -4,7 +4,7 @@
 Version 1.0, 2026-10-22
 
 This document describes how the program is tested: what each test checks, how the expected result is known, and when the tests run.
-It builds on the [Software Requirements Specification](SRS.md), whose [traceability matrix](SRS.md#43-traceability-matrix) names the tests of every requirement,
+It builds on the [Software Requirements Specification](SRS.md), whose [traceability matrix](SRS.md#42-traceability-matrix) names the tests of every requirement,
 and on the [algorithm document](ALGORITHM.md), whose [section 9](ALGORITHM.md#9-program-structure) names the modules under test.
 
 ## Contents

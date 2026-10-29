@@ -8,7 +8,7 @@ Version 2.0, 2026-10-29
 1. [Introduction](#1-introduction)
 2. [Overall description](#2-overall-description)
 3. [Specific requirements](#3-specific-requirements)
-4. [Appendices](#4-appendices): use cases, data dictionary, traceability matrix
+4. [Appendices](#4-appendices): use cases, traceability matrix
 
 ---
 
@@ -26,16 +26,17 @@ The product is a command-line program, `Ex0.py`. It reads a 3D volume from an NR
 and writes an MP4 video with one frame per plane: the volume sampled on that plane.
 What is out of scope is listed in the [README](../README.md#scope).
 
-### 1.3 Definitions
+### 1.3 Definitions and data dictionary
 
-| Term | Meaning |
-|---|---|
-| Voxel unit | The distance between the centers of two neighboring voxels. All lengths in this document are in voxel units. |
-| Plane | One line of the planes file: a triangle of 3 points or a trapezoid of 4. It fixes the plane in space and the part of it that is drawn. |
-| Projection | Sampling the volume at the points of the shape. It is a slice, not a sum along rays. |
-| Valid plane | A plane that passes the checks of [FR-24](#35-input-validation). |
-
-The data items, such as the volume `M`, the image `E` and the frame, are defined in the [data dictionary](#42-data-dictionary).
+| Term | Meaning | Type and range |
+|---|---|---|
+| `M`, the volume | The 3D array of voxel values read from the NRRD file, `sx × sy × sz`. | each size 1 to 1023; `uint8`, `uint16`, `uint32`, `int8`, `int16` or `int32` (FR-6, FR-7) |
+| Voxel unit | The distance between the centers of two neighboring voxels. All lengths in this document are in voxel units. | |
+| Plane | One line of the planes file: a triangle of 3 points or a trapezoid of 4. It fixes the plane in space and the part of it that is drawn. | 3 numbers `x, y, z` per point, voxel indices that may have fractions and lie outside `M` (FR-12, FR-13) |
+| Valid plane | A plane that passes the checks of [FR-24](#35-input-validation). | |
+| Projection | Sampling the volume at the points of the shape. It is a slice, not a sum along rays. | |
+| `E`, the image | The 2D array of `rows × cols` voxel values that the projection gives for one plane. | each size 1 to 4096 (FR-16, FR-24) |
+| Frame | One picture of the video: the image in gray levels, in the middle of a `W × H` picture. | `W` and `H` even, 64 × 64 if no plane is valid; gray levels 0 to 255 (FR-30, FR-32) |
 
 ### 1.4 References
 
@@ -299,62 +300,23 @@ the gray levels, the placement or the encoding. The rate is the number of planes
 
 ### 4.1 Use cases
 
-**UC-01 Make a video.** Actor: the lecturer or a grader.
-
-- **Precondition:** an NRRD volume and a planes file.
-- **Main flow:** 1. The actor runs `Ex0.py` with the three files (FR-1).
-  2. The program checks the inputs, projects each plane and writes its frame. 3. It prints the summary and exits with code 0.
-- **Alternative flows:** 1a. Wrong arguments: exit code 2 (FR-3). 2a. Fatal error: no video, exit code 1 (FR-4).
-  2b. Bad plane: a black frame and a warning (FR-24). 2c. Doubtful plane: drawn, with a warning (FR-25).
-- **Postcondition:** an MP4 file with one frame per plane line.
-
-**UC-02 Measure the speed.** Actor: a developer.
-
-- **Precondition:** `DATA/croissant.nrrd` and the benchmark planes, `demo/croissant.csv`.
-- **Main flow:** 1. The developer runs `python tools/benchmark.py`. 2. The script projects the planes of NFR-4 and prints the median rate.
-- **Alternative flows:** 2a. Under 30 frames per second: exit code 1 (NFR-1).
-- **Postcondition:** the rate, recorded with the machine (NFR-4).
-
-**UC-03 Project a plane from code.** Actor: a developer.
-
-- **Precondition:** a volume as a NumPy array, and a plane of 3 or 4 points.
-- **Main flow:** 1. The developer calls `plane_setup` and then `Projector.project`, and gets the image `E`.
-- **Alternative flows:** 1a. Bad plane: the setup gives the reason, and there is no image (FR-24).
-- **Postcondition:** the image of FR-15 to FR-21, with no file read or written (NFR-12).
-
-### 4.2 Data dictionary
-
-| Item | Type | Range | Requirements |
+| Use case | Actor | Main flow and result | Alternative flows |
 |---|---|---|---|
-| `M`, the volume | 3D array of `sx × sy × sz` voxels | each size 1 to 1023 | FR-7, FR-8 |
-| voxel value | `uint8`, `uint16`, `uint32`, `int8`, `int16` or `int32` | values below 0 are read as 0 | FR-6 |
-| plane line | the number of points, then 3 numbers per point | 3 or 4 points | FR-10 to FR-12 |
-| point | 3 numbers `x, y, z` | voxel indices, may have fractions and lie outside `M` | FR-13 |
-| `E`, the image | 2D array of `rows × cols` voxel values | each size 1 to 4096 | FR-16, FR-20, FR-24 |
-| frame | gray picture of `W × H` pixels | `W` and `H` even; 64 × 64 if no plane is valid | FR-30, FR-31 |
-| gray level | integer | 0 to 255 | FR-32 |
-| frame rate | positive number | 30 by default | FR-2, FR-33 |
+| UC-01 Make a video | the lecturer or a grader | runs `Ex0.py` with a volume and a planes file (FR-1); the program checks them, projects each plane, writes an MP4 file with one frame per plane line, prints the summary and exits with code 0 | wrong arguments: exit code 2 (FR-3); fatal error: no video, exit code 1 (FR-4); bad plane: a black frame and a warning (FR-24); doubtful plane: drawn, with a warning (FR-25) |
+| UC-02 Measure the speed | a developer | runs `python tools/benchmark.py`, which projects the planes of NFR-4 and prints the median rate, recorded with the machine | under 30 frames per second: exit code 1 (NFR-1) |
+| UC-03 Project a plane from code | a developer | calls `plane_setup` and then `Projector.project` with a volume array and a plane of 3 or 4 points, and gets the image of FR-15 to FR-21, with no file read or written (NFR-12) | bad plane: the setup gives the reason, and there is no image (FR-24) |
 
-### 4.3 Traceability matrix
+### 4.2 Traceability matrix
 
 Design sections are in the [algorithm document](ALGORITHM.md), and test files in `tests/`.
 
 | Requirements | Use case | Design | Tests | Status |
 |---|---|---|---|---|
-| FR-1 to FR-4 | UC-01 | [8.1](ALGORITHM.md#81-errors) | `test_cli`, `test_planes`, `test_volume` | passed |
-| FR-5 to FR-9 | UC-01 | [3.1](ALGORITHM.md#31-volume) | `test_volume`, `test_projector` | passed |
-| FR-10 to FR-14 | UC-01 | [3.2](ALGORITHM.md#32-planes) | `test_planes` | passed |
-| FR-15 to FR-18 | UC-01, UC-03 | [4](ALGORITHM.md#4-plane-setup-and-checks) | `test_geometry`, `test_projector` | passed |
-| FR-19 to FR-21 | UC-01, UC-03 | [5](ALGORITHM.md#5-projection) | `test_projector`, `test_demo` | passed |
-| FR-23 to FR-27 | UC-01, UC-03 | [4](ALGORITHM.md#4-plane-setup-and-checks), [8.1](ALGORITHM.md#81-errors) | `test_planes`, `test_geometry`, `test_cli`, `test_demo` | passed |
-| FR-28 to FR-34 | UC-01 | [7](ALGORITHM.md#7-frames-and-video) | `test_frames`, `test_video`, `test_cli`, `test_demo` | passed |
-| FR-35, FR-36 | UC-01 | [8.2](ALGORITHM.md#82-run-report) | `test_cli`, `test_demo` | passed |
-| NFR-1 to NFR-4 | UC-02 | [6](ALGORITHM.md#6-speed) | `test_benchmark`, and the benchmark of the [experiment](../experiment/README.md#3-speed) | passed, 317 fps |
-| NFR-6 | UC-01 | [10](ALGORITHM.md#10-complexity) | `test_volume`, `test_robustness` | passed |
-| NFR-8, NFR-9 | UC-01 | [5.2](ALGORITHM.md#52-sampling), [8.1](ALGORITHM.md#81-errors) | `test_robustness`, `test_projector`, `test_cli` | passed |
-| NFR-10, NFR-11 | UC-01 | [7.4](ALGORITHM.md#74-encoding) | the continuous integration on Windows, macOS and Linux | passed on Windows |
-| NFR-12 | UC-03 | [9](ALGORITHM.md#9-program-structure) | `test_projector` | passed |
-| NFR-14 | all | [9](ALGORITHM.md#9-program-structure) | every test file, and a review of the code | passed, 98% of the lines covered |
-| NFR-15 | UC-01 | [9](ALGORITHM.md#9-program-structure) | `test_cli` | passed |
+| FR-1 to FR-14, command line and input files | UC-01 | [3](ALGORITHM.md#3-reading-the-inputs), [8.1](ALGORITHM.md#81-errors) | `test_cli`, `test_volume`, `test_planes` | passed |
+| FR-15 to FR-21, geometry | UC-01, UC-03 | [4](ALGORITHM.md#4-plane-setup-and-checks), [5](ALGORITHM.md#5-projection) | `test_geometry`, `test_projector`, `test_demo` | passed |
+| FR-23 to FR-27, input validation | UC-01, UC-03 | [4](ALGORITHM.md#4-plane-setup-and-checks), [8.1](ALGORITHM.md#81-errors) | `test_planes`, `test_geometry`, `test_cli`, `test_demo` | passed |
+| FR-28 to FR-36, video and run report | UC-01 | [7](ALGORITHM.md#7-frames-and-video), [8.2](ALGORITHM.md#82-run-report) | `test_frames`, `test_video`, `test_cli`, `test_demo` | passed |
+| NFR-1 to NFR-4, speed | UC-02 | [6](ALGORITHM.md#6-speed) | `test_benchmark`, and the benchmark of the [experiment](../experiment/README.md#3-speed) | passed, 317 fps |
+| NFR-6 to NFR-15, other qualities | UC-01, UC-03 | [5.2](ALGORITHM.md#52-sampling), [7.4](ALGORITHM.md#74-encoding), [9](ALGORITHM.md#9-program-structure), [10](ALGORITHM.md#10-complexity) | `test_volume`, `test_robustness`, `test_projector`, `test_cli`, and the continuous integration | passed on Windows, 98% of the lines covered |
 
 Status of 2026-10-29: the 155 everyday tests and the 42 slow tests pass on Windows.
