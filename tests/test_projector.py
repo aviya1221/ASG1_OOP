@@ -126,7 +126,7 @@ AXIS_FILES = ["MRHead_1.nrrd", "onion.nrrd", "biscuit_cake.nrrd", "swiss_roll.nr
 @pytest.mark.slow
 @pytest.mark.parametrize("name", AXIS_FILES)
 def test_slices_along_the_axes(name):
-    """FR-8, FR-22: images of planes along the axes equal NumPy slices, turned so that rows come first"""
+    """FR-8, FR-19: images of planes along the axes equal NumPy slices, turned so that rows come first"""
     volume = read_volume(DATA / name)
     data = volume.data
     sx, sy, sz = (n - 1 for n in data.shape)

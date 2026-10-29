@@ -1,4 +1,4 @@
-"""Sampling the volume on a plane (docs/SRS.md, FR-19 to FR-22; docs/ALGORITHM.md, section 5)."""
+"""Sampling the volume on a plane (docs/SRS.md, FR-19 to FR-21; docs/ALGORITHM.md, section 5)."""
 
 from concurrent.futures import ThreadPoolExecutor
 

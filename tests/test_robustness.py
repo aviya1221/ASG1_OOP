@@ -59,7 +59,7 @@ def test_projection_memory_does_not_grow_with_the_volume(traced):
 
 
 def test_run_memory_does_not_grow_with_the_number_of_planes(tmp_path, write_nrrd, write_csv, traced, capsys):
-    """NFR-7: each extra plane adds far less memory than one frame, so frames are not kept"""
+    """NFR-6: each extra plane adds far less memory than one frame, so frames are not kept"""
     volume = write_nrrd(np.ones((256, 256, 8), dtype=np.uint8))
     line = "4, 0,0,4, 0,255,4, 255,0,4, 255,255,4"       # a 256 x 256 frame of 64 KB
     peaks = {}

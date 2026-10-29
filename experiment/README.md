@@ -4,7 +4,7 @@
 2026-10-22
 
 The demo program, `Ex0.py`, was run on the six demo planes files, its images were compared pixel by pixel with the reslicing filter of
-3D Slicer, and its speed was measured on the benchmark of the [requirements](../docs/SRS.md#41-speed).
+3D Slicer, and its speed was measured on the benchmark of the [requirements](../docs/SRS.md#38-non-functional-requirements).
 All the results in this folder are made again by one command:
 
 ```
@@ -82,8 +82,8 @@ The third column shows linear interpolation, as 3D Slicer shows a slice by defau
 
 ## 3. Speed
 
-The benchmark of [NFR-4](../docs/SRS.md#41-speed) is the 100 triangles of `demo/croissant.csv` through the 500 × 500 × 500 croissant, each an image of 501 × 501 pixels.
-The time of a plane is that of `plane_setup` and `Projector.project` together ([NFR-3](../docs/SRS.md#41-speed)).
+The benchmark of [NFR-4](../docs/SRS.md#38-non-functional-requirements) is the 100 triangles of `demo/croissant.csv` through the 500 × 500 × 500 croissant, each an image of 501 × 501 pixels.
+The time of a plane is that of `plane_setup` and `Projector.project` together ([NFR-3](../docs/SRS.md#38-non-functional-requirements)).
 Each configuration ran 5 rounds, every round running all configurations in turn, so that changes of the processor clock affect them alike
 ([results/speed.txt](results/speed.txt)). The laptop was on the charger.
 

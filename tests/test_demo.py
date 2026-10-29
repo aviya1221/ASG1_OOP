@@ -104,7 +104,7 @@ def test_black_frames_of_the_edge_cases(demos):
 
 
 def test_known_head_frame(demos):
-    """FR-22, FR-32: frame 66 is the slice z = 65, after the gray map, within the loss of H.264.
+    """FR-19, FR-32: frame 66 is the slice z = 65, after the gray map, within the loss of H.264.
 
     On the noise of the MRI the loss is about 2.5 gray levels on average, and the neighboring slices
     are 6 or more away, so frame 66 must be within 3 of slice 65 and closer to it than to its neighbors.

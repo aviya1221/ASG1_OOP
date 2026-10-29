@@ -131,7 +131,7 @@ The assignment leaves these questions open. The [Software Requirements Specifica
 | 7 | What does the CSV file look like? | the format of the lecturer's example: a header, then one plane per line, the number of points (3 or 4) and then `x, y, z` of each point; comments are allowed ([3.3](docs/SRS.md#33-planes-file)) |
 | 8 | Each image has its own size, but a video needs one frame size; how are 16 and 32-bit values shown; at what rate? | images centered in a fixed frame, one gray-level map for the whole video, 30 fps by default ([3.6](docs/SRS.md#36-video-output)) |
 | 9 | How do NRRD axes map to `M[x][y][z]`? `MRHead_1.nrrd` is signed. | `x` is the fastest axis on disk; signed types are accepted ([3.2](docs/SRS.md#32-volume-file)) |
-| 10 | Does the speed target cover the projection alone, and for which planes? | the projection alone, on a fixed benchmark of 100 planes of 501 × 501 pixels ([4.1](docs/SRS.md#41-speed)) |
+| 10 | Does the speed target cover the projection alone, and for which planes? | the projection alone, on a fixed benchmark of 100 planes of 501 × 501 pixels ([3.8](docs/SRS.md#38-non-functional-requirements)) |
 
 ## Data
 

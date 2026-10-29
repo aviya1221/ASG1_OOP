@@ -60,7 +60,7 @@ the frame size depends on the largest valid plane (FR-30), and every fatal error
 | read the volume | [3.1](#31-volume) | FR-5 to FR-9 |
 | read the planes | [3.2](#32-planes) | FR-10 to FR-14 |
 | set up and check each plane | [4](#4-plane-setup-and-checks) | FR-15 to FR-18, FR-23 to FR-27 |
-| project | [5](#5-projection) | FR-19 to FR-22, NFR-1 to NFR-3 |
+| project | [5](#5-projection) | FR-19 to FR-21, NFR-1 to NFR-3 |
 | gray levels, placement, video | [7](#7-frames-and-video) | FR-28 to FR-34 |
 | errors and report | [8](#8-errors-and-the-run-report) | FR-1 to FR-4, FR-35, FR-36 |
 
@@ -365,7 +365,7 @@ The video is written with [imageio-ffmpeg](https://github.com/imageio/imageio-ff
 | frame rate | `--fps` | FR-33 |
 | `macro_block_size` | 1 | by default the library resizes frames to a multiple of 16; even sizes are enough for `yuv420p` |
 
-Frames go to the encoder one at a time, as they are made, so the video is never held in memory (NFR-7).
+Frames go to the encoder one at a time, as they are made, so the video is never held in memory (NFR-6).
 The encoder starts only after all the checks have passed, so a fatal error never leaves a video behind (FR-3).
 OpenCV was considered and rejected: its `pip` package does not write H.264 without extra files.
 
@@ -406,7 +406,7 @@ At the end the program prints the summary of FR-35 to the standard output, with 
 
 ## 9. Program structure
 
-Each step of the pipeline is its own module (NFR-13), in a package named `plane_projection`.
+Each step of the pipeline is its own module, in a package named `plane_projection`.
 Only `Ex0.py` talks to the user; the modules return results or raise `InputError`, and never print.
 
 | Module | Contents | Uses | Requirements |
@@ -416,11 +416,11 @@ Only `Ex0.py` talks to the user; the modules return results or raise `InputError
 | `plane_projection/volume.py` | `Volume`, `read_volume` | `errors`, `pynrrd` | FR-5 to FR-9 |
 | `plane_projection/planes.py` | `Plane`, `read_planes` | `errors` | FR-10 to FR-14 |
 | `plane_projection/geometry.py` | `PlaneSetup`, `plane_setup` | `planes` | FR-15 to FR-18, FR-21, FR-23 to FR-27 |
-| `plane_projection/projector.py` | `Projector` | `volume`, `geometry` | FR-19, FR-20, FR-22, NFR-1 to NFR-3, NFR-12 |
+| `plane_projection/projector.py` | `Projector` | `volume`, `geometry` | FR-19, FR-20, NFR-1 to NFR-3, NFR-12 |
 | `plane_projection/frames.py` | `frame_size`, `GrayMap`, `place` | `geometry` | FR-29 to FR-32 |
-| `plane_projection/video.py` | `VideoWriter` | `errors`, `imageio-ffmpeg` | FR-28, FR-33, FR-34, NFR-7 |
+| `plane_projection/video.py` | `VideoWriter` | `errors`, `imageio-ffmpeg` | FR-28, FR-33, FR-34, NFR-6 |
 | `tests/` | one test file for each module | | NFR-14 |
-| `tools/benchmark.py` | the benchmark of NFR-4 | `geometry`, `projector` | NFR-1 to NFR-5 |
+| `tools/benchmark.py` | the benchmark of NFR-4 | `geometry`, `projector` | NFR-1 to NFR-4 |
 
 `Volume`, `Plane` and `PlaneSetup` are frozen data classes: once made, they do not change.
 `Projector` and `VideoWriter` are classes because they hold something for the whole run, a pool of threads and an open encoder.

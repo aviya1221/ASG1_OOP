@@ -4,7 +4,7 @@
 Version 1.0, 2026-10-22
 
 This document describes how the program is tested: what each test checks, how the expected result is known, and when the tests run.
-It builds on the [Software Requirements Specification](SRS.md), whose [section 7](SRS.md#7-verification) names the method for every requirement,
+It builds on the [Software Requirements Specification](SRS.md), whose [traceability matrix](SRS.md#43-traceability-matrix) names the tests of every requirement,
 and on the [algorithm document](ALGORITHM.md), whose [section 9](ALGORITHM.md#9-program-structure) names the modules under test.
 
 ## Contents
@@ -41,7 +41,7 @@ and on the [algorithm document](ALGORITHM.md), whose [section 9](ALGORITHM.md#9-
 | unit | one module, in memory | `plane_setup` of the worked example gives 11 rows and 9 columns | FR-5 to FR-34 |
 | command line | `Ex0.main()` in the same process, on files in a temporary folder | a missing volume file gives exit code 1 and one error line | FR-1 to FR-4, FR-23 to FR-36 |
 | demo | `python Ex0.py` as a separate process, on the data set | the head demo writes a video with 280 frames | FR-1, FR-28 to FR-34 |
-| speed and memory | the benchmark and memory measurements | 100 planes on the croissant at 30 fps or more | NFR-1 to NFR-7 |
+| speed and memory | the benchmark and memory measurements | 100 planes on the croissant at 30 fps or more | NFR-1 to NFR-6 |
 | robustness | random and broken input | 1000 random lines give 1000 frames and no crash | NFR-8, NFR-9 |
 | by eye | a person watches the videos and compares frames with 3D Slicer | the oblique head frames look like the Reformat view | FR-21, FR-28 |
 
@@ -118,7 +118,7 @@ This is how the rounding of FR-19 and the edges of FR-20 are checked: the voxel 
 
 ### 3.4 Slices along the axes
 
-For a plane perpendicular to an axis, with integer points, the image must equal a slice that NumPy cuts directly from the array (FR-22).
+For a plane perpendicular to an axis, with integer points, the image must equal a slice that NumPy cuts directly from the array (FR-17, FR-19).
 For example, the rectangle `(0, 0, z), (sx − 1, 0, z), (0, sy − 1, z), (sx − 1, sy − 1, z)`, written as a trapezoid, gives `M[:, :, z]` turned so that `x` runs along the columns.
 This checks the axis order of FR-8 on the real files of the data set.
 
@@ -223,7 +223,7 @@ Each table lists the cases of one module, with the requirements they check. Smal
 | a plane with points near `10⁹` | all zeros, and no warning from NumPy about overflow | FR-20, NFR-8 |
 | each value type | `E` has the type of the volume, and `uint32` values above 65535 are kept | FR-6, FR-20 |
 | 1, 2, 4 and 8 threads | the same image every time | NFR-9 |
-| slow: axis slices of `MRHead_1.nrrd`, the foods and the die | equal to NumPy slices ([3.4](#34-slices-along-the-axes)) | FR-8, FR-22 |
+| slow: axis slices of `MRHead_1.nrrd`, the foods and the die | equal to NumPy slices ([3.4](#34-slices-along-the-axes)) | FR-8, FR-19 |
 | slow: the planes of the die in [3.5](#35-shapes-known-in-advance) | the counts and areas listed there | FR-19, FR-20 |
 | slow: the label volumes of [3.6](#36-label-volumes) | the expected materials | FR-19, FR-20 |
 
@@ -357,7 +357,7 @@ The videos go to `demo/output/`, which git ignores. The ones chosen for the expe
 | standard error | empty for the five clean files; for `edge_cases.csv` and `lecturer_example.csv`, exactly the expected list of warnings, with their line and frame numbers | FR-24 to FR-27, FR-36 |
 | summary | printed, with the number of frames and the projection rate | FR-35 |
 | black frames | in `edge_cases.mp4`, the frames of the bad lines and of the plane outside the volume are black | FR-24, FR-26 |
-| known frames | frame 66 of `head.mp4` is within 3 gray levels on average of the slice `z = 65` after the gray map, and closer to it than to the slices around it; on the noise of the MRI, H.264 loses about 2.5 gray levels, and the next slices are 6 or more away | FR-22, FR-32 |
+| known frames | frame 66 of `head.mp4` is within 3 gray levels on average of the slice `z = 65` after the gray map, and closer to it than to the slices around it; on the noise of the MRI, H.264 loses about 2.5 gray levels, and the next slices are 6 or more away | FR-19, FR-32 |
 
 ### 6.3 Checks by eye
 
@@ -407,7 +407,7 @@ and its result goes into the experiment report. A quick test in the suite runs i
 |---|---|---|
 | the memory after reading a volume | at most 10% above the size of its data: one copy only | NFR-6 |
 | the same 200 × 200 plane projected from volumes of 100³ and 400³, on one thread | the same peak memory for both, within 10%: it grows with the image, not the volume. With several threads the peak depends on how the bands overlap in time, so one thread gives a stable measure | NFR-6 |
-| a full run with 10 planes and with 200 planes of 256 × 256 | each extra plane adds less than a quarter of a frame to the peak memory, so frames are not kept. The setup of each plane is kept, a few kB, as the complexity table of the algorithm document allows | NFR-7 |
+| a full run with 10 planes and with 200 planes of 256 × 256 | each extra plane adds less than a quarter of a frame to the peak memory, so frames are not kept. The setup of each plane is kept, a few kB, as the complexity table of the algorithm document allows | NFR-6 |
 | slow: a full run on the croissant | peak memory recorded in the experiment report | NFR-6 |
 
 ### 7.3 Robustness
@@ -456,16 +456,16 @@ The data set is part of the repository, so the slow tests have their files. A ba
 | FR-5 to FR-9 | [4.1](#41-volumepy-reading-the-volume), [3.4](#34-slices-along-the-axes) |
 | FR-10 to FR-14 | [4.2](#42-planespy-reading-the-planes) |
 | FR-15 to FR-18 | [4.3](#43-geometrypy-plane-setup-and-checks), [3.1](#31-results-worked-out-by-hand), [3.2](#32-a-slow-reference) |
-| FR-19 to FR-22 | [4.4](#44-projectorpy-the-projection), [3.2](#32-a-slow-reference) to [3.6](#36-label-volumes) |
+| FR-19 to FR-21 | [4.4](#44-projectorpy-the-projection), [3.2](#32-a-slow-reference) to [3.6](#36-label-volumes) |
 | FR-23 to FR-27 | [4.2](#42-planespy-reading-the-planes), [4.3](#43-geometrypy-plane-setup-and-checks), [5](#5-command-line-tests), [6.2](#62-automatic-checks) |
 | FR-28 to FR-34 | [4.5](#45-framespy-frame-size-gray-levels-placement), [4.6](#46-videopy-writing-the-video), [5](#5-command-line-tests), [6](#6-the-demo) |
 | FR-35, FR-36 | [5](#5-command-line-tests), [6.2](#62-automatic-checks) |
-| NFR-1 to NFR-5 | [7.1](#71-speed) |
-| NFR-6, NFR-7 | [7.2](#72-memory) |
+| NFR-1 to NFR-4 | [7.1](#71-speed) |
+| NFR-6 | [7.2](#72-memory) |
 | NFR-8, NFR-9 | [7.3](#73-robustness), [4.4](#44-projectorpy-the-projection), [5](#5-command-line-tests) |
 | NFR-10, NFR-11 | [8](#8-portability-and-continuous-integration) |
 | NFR-12 | [4.4](#44-projectorpy-the-projection) |
-| NFR-13, NFR-14 | [2](#2-test-levels-and-tools), [8](#8-portability-and-continuous-integration): one test file per module, and the coverage report |
+| NFR-14 | [2](#2-test-levels-and-tools), [8](#8-portability-and-continuous-integration): one test file per module, and the coverage report |
 | NFR-15 | [5](#5-command-line-tests) |
 
 ### 9.3 Done criteria
