@@ -19,19 +19,32 @@ The assignment allows a voxel to be an unsigned integer of 8, 16 or 32 bits, and
 The head scan is a signed 16-bit file, but all its values are positive, so it reads like an unsigned one.
 The food scans are simulated MRI scans, made by `tools/generate_foods.py`.
 
-Two more folders:
-- `synthetic/` holds test volumes with an exact answer for every voxel: a cake, a tomato and a die.
-- `real_scans/` holds four real CT scans from an earlier step: a teapot, a tooth, an engine and a carp.
+All the files are in the `DATA/` folder. Two more folders:
+- `DATA/synthetic/` holds test volumes with an exact answer for every voxel: a cake, a tomato and a die.
+- `DATA/real_scans/` holds four real CT scans from an earlier step: a teapot, a tooth, an engine and a carp.
   They are not single objects with many layers, so they are not part of the main set.
+
+## What each part checks
+
+| Data | Used for |
+|---|---|
+| small arrays built inside the tests | exact checks of the geometry, [FR-15 to FR-21](SRS.md#34-projection-geometry) |
+| `synthetic/dice.nrrd` | values above 65535, and images known in advance: a square face with its pips, a hexagon through the center, a triangle cut off a corner |
+| `synthetic/cake_3layers.nrrd` and `.seg.nrrd` | the label file gives the exact material of every pixel |
+| `synthetic/tomato.nrrd` and `.seg.nrrd` | a tilted object that no axis lines up with |
+| `MRHead_1.nrrd` | the lecturer's file: a signed type ([FR-6](SRS.md#32-volume-file)), and the main demo |
+| `onion.nrrd`, `biscuit_cake.nrrd`, `swiss_roll.nrrd` | demo videos in all three value types of the assignment |
+| `croissant.nrrd` | the speed benchmark, [NFR-1 to NFR-4](SRS.md#38-non-functional-requirements) |
+| `real_scans/` | extra runs on real CT scans |
 
 ## Preview images
 
-`images/` holds a picture of every volume in this folder and its subfolders: the cuts through its middle that 3D Slicer shows
+`DATA/images/` holds a picture of every volume: the cuts through its middle that 3D Slicer shows
 in its three views, turned the same way and marked with the directions (R/L, A/P, S/I), and one oblique cut.
 Each cut is zoomed in on the object and has a scale bar.
 `images/overview.png` shows the main set, one row per file; `images/synthetic/` and `images/real_scans/` hold the others.
 
-![The main data set](images/overview.png)
+![The main data set](../DATA/images/overview.png)
 
 To make the images again, for example after changing a volume:
 
