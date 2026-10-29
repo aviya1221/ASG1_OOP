@@ -124,7 +124,7 @@ The assignment leaves these questions open. The [Software Requirements Specifica
 |---|---|---|
 | 1 | Are the points voxel indices, or physical positions from the NRRD header (as 3D Slicer shows them)? | voxel indices ([FR-13](docs/SRS.md#33-planes-file)) |
 | 2 | `p` is almost never on a whole voxel: take the nearest one, or interpolate? | the nearest voxel ([FR-19](docs/SRS.md#34-projection-geometry)) |
-| 3 | `Dab`, `Dbc`, `d12` and `x` are real numbers: how are they rounded? The loop skips the apex row: is that intended? | an exact image geometry with square pixels and the apex in row 0 ([3.4](docs/SRS.md#34-projection-geometry), [section 6](docs/SRS.md#6-deviations-from-the-assignment-text)) |
+| 3 | `Dab`, `Dbc`, `d12` and `x` are real numbers: how are they rounded? The loop skips the apex row: is that intended? | an exact image geometry with square pixels and the apex in row 0 ([3.4](docs/SRS.md#34-projection-geometry), [deviations from the assignment](docs/DEVIATIONS.md)) |
 | 4 | `E` is a rectangle and the triangle covers about half of it: what do the other pixels get? | 0 ([FR-20](docs/SRS.md#34-projection-geometry)) |
 | 5 | In which order are the 4 points of a trapezoid written? | `a', b, a'', c`: the two legs one after the other, which makes the lecturer's example an isosceles trapezoid ([FR-12](docs/SRS.md#33-planes-file)) |
 | 6 | What if the triangle is not isosceles, the points are on one line, or two points are the same? | a black frame and a warning for bad planes, a warning for doubtful ones ([3.5](docs/SRS.md#35-input-validation)) |
