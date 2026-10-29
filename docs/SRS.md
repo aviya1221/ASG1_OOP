@@ -31,7 +31,7 @@ What is out of scope is listed in the [README](../README.md#scope).
 | Term | Meaning |
 |---|---|
 | Voxel unit | The distance between the centers of two neighboring voxels. All lengths in this document are in voxel units. |
-| Plane | One line of the planes file: a triangle of 3 points or a trapezoid of 4 points. It fixes both the plane in space and the part of it that is drawn. |
+| Plane | One line of the planes file: a triangle of 3 points or a trapezoid of 4. It fixes the plane in space and the part of it that is drawn. |
 | Projection | Sampling the volume at the points of the shape. It is a slice, not a sum along rays. |
 | Valid plane | A plane that passes the checks of [FR-24](#35-input-validation). |
 
@@ -68,7 +68,7 @@ Python 3.12 or newer on Windows, macOS or Linux, with the packages of `requireme
 
 ### 2.4 Constraints
 
-- The assignment allows Java, Python, C or C++. The program is written in Python.
+- The program is written in Python, one of the languages the assignment allows.
 - A volume can be 1023 × 1023 × 1023 voxels of 32 bits, about 4.3 GB.
 - H.264 video needs a frame width and height that are even numbers.
 - Plane points carry rounding errors, so every geometric check has a tolerance.
@@ -295,67 +295,66 @@ the gray levels, the placement or the encoding. The rate is the number of planes
 
 ---
 
-## 5. Data
+## 4. Appendices
 
-The data set is described in full in [DATA/README.md](../DATA/README.md). This table shows what each part is used to check.
+### 4.1 Use cases
 
-| Data | Value type | Size | Used for |
+**UC-01 Make a video.** Actor: the lecturer or a grader.
+
+- **Precondition:** an NRRD volume and a planes file.
+- **Main flow:** 1. The actor runs `Ex0.py` with the three files (FR-1).
+  2. The program checks the inputs, projects each plane and writes its frame. 3. It prints the summary and exits with code 0.
+- **Alternative flows:** 1a. Wrong arguments: exit code 2 (FR-3). 2a. Fatal error: no video, exit code 1 (FR-4).
+  2b. Bad plane: a black frame and a warning (FR-24). 2c. Doubtful plane: drawn, with a warning (FR-25).
+- **Postcondition:** an MP4 file with one frame per plane line.
+
+**UC-02 Measure the speed.** Actor: a developer.
+
+- **Precondition:** `DATA/croissant.nrrd` and the benchmark planes, `demo/croissant.csv`.
+- **Main flow:** 1. The developer runs `python tools/benchmark.py`. 2. The script projects the planes of NFR-4 and prints the median rate.
+- **Alternative flows:** 2a. Under 30 frames per second: exit code 1 (NFR-1).
+- **Postcondition:** the rate, recorded with the machine (NFR-4).
+
+**UC-03 Project a plane from code.** Actor: a developer.
+
+- **Precondition:** a volume as a NumPy array, and a plane of 3 or 4 points.
+- **Main flow:** 1. The developer calls `plane_setup` and then `Projector.project`, and gets the image `E`.
+- **Alternative flows:** 1a. Bad plane: the setup gives the reason, and there is no image (FR-24).
+- **Postcondition:** the image of FR-15 to FR-21, with no file read or written (NFR-12).
+
+### 4.2 Data dictionary
+
+| Item | Type | Range | Requirements |
 |---|---|---|---|
-| small arrays built inside the tests, such as the cake of the worked example | any | a few voxels | exact checks of the geometry, FR-15 to FR-22 |
-| `DATA/synthetic/dice.nrrd` | `uint32` | 200 × 180 × 160 | values above 65535, and images known in advance: a square face with its pips, a hexagon through the center, a triangle cut off a corner |
-| `DATA/synthetic/cake_3layers.nrrd` and `.seg.nrrd` | `uint8` | 256 × 180 × 96 | the label file gives the exact material of every pixel |
-| `DATA/synthetic/tomato.nrrd` and `.seg.nrrd` | `uint16` | 204 × 196 × 184 | a tilted object that no axis lines up with |
-| `DATA/MRHead_1.nrrd` | `int16` | 256 × 256 × 130 | the lecturer's file: a signed type (FR-6), and the main demo |
-| `DATA/onion.nrrd`, `biscuit_cake.nrrd`, `swiss_roll.nrrd` | `uint8`, `uint16`, `uint32` | 256 × 256 × 130 | demo videos in all three value types of the assignment |
-| `DATA/croissant.nrrd` | `uint8` | 500 × 500 × 500 | the speed benchmark, NFR-1 to NFR-4 |
-| `DATA/real_scans/` | `uint8`, `uint16` | various | extra runs on real CT scans |
+| `M`, the volume | 3D array of `sx × sy × sz` voxels | each size 1 to 1023 | FR-7, FR-8 |
+| voxel value | `uint8`, `uint16`, `uint32`, `int8`, `int16` or `int32` | values below 0 are read as 0 | FR-6 |
+| plane line | the number of points, then 3 numbers per point | 3 or 4 points | FR-10 to FR-12 |
+| point | 3 numbers `x, y, z` | voxel indices, may have fractions and lie outside `M` | FR-13 |
+| `E`, the image | 2D array of `rows × cols` voxel values | each size 1 to 4096 | FR-16, FR-20, FR-24 |
+| frame | gray picture of `W × H` pixels | `W` and `H` even; 64 × 64 if no plane is valid | FR-30, FR-31 |
+| gray level | integer | 0 to 255 | FR-32 |
+| frame rate | positive number | 30 by default | FR-2, FR-33 |
 
-The planes files for the tests and the demo are part of the testing strategy.
+### 4.3 Traceability matrix
 
----
+Design sections are in the [algorithm document](ALGORITHM.md), and test files in `tests/`.
 
-## 6. Deviations from the assignment text
+| Requirements | Use case | Design | Tests | Status |
+|---|---|---|---|---|
+| FR-1 to FR-4 | UC-01 | [8.1](ALGORITHM.md#81-errors) | `test_cli`, `test_planes`, `test_volume` | passed |
+| FR-5 to FR-9 | UC-01 | [3.1](ALGORITHM.md#31-volume) | `test_volume`, `test_projector` | passed |
+| FR-10 to FR-14 | UC-01 | [3.2](ALGORITHM.md#32-planes) | `test_planes` | passed |
+| FR-15 to FR-18 | UC-01, UC-03 | [4](ALGORITHM.md#4-plane-setup-and-checks) | `test_geometry`, `test_projector` | passed |
+| FR-19 to FR-21 | UC-01, UC-03 | [5](ALGORITHM.md#5-projection) | `test_projector`, `test_demo` | passed |
+| FR-23 to FR-27 | UC-01, UC-03 | [4](ALGORITHM.md#4-plane-setup-and-checks), [8.1](ALGORITHM.md#81-errors) | `test_planes`, `test_geometry`, `test_cli`, `test_demo` | passed |
+| FR-28 to FR-34 | UC-01 | [7](ALGORITHM.md#7-frames-and-video) | `test_frames`, `test_video`, `test_cli`, `test_demo` | passed |
+| FR-35, FR-36 | UC-01 | [8.2](ALGORITHM.md#82-run-report) | `test_cli`, `test_demo` | passed |
+| NFR-1 to NFR-4 | UC-02 | [6](ALGORITHM.md#6-speed) | `test_benchmark`, and the benchmark of the [experiment](../experiment/README.md#3-speed) | passed, 317 fps |
+| NFR-6 | UC-01 | [10](ALGORITHM.md#10-complexity) | `test_volume`, `test_robustness` | passed |
+| NFR-8, NFR-9 | UC-01 | [5.2](ALGORITHM.md#52-sampling), [8.1](ALGORITHM.md#81-errors) | `test_robustness`, `test_projector`, `test_cli` | passed |
+| NFR-10, NFR-11 | UC-01 | [7.4](ALGORITHM.md#74-encoding) | the continuous integration on Windows, macOS and Linux | passed on Windows |
+| NFR-12 | UC-03 | [9](ALGORITHM.md#9-program-structure) | `test_projector` | passed |
+| NFR-14 | all | [9](ALGORITHM.md#9-program-structure) | every test file, and a review of the code | passed, 98% of the lines covered |
+| NFR-15 | UC-01 | [9](ALGORITHM.md#9-program-structure) | `test_cli` | passed |
 
-The algorithm in the assignment is a description, and it leaves points open. Where this document differs from it, this is why.
-
-| Topic | Assignment | This project | Reason |
-|---|---|---|---|
-| computation | two points walk down the legs, and a third walks along each row between them | a direct formula for every pixel (FR-17) | all the pixels of an image can be computed at once, which is what makes the speed target reachable in Python; for an isosceles triangle it covers the same shape |
-| row spacing | each row moves one unit along the legs | each row moves one unit along the height (FR-17) | in the assignment, rows are only `height / Dab` apart while pixels in a row are 1 apart, so the image is squeezed vertically; here both are 1 apart and the proportions are true. In the worked example `Dab = √116 ≈ 10.77` and the height is 10 |
-| apex row | skipped, because `a1` and `a2` move before the first row is read | row 0 (FR-21) | the apex is part of the triangle |
-| image size | `Dab × Dbc` | `floor(height) + 1` rows and `floor(Dbc) + 1` columns for a triangle (FR-16) | follows from the row spacing, and from counting both ends of each side |
-| indexing | `E[x][y]` | `E[r][c]` | the same picture, written in the row-first order of NumPy |
-| triangle shape | isosceles | any triangle, with a warning (FR-25) | the description of the CSV file in the assignment does not promise isosceles triangles, and rounding makes the legs slightly unequal anyway |
-| sampling | `M[p]` for a point `p` with fractions, not specified further | the nearest voxel (FR-19) | the fastest choice; interpolation between voxels can be added later as an option |
-| value types | unsigned 8, 16 and 32 bits | signed types too (FR-6) | the lecturer's `MRHead_1.nrrd` is `int16` |
-
----
-
-## 7. Verification
-
-How each requirement is checked. The [testing strategy](TESTING.md) describes the tests in detail.
-
-| Method | Meaning |
-|---|---|
-| T | automated test |
-| D | demo run, looked at by a person |
-| B | benchmark run |
-| I | inspection of the code or the documents |
-
-| Requirements | Method | How |
-|---|---|---|
-| FR-1 to FR-4 | T, D | run the program with good and broken arguments and files; check the exit code, the message, and that no video is written after a fatal error |
-| FR-5 to FR-9 | T | read every file of the data set, and small NRRD files written by the tests for each value type, encoding and size limit |
-| FR-10 to FR-14 | T | planes files with a header, comments, blank lines, spaces, decimals and wrong counts |
-| FR-15 to FR-21 | T | results computed by hand: the worked example, and a small volume whose every voxel holds its own index, `x + 1000·y + 1000000·z`, so each pixel shows which voxel it read |
-| FR-22 | T | planes along the axes compared with NumPy slices of the data set volumes |
-| FR-23 to FR-27 | T | one planes file for each bad and doubtful case; check the frame count, the black frames and the warning text |
-| FR-28 to FR-34 | T, D | read the video back and check the codec, frame count, frame size and rate; compare the frames before encoding exactly |
-| FR-35, FR-36 | T | capture the standard output and the standard error |
-| NFR-1 to NFR-5 | B | run the benchmark on the croissant and record the result in the experiment report |
-| NFR-6, NFR-7 | B | measure the peak memory during the benchmark and during a demo with many planes |
-| NFR-8 | T | random and malformed plane lines; the program must finish and write one frame per line |
-| NFR-9 | T | run twice and compare the images and frames |
-| NFR-10, NFR-11 | D | install into a new virtual environment from `requirements.txt` and run the demo, on Windows and on macOS or Linux when available |
-| NFR-12 to NFR-14 | I, T | review the code; the projection tests use arrays only, with no files |
-| NFR-15 | I | read `--help` and the messages |
+Status of 2026-10-29: the 155 everyday tests and the 42 slow tests pass on Windows.
