@@ -81,61 +81,48 @@ Python 3.12 or newer on Windows, macOS or Linux, with the packages of `requireme
 
 ---
 
-## 3. Functional requirements
+## 3. Specific requirements
+
+Every requirement is mandatory unless it is marked **(Should)**. Sections 3.1, 3.2, 3.3 and 3.6 are the external interfaces.
+The IDs of removed requirements are not used again.
 
 ### 3.1 Command line
 
-**FR-1.** The program runs as
+**FR-1.** The program shall run as `python Ex0.py file.nrrd file.csv file.mp4 [--fps N]`: the volume, the planes and the output video, in this order.
 
-```
-python Ex0.py file.nrrd file.csv file.mp4 [--fps N]
-```
-
-with the volume, the planes and the output video, in this order.
-
-**FR-2.** Options:
+**FR-2.** The program shall accept these options:
 
 | Option | Meaning | Default |
 |---|---|---|
 | `--fps N` | frame rate of the output video, a positive number | `30` |
 | `--help` | print the usage and exit | |
 
-**FR-3.** Exit codes:
+**FR-3.** The program shall exit with code `0` when the video was written, even if some planes gave warnings,
+`1` after a fatal error, and `2` for wrong command-line arguments.
 
-| Code | Meaning |
-|---|---|
-| `0` | the video was written, even if some planes gave warnings |
-| `1` | fatal error: no video was written |
-| `2` | wrong command-line arguments |
+**FR-4a.** On a fatal error, the program shall print one message to the standard error that names the file and the cause, without a Python traceback, and shall write no video.
 
-**FR-4.** A fatal error prints one message to the standard error that names the file and the cause, without a Python traceback.
-Fatal errors are: a missing or unreadable input file, a volume that breaks [3.2](#32-volume-file), a planes file with no planes,
-and an output folder that does not exist. All of them are found before the first plane is projected.
+**FR-4b.** The fatal errors shall be: a missing or unreadable input file, a volume that breaks [3.2](#32-volume-file), a planes file with no planes, and an output folder that does not exist.
+
+**FR-4c.** The program shall find every fatal error before it projects the first plane.
 
 ### 3.2 Volume file
 
-**FR-5.** The volume is read from an NRRD file with 3 dimensions and a single header and data file (`.nrrd`), with `raw` or `gzip` encoding.
+**FR-5.** The program shall read the volume from an NRRD file with 3 dimensions, a single file for header and data (`.nrrd`), and `raw` or `gzip` encoding.
 
-**FR-6.** Value types:
+**FR-6a.** The program shall accept the value types `uint8`, `uint16`, `uint32`, `int8`, `int16` and `int32`. Any other type shall be a fatal error.
 
-| Type | Accepted | Notes |
-|---|---|---|
-| `uint8`, `uint16`, `uint32` | yes | the types of the assignment |
-| `int8`, `int16`, `int32` | yes | values below 0 are read as 0; the lecturer's `MRHead_1.nrrd` is `int16` |
-| floating point, 64-bit, anything else | no | fatal error |
+**FR-6b.** The program shall read values below 0 as 0.
 
-**FR-7.** Every axis size is between 1 and 1023, as in the assignment. Any other size is a fatal error.
+**FR-7.** Every axis size shall be between 1 and 1023. Any other size shall be a fatal error.
 
-**FR-8.** `M[x][y][z]` is the value at index `(x, y, z)`, where `x` is the first axis of the NRRD `sizes` field, the one that is fastest on disk.
-This is the same index that 3D Slicer calls IJK.
+**FR-8.** `M[x][y][z]` shall be the value at index `(x, y, z)`, where `x` is the first axis of the NRRD `sizes` field, the one that is fastest on disk.
 
-**FR-9.** The `space origin` and `space directions` fields of the header are not used for sampling, because plane points are voxel indices.
+**FR-9.** The program shall not use the `space origin` and `space directions` fields of the header for sampling.
 
 ### 3.3 Planes file
 
-The planes file has the format of the lecturer's example file,
-[demo/lecturer_example.csv](../demo/lecturer_example.csv), a copy of the
-[example the lecturer shared](https://docs.google.com/spreadsheets/d/1Tfy1yMYhAJjRBA8ZpRp_07pZXqGtxWhWoP02yZW1FQE/edit):
+The planes file has the format of the lecturer's example, [demo/lecturer_example.csv](../demo/lecturer_example.csv):
 
 ```
 Number of Points (3 or 4),x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4
@@ -143,43 +130,31 @@ Number of Points (3 or 4),x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4
 4,200,0,0,200,0,500,200,400,0,200,400,500
 ```
 
-**FR-10.** Every line that is not blank and not a comment is one plane. Its fields are separated by commas,
-spaces around a field are ignored, and each field is a number written as an integer or a decimal (`12`, `12.5`, `-3e2`).
-Empty fields at the end of a line are ignored.
+**FR-10a.** Every line that is not blank and not a comment shall be one plane.
 
-**FR-11.** Lines starting with `#` are comments. The first line is a header, and is skipped, if it has a field that is neither empty nor a number.
+**FR-10b.** Fields shall be separated by commas, with spaces around a field ignored. Each field shall be an integer or a decimal number (`12`, `12.5`, `-3e2`), and empty fields at the end of a line shall be ignored.
 
-**FR-12.** The first field of a plane is the number of points, 3 or 4. Then come three numbers per point, in the order `x, y, z`.
-A triangle leaves the fields of the fourth point empty, or leaves them out.
+**FR-11a.** Lines starting with `#` shall be comments.
+
+**FR-11b.** The first line shall be skipped as a header if it has a field that is neither empty nor a number.
+
+**FR-12.** The first field of a plane shall be the number of points, 3 or 4, followed by `x, y, z` of each point. A triangle leaves the fields of the fourth point empty, or leaves them out.
 
 | Points | Shape | Point order in the file | Sides |
 |---|---|---|---|
 | 3 | triangle | `a, b, c` | apex `a`, legs `a → b` and `a → c`, base `b → c` |
 | 4 | trapezoid | `a', b, a'', c` | legs `a' → b` and `a'' → c`, top side `a' → a''`, base `b → c` |
 
-In both shapes, the first leg runs from point 1 to point 2. In a trapezoid, points 1 and 3 make the top side and points 2 and 4 the base.
-The assignment names the legs of a trapezoid, the two vectors `a' → b` and `a'' → c` of the same length, and the file lists them one after the other.
-In the lecturer's example this order makes the second trapezoid an isosceles trapezoid, with a top side of 300, a base of 400 and legs of 502.5;
-read as `a', a'', b, c`, its legs would be 300 and 400 long, and its top side would not be parallel to its base.
+**FR-13.** Points shall be voxel indices of `M`. They may have fractions and may lie outside `M`.
 
-**FR-13.** Points are in voxel indices of `M` and may have fractions. They may lie outside `M`.
-
-**FR-14.** A planes file without any plane line is a fatal error.
-
-Example with the header, a triangle in the slice `z = 65` of a 256 × 256 × 130 volume, and a tilted trapezoid:
-
-```
-Number of Points (3 or 4),x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4
-3,127.5,0,65,0,255,65,255,255,65,,,
-4,60,40,20,20,200,110,190,40,20,230,200,110
-```
+**FR-14.** A planes file without any plane line shall be a fatal error.
 
 ### 3.4 Projection geometry
 
-These requirements define the image of a valid plane exactly. They hold for the triangle and the trapezoid alike.
+These requirements define the image of a valid plane, for the triangle and the trapezoid alike.
 `P0` is the first point of the plane: `a` for a triangle, `a'` for a trapezoid.
 
-**FR-15. Directions in the plane.**
+**FR-15. Directions in the plane.** The directions of the image shall be
 
 ```
 right = (c − b) / |c − b|
@@ -187,60 +162,34 @@ w     = (b − P0) − ((b − P0) · right) · right
 down  = w / |w|
 ```
 
-`right` runs along the base from `b` to `c`. `down` lies in the plane, perpendicular to the base, and points from `P0` toward the base.
-Both have length 1 and are perpendicular to each other.
-
-**FR-16. Image size.** For every input point `v`, its position in the plane is `s(v) = (v − P0) · right` and `t(v) = (v − P0) · down`.
-With the smallest and largest of these over the input points:
+**FR-16. Image size.** With `s(v) = (v − P0) · right` and `t(v) = (v − P0) · down` for every input point `v`, the image shall have
 
 ```
-cols = floor(s_max − s_min) + 1
-rows = floor(t_max − t_min) + 1
+cols = floor(s_max − s_min + 1e-6) + 1
+rows = floor(t_max − t_min + 1e-6) + 1
 ```
 
-The floor is taken after adding `1e-6`, so that a length of `7.9999999` caused by rounding counts as 8.
-
-**FR-17. Pixel position.** Pixel `(r, c)`, row `r` and column `c`, sits at the point
+**FR-17. Pixel position.** Pixel `(r, c)`, row `r` and column `c`, shall sit at the point
 
 ```
-corner = P0 + s_min · right + t_min · down
+corner  = P0 + s_min · right + t_min · down
 p(r, c) = corner + c · right + r · down
 ```
 
-Neighboring pixels are one voxel unit apart in both directions, so the image keeps the true proportions of the shape.
+**FR-18. Inside the shape.** Pixel `(r, c)` shall belong to the shape if its plane point `(s_min + c, t_min + r)` lies inside the triangle `a, b, c`,
+or inside the quadrilateral `a', a'', c, b`, or on its edge, with a tolerance of `1e-6`.
 
-**FR-18. Inside the shape.** In plane coordinates, pixel `(r, c)` is at `(s_min + c, t_min + r)`.
-It belongs to the shape if that point lies inside the triangle `a, b, c`, or inside the quadrilateral `a', a'', c, b`, or on its edge, with a tolerance of `1e-6`.
+**FR-19. Sampling.** The value at a point `p` shall be that of the nearest voxel: `index = floor(p + 0.5)` on each axis.
 
-**FR-19. Sampling.** The value at a point is the value of the nearest voxel: on each axis, `index = floor(p + 0.5)`, so halves round up.
+**FR-20. Pixel value.** `E[r][c]` shall be `M[index]` if the pixel belongs to the shape and `0 <= index < size` on all three axes, and 0 otherwise.
 
-**FR-20. Pixel value.** `E[r][c] = M[index]` if the pixel belongs to the shape and `0 <= index < size` on all three axes. Otherwise `E[r][c] = 0`.
-
-**FR-21. Orientation.** Row 0 is at the top and holds the apex, or the top side of a trapezoid. The base is in the last row, with `b` on the left and `c` on the right.
-
-**FR-22. Slices along the axes.** For a plane perpendicular to an axis, with integer points, every pixel inside the shape equals the matching voxel exactly.
-For example, the triangle `a = (5, 0, z0)`, `b = (0, 10, z0)`, `c = (10, 10, z0)` gives `E[r][c] = M[c][r][z0]`.
-
-**Worked example.** The cake in the picture below is 10 × 10 × 10 voxels. The plane is the triangle `a = (5, 0, 8)`, `b = (1, 6, 0)`, `c = (9, 6, 0)`.
-
-| Step | Result |
-|---|---|
-| `right` | `(8, 0, 0) / 8 = (1, 0, 0)` |
-| `w` | `(−4, 6, −8) − (−4) · (1, 0, 0) = (0, 6, −8)` |
-| `down` | `(0, 6, −8) / 10 = (0, 0.6, −0.8)` |
-| `s` of `a, b, c` | `0, −4, 4` |
-| `t` of `a, b, c` | `0, 10, 10` |
-| image size | 9 columns, 11 rows |
-| `corner` | `(5, 0, 8) − 4 · (1, 0, 0) = (1, 0, 8)` |
-| pixel `(5, 2)` | `(1, 0, 8) + 2 · (1, 0, 0) + 5 · (0, 0.6, −0.8) = (3, 3, 4)`, in the cream layer |
-
-![The worked example: the triangle inside the cake, and the image it gives](../DATA/images/explain/how_a_cut_is_made.png)
+**FR-21. Orientation.** Row 0 shall hold the apex, or the top side of a trapezoid, and the last row the base, with `b` on the left and `c` on the right.
 
 ### 3.5 Input validation
 
-**FR-23.** Every plane line gives exactly one frame, in the order of the file, whatever it contains.
+**FR-23.** Every plane line shall give exactly one frame, in the order of the file.
 
-**FR-24. Bad planes.** A plane that fails one of these checks gives a black frame and a warning:
+**FR-24. Bad planes.** A plane that fails one of these checks shall give a black frame and a warning:
 
 | Check | The plane is bad when |
 |---|---|
@@ -252,57 +201,48 @@ For example, the triangle `a = (5, 0, z0)`, `b = (0, 10, z0)`, `c = (10, 10, z0)
 | trapezoid shape | the quadrilateral `a', a'', c, b` is not convex, for example because its sides cross |
 | size | the image would have more than 4096 rows or columns |
 
-The size limit keeps a point that is very far away from producing a huge video.
-
-**FR-25. Doubtful planes.** A plane that passes the checks above but breaks a promise of the assignment is drawn as given, with a warning:
+**FR-25. Doubtful planes (Should).** A plane that passes FR-24 but breaks a promise of the assignment shall be drawn as given, with a warning:
 
 | Check | Warning when |
 |---|---|
 | equal legs | the two legs differ by more than 0.5: `\|ab\|` and `\|ac\|`, or `\|a'b\|` and `\|a''c\|` |
-| parallel sides | in a trapezoid, `\|t(a'')\| > 0.5`, so the top side is not parallel to the base (`t(a')` is always 0) |
+| parallel sides | in a trapezoid, `\|t(a'')\| > 0.5`: the top side is not parallel to the base |
 
-**FR-26.** A valid plane that does not meet the volume at all gives a black image without a warning. It is valid input.
+**FR-26.** A valid plane that does not meet the volume shall give a black image, without a warning.
 
-**FR-27.** A warning names the line of the file and the frame, both counted from 1, the cause and the result:
+**FR-27.** A warning shall name the line of the file and the frame, both counted from 1, the cause and the result:
 
 ```
 warning: line 7, frame 5: points a, b and c are on one line; the frame is black
-warning: line 9, frame 7: the legs differ by 3.2 voxels; drawn as given
 ```
 
 ### 3.6 Video output
 
-**FR-28. Format.** The output is an MP4 file with H.264 video in the `yuv420p` pixel format, which plays in common players and web browsers.
+**FR-28.** The output shall be an MP4 file with H.264 video in the `yuv420p` pixel format.
 
-**FR-29. Frames.** The video has one frame per plane line, in the order of the file (FR-23).
+**FR-29.** The video shall have one frame per plane line, in the order of the file.
 
-**FR-30. Frame size.** All frames have the same size: the largest number of columns and the largest number of rows among the valid planes,
-each rounded up to an even number. If no plane is valid, the frames are 64 × 64.
-The size is known from the checks of [3.5](#35-input-validation), before any plane is projected.
+**FR-30a.** All frames shall have the same size `W × H`: the largest number of columns and the largest number of rows among the valid planes, each rounded up to an even number.
 
-**FR-31. Placement.** Each image is placed in the middle of its frame, at column `(W − cols) // 2` and row `(H − rows) // 2`,
-where `W × H` is the frame size. The rest of the frame is black.
+**FR-30b.** If no plane is valid, the frames shall be 64 × 64.
 
-**FR-32. Gray levels.** Values become gray levels by one linear map for the whole video, so the brightness does not jump between frames.
-`lo` and `hi` are the smallest and largest values of `M`, found once when the volume is read.
+**FR-31.** Each image shall be placed in its frame at column `(W − cols) // 2` and row `(H − rows) // 2`, and the rest of the frame shall be black.
+
+**FR-32a.** Values shall become gray levels by one map for the whole video, where `lo` and `hi` are the smallest and largest values of `M`:
 
 ```
 gray(v) = round(255 · (v − lo) / (hi − lo)), clipped to 0 … 255
 ```
 
-A value of 0, such as a pixel outside the shape or outside the volume, is always black.
-If all values of `M` are equal (`hi = lo`), every value above 0 is white.
+**FR-32b.** A value of 0 shall always be black. If `hi = lo`, every value above 0 shall be white.
 
-**FR-33. Frame rate.** The video plays at the rate set by `--fps` (FR-2), so it lasts `frames / fps` seconds.
+**FR-33.** The video shall play at the rate set by `--fps`.
 
-**FR-34. Output file.** An existing output file is overwritten. An output folder that does not exist is a fatal error (FR-4).
-
-H.264 compresses with some loss, so the gray levels in the video are close to those of FR-32 but not always equal.
-Exact values are checked on the images `E` and on the frames before encoding.
+**FR-34.** The program shall overwrite an existing output file.
 
 ### 3.7 Run report
 
-**FR-35. Summary.** When the video is written, the program prints a summary:
+**FR-35. Summary (Should).** When the video is written, the program shall print a summary:
 
 ```
 volume:      DATA/croissant.nrrd, 500 x 500 x 500, uint8
@@ -312,23 +252,18 @@ projection:  0.95 s total, 7.9 ms per frame, 126 fps
 video:       3.10 s
 ```
 
-`projection` is the time defined in NFR-3. `load` covers reading both input files, and `video` covers the gray levels, the placement and the encoding.
+`projection` is the time of NFR-3, `load` covers reading both input files, and `video` the gray levels, the placement and the encoding.
 
-**FR-36. Output streams.** The summary goes to the standard output. Warnings and errors go to the standard error, as they happen.
+**FR-36.** The summary shall go to the standard output, and warnings and errors to the standard error, as they happen.
 
----
+### 3.8 Non-functional requirements
 
-## 4. Non-functional requirements
+**NFR-1. Speed.** On the benchmark of NFR-4, the projection shall run at 30 frames per second or more.
 
-### 4.1 Speed
+**NFR-2. Speed target (Should).** On the same benchmark, the projection shall run at 100 frames per second or more.
 
-**NFR-1.** On the benchmark of NFR-4, the projection runs at **30 frames per second at least**.
-
-**NFR-2.** The target is **100 frames per second**.
-
-**NFR-3. What is measured.** The time from the points of a plane to its image `E`, including the setup of FR-15 to FR-17 for that plane.
-Reading the files, the gray levels, the placement in the frame and the video encoding are not included.
-The rate is the number of planes divided by the total of these times.
+**NFR-3. What is measured.** The time of a plane shall run from its points to its image `E`, including FR-15 to FR-17, and shall not include reading the files,
+the gray levels, the placement or the encoding. The rate is the number of planes divided by the total of these times.
 
 **NFR-4. Benchmark.**
 
@@ -340,44 +275,23 @@ The rate is the number of planes divided by the total of these times.
 | directions | spread evenly over all directions, made with a fixed random seed, and kept in the repository as a CSV file |
 | record | the result is written down with the processor, memory, operating system, and Python and NumPy versions |
 
-**NFR-5.** The time to read the files and to write the video is measured and reported (FR-35), without a target,
-because the assignment sets its target on the projection.
+**NFR-6. Memory.** The program shall hold the volume in memory once, in its own value type, and the rest of its memory shall grow with the size of an image, not with the size of the volume or the number of planes.
 
-### 4.2 Memory
+**NFR-8. Reliability.** No content of a plane line shall stop the program.
 
-**NFR-6.** The volume is held in memory once, in its own value type: 125 MB for the benchmark volume, and 4.3 GB for the largest volume allowed,
-1023 × 1023 × 1023 voxels of 32 bits. The extra memory for a plane grows with the size of its image, not with the size of the volume.
+**NFR-9. Determinism.** The same inputs shall always give the same images `E` and the same frames before encoding.
 
-**NFR-7.** Frames are written to the video as they are made. Memory use does not grow with the number of planes.
+**NFR-10. Portability.** The program shall run on Python 3.12 or newer, on Windows, macOS and Linux.
 
-### 4.3 Reliability
+**NFR-11. Installation.** Every dependency, the video encoder included, shall install with `pip` from `requirements.txt`.
 
-**NFR-8.** No content of a plane line can stop the program (FR-23).
+**NFR-12. Testability.** The projection shall be a function of a volume array and a plane, with no file access.
 
-**NFR-9.** The same inputs always give the same images `E` and the same frames before encoding.
+**NFR-14a. Code.** The code shall have type hints and docstrings.
 
-### 4.4 Portability
+**NFR-14b. Tests.** Every requirement that a program can check shall have an automated test that runs with `pytest`.
 
-**NFR-10.** The program runs on Python 3.12 or newer, on Windows, macOS and Linux.
-
-**NFR-11.** Every dependency is listed in `requirements.txt` and installs with `pip`, the video encoder included. No other program has to be installed.
-
-### 4.5 Design and code quality
-
-The assignment puts the design and the quality of the code before the implementation.
-
-**NFR-12.** The projection is a function of a volume array and a plane, with no file access, so tests can run it on small arrays they build themselves.
-
-**NFR-13.** Reading the volume, reading and checking the planes, the plane geometry, the sampling, the frame placement, the video writing and the command line are separate units.
-Each one can be tested on its own.
-
-**NFR-14.** The code has type hints and docstrings. The tests are automated and run with `pytest`.
-Every requirement that a program can check has at least one test ([section 7](#7-verification)).
-
-### 4.6 Usability
-
-**NFR-15.** `--help` explains the three arguments and the format of the planes file.
-Every warning and error says which file and line it is about, and what happened (FR-4, FR-27).
+**NFR-15. Usability (Should).** `--help` shall describe the three arguments and the format of the planes file.
 
 ---
 
