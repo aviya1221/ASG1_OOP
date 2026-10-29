@@ -98,7 +98,7 @@ The setup values, `right`, `down`, `corner` and the row spans, are written out t
 
 ### 3.2 A slow reference
 
-`tests/reference.py` projects a plane the slowest and plainest way: one pixel at a time, in Python floats, following the text of SRS 3.4 line by line.
+`tests/reference.py` projects a plane the slowest and plainest way: one pixel at a time, in Python floats, by the rules of SRS 3.4 and the formulas of [ALGORITHM 4.2](ALGORITHM.md#42-steps).
 It shares no code with the package, and it decides "inside the shape" in a different way:
 
 | | The package | The reference |
@@ -238,8 +238,8 @@ All the tests in this table, except the slow ones, build their volume in memory 
 | an image of 5 × 3 in a frame of 8 × 6 | placed at column 1, row 1, with black around it | FR-31 |
 | a bad plane | an all-black frame | FR-24, FR-31 |
 | `uint8`, `lo = 0`, `hi = 200`: the values 0, 100, 200 | 0, 128, 255 | FR-32 |
-| every value from 0 to `hi` of a `uint16` volume | the table gives exactly the formula of FR-32 | FR-32 |
-| `uint32` values up to `4·10⁹` | exactly the formula of FR-32 | FR-32 |
+| every value from 0 to `hi` of a `uint16` volume | the table gives exactly the formula of [ALGORITHM 7.2](ALGORITHM.md#72-gray-levels) | FR-32 |
+| `uint32` values up to `4·10⁹` | exactly the formula of [ALGORITHM 7.2](ALGORITHM.md#72-gray-levels) | FR-32 |
 | `lo` above 0 | the value 0 is still black | FR-32 |
 | all values equal | values above 0 are white, 0 is black | FR-32 |
 | any input type | the frame is `uint8` | FR-32 |

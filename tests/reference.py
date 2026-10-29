@@ -1,6 +1,7 @@
 """The slow reference projection (docs/TESTING.md, section 3.2).
 
-It follows docs/SRS.md, section 3.4, one pixel at a time in Python floats, and shares no code with the package.
+It follows docs/SRS.md, section 3.4, by the formulas of docs/ALGORITHM.md, section 4.2, one pixel at a time in Python floats,
+and shares no code with the package.
 It decides "inside the shape" by the side of every edge, not by row spans as the package does,
 so a mistake in either one shows up as a difference.
 """
@@ -29,7 +30,7 @@ def length(u):
 
 
 class Reference:
-    """The geometry of one plane, computed from the text of FR-15 to FR-17."""
+    """The geometry of one plane, FR-15 to FR-17, by the formulas of docs/ALGORITHM.md, section 4.2."""
 
     def __init__(self, points):
         points = [tuple(float(x) for x in p) for p in points]
