@@ -1,60 +1,60 @@
-# Demo runs, commit 7ae8e73
-# Intel64 Family 6 Model 142 Stepping 12, GenuineIntel, 8 logical processors, Windows-11-10.0.26200-SP0, Python 3.13.15, NumPy 2.5.4
+# Demo runs, commit e192660
+# Intel64 Family 6 Model 142 Stepping 12, GenuineIntel, 8 logical processors, Windows-11-10.0.26300-SP0, Python 3.13.15, NumPy 2.5.4
 
 $ python Ex0.py DATA/MRHead_1.nrrd demo/head.csv experiment/videos/head.mp4
 volume:      DATA/MRHead_1.nrrd, 256 x 256 x 130, int16
 frames:      280 (0 black, 0 warnings)
-load:        0.18 s
-projection:  1.34 s total, 4.8 ms per frame, 209 fps
-video:       0.51 s
+load:        0.19 s
+projection:  1.35 s total, 4.8 ms per frame, 207 fps
+video:       0.37 s
 exit code 0
 
 $ python Ex0.py DATA/onion.nrrd demo/onion.csv experiment/videos/onion.mp4
 volume:      DATA/onion.nrrd, 256 x 256 x 130, uint8
 frames:      120 (0 black, 0 warnings)
-load:        0.17 s
-projection:  0.93 s total, 7.8 ms per frame, 129 fps
-video:       0.46 s
+load:        0.12 s
+projection:  0.62 s total, 5.1 ms per frame, 194 fps
+video:       0.38 s
 exit code 0
 
 $ python Ex0.py DATA/biscuit_cake.nrrd demo/biscuit_cake.csv experiment/videos/biscuit_cake.mp4
 volume:      DATA/biscuit_cake.nrrd, 256 x 256 x 130, uint16
 frames:      120 (0 black, 0 warnings)
-load:        0.29 s
-projection:  0.94 s total, 7.8 ms per frame, 128 fps
-video:       0.43 s
+load:        0.24 s
+projection:  0.61 s total, 5.1 ms per frame, 197 fps
+video:       0.34 s
 exit code 0
 
 $ python Ex0.py DATA/swiss_roll.nrrd demo/swiss_roll.csv experiment/videos/swiss_roll.mp4
 volume:      DATA/swiss_roll.nrrd, 256 x 256 x 130, uint32
 frames:      120 (0 black, 0 warnings)
-load:        0.52 s
-projection:  0.73 s total, 6.1 ms per frame, 164 fps
-video:       0.57 s
+load:        0.37 s
+projection:  0.61 s total, 5.1 ms per frame, 197 fps
+video:       0.41 s
 exit code 0
 
 $ python Ex0.py DATA/croissant.nrrd demo/croissant.csv experiment/videos/croissant.mp4
 volume:      DATA/croissant.nrrd, 500 x 500 x 500, uint8
 frames:      100 (0 black, 0 warnings)
-load:        2.44 s
-projection:  1.13 s total, 11.3 ms per frame, 88 fps
-video:       0.71 s
+load:        1.33 s
+projection:  0.99 s total, 9.9 ms per frame, 101 fps
+video:       0.83 s
 exit code 0
 
 $ python Ex0.py DATA/synthetic/dice.nrrd demo/edge_cases.csv experiment/videos/edge_cases.mp4
-warning: line 28, frame 7: the legs differ by 37.8 voxels; drawn as given
-warning: line 30, frame 8: the top side a' a'' is not parallel to the base: its ends differ by 16 voxels; drawn as given
-warning: line 34, frame 9: 8 numbers instead of 9 (triangle) or 12 (trapezoid); the frame is black
-warning: line 36, frame 10: field 9 is not a number: 'abc'; the frame is black
-warning: line 38, frame 11: field 6 is not a finite number: 'inf'; the frame is black
-warning: line 40, frame 12: b and c are the same point; the frame is black
-warning: line 42, frame 13: points a, b and c are on one line; the frame is black
-warning: line 44, frame 14: point a'' is 10 voxels off the plane of a', b and c; the frame is black
-warning: line 46, frame 15: the sides of the trapezoid a', a'', c, b cross each other; the frame is black
-warning: line 48, frame 16: the image would be 10200 x 180 pixels, more than 4096 on a side; the frame is black
+warning: line 29, frame 7: the legs differ by 37.8 voxels; drawn as given
+warning: line 31, frame 8: the top side a' a'' is not parallel to the base: its ends differ by 16 voxels; drawn as given
+warning: line 35, frame 9: 9 numbers for 4 points instead of 12; the frame is black
+warning: line 37, frame 10: field 10 is not a number: 'abc'; the frame is black
+warning: line 39, frame 11: field 7 is not a finite number: 'inf'; the frame is black
+warning: line 41, frame 12: b and c are the same point; the frame is black
+warning: line 43, frame 13: points a, b and c are on one line; the frame is black
+warning: line 45, frame 14: point a'' is 10 voxels off the plane of a', b and c; the frame is black
+warning: line 47, frame 15: the sides of the trapezoid a', a'', c, b cross each other; the frame is black
+warning: line 49, frame 16: the image would be 10200 x 180 pixels, more than 4096 on a side; the frame is black
 volume:      DATA/synthetic/dice.nrrd, 200 x 180 x 160, uint32
 frames:      16 (8 black, 10 warnings)
-load:        0.16 s
-projection:  0.07 s total, 4.4 ms per frame, 229 fps
-video:       0.32 s
+load:        0.09 s
+projection:  0.03 s total, 2.0 ms per frame, 513 fps
+video:       0.20 s
 exit code 0
