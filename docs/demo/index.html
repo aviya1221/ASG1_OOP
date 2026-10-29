@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interactive cut demo</title>
+<meta name="description" content="Move a triangle inside a layered cake and see the image the plane projection makes, step by step.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,600&family=IBM+Plex+Sans:wght@400;600;700&display=swap">
+<style>
+/* The live demo of the explainer site, on its own page: the cake with the sheet inside it, and the image that comes out */
+:root {
+  --bg: #F1F4F6; --paper: #FFFFFF; --ink: #16212B; --muted: #56636E; --line: #D2D9E0; --grid: #E3E8ED;
+  --accent: #0E6A87; --accent-ink: #FFFFFF; --accent-soft: #DCEDF3; --mark: #D7261E;
+  --ok-soft: #DEF0E5; --warn-soft: #FAEED2; --bad-soft: #F8E0DD;
+  --choc: #6A4128; --cream: #F0DEBB; --bis: #BF8447; --void: #24282D;
+  --code-bg: #F8FAFB;
+  --shadow: 0 1px 2px rgba(22, 33, 43, .06), 0 8px 24px rgba(22, 33, 43, .09);
+  --font-body: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151B; --paper: #161E26; --ink: #E1E7EC; --muted: #98A5B0; --line: #2A3641; --grid: #1C262F;
+    --accent: #58B7DA; --accent-ink: #0A1217; --accent-soft: #14303B; --mark: #FF5B4F;
+    --ok-soft: #13301F; --warn-soft: #33270F; --bad-soft: #3A1714;
+    --choc: #85543A; --cream: #E5D0A6; --bis: #C68C50; --void: #04070A;
+    --code-bg: #11181F;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 8px 24px rgba(0, 0, 0, .4);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151B; --paper: #161E26; --ink: #E1E7EC; --muted: #98A5B0; --line: #2A3641; --grid: #1C262F;
+  --accent: #58B7DA; --accent-ink: #0A1217; --accent-soft: #14303B; --mark: #FF5B4F;
+  --ok-soft: #13301F; --warn-soft: #33270F; --bad-soft: #3A1714;
+  --choc: #85543A; --cream: #E5D0A6; --bis: #C68C50; --void: #04070A;
+  --code-bg: #11181F;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 8px 24px rgba(0, 0, 0, .4);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16.5px/1.65 var(--font-body); -webkit-text-size-adjust: 100%; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible, input:focus-visible, canvas:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+main { max-width: 1060px; margin: 0 auto; padding: 32px 16px 56px; }
+.eyebrow { font: 600 13px/1.2 var(--font-body); letter-spacing: .06em; color: var(--accent); margin: 0; }
+h1 { font-size: clamp(1.8rem, 1.3rem + 2vw, 2.5rem); line-height: 1.15; margin: 6px 0 10px; text-wrap: balance; }
+h2 { font-size: 1.3rem; margin: 40px 0 8px; }
+.lede { font-size: 1.08rem; color: var(--muted); max-width: 70ch; margin: 0; }
+p, li { max-width: 74ch; }
+code { font-family: var(--font-mono); font-size: .86em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: .04em .34em; }
+pre { font: 14px/1.6 var(--font-mono); background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; overflow-x: auto; }
+.l { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chip { font: inherit; font-size: 14px; background: var(--paper); border: 1px solid var(--line); color: var(--ink); border-radius: 999px; padding: 5px 13px; cursor: pointer; line-height: 1.5; }
+.chip:hover { border-color: var(--accent); }
+.graph { background-color: var(--paper); background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 22px 22px; background-position: -1px -1px; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); margin-top: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; line-height: 1.55; }
+th, td { padding: 8px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+thead th { font-weight: 600; background: var(--bg); white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+td:nth-child(2) code { white-space: nowrap; }
+
+.demo { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 14px; margin: 24px 0; box-shadow: var(--shadow); }
+.demo > *, .demo-stage > * { min-width: 0; }
+.demo-stage { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 14px; }
+.demo-view, .demo-image { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.demo canvas { display: block; width: 100%; }
+#demo-3d { touch-action: pan-y; cursor: grab; }
+#demo-3d:active { cursor: grabbing; }
+#demo-image { cursor: crosshair; }
+.demo-hint { font-size: 13px; color: var(--muted); margin: 6px 2px 0; }
+.demo-pixel { margin-top: 10px; font-size: 15px; background: var(--bg); border-radius: 10px; padding: 10px 14px; }
+.demo-pixel p { margin: 0; }
+.demo-status { border-radius: 10px; padding: 10px 14px; font-size: 15px; }
+.demo-status.ok { background: var(--ok-soft); }
+.demo-status.warn { background: var(--warn-soft); }
+.demo-status.bad { background: var(--bad-soft); }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; }
+.demo-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.pt { border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px 10px; margin: 0; min-width: 0; }
+.pt legend { padding: 0 6px; font-weight: 600; }
+.pt legend .l { font: 700 16px var(--font-mono); margin-right: 4px; }
+.axis-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) 46px; align-items: center; gap: 8px; }
+.axis-row label { font: 600 13px var(--font-mono); color: var(--muted); }
+.axis-row output { font: 13px var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; }
+.axis-row input { width: 100%; accent-color: var(--accent); margin: 6px 0; }
+.demo-facts > summary { cursor: pointer; font-weight: 600; }
+footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+
+@media (max-width: 860px) {
+  .demo-stage { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .demo-controls { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">Ex1 · Plane projection of a 3D volume</p>
+  <h1>Cut a cake with a triangle</h1>
+  <p class="lede">A <span class="l">10 × 10 × 10</span> cake of three layers, a triangle <code>a</code>, <code>b</code>, <code>c</code> inside it,
+    and the image that comes out. Move the three points, turn the cake, and click a square of the image to see where its color comes from.</p>
+
+  <div class="demo" id="demo">
+    <div class="demo-stage">
+      <div>
+        <div class="demo-view graph"><canvas id="demo-3d" tabindex="0" aria-label="The cake and the triangle inside it. The left and right arrow keys turn the view"></canvas></div>
+        <p class="demo-hint">Drag the drawing, or click it and use the arrow keys, to turn the cake.</p>
+      </div>
+      <div>
+        <div class="demo-image graph"><canvas id="demo-image" tabindex="0" aria-label="The image that comes out. The arrow keys move the chosen square"></canvas></div>
+        <p class="demo-hint">Click a square to see where its color comes from.</p>
+        <div class="demo-pixel" id="demo-pixel" aria-live="polite"></div>
+      </div>
+    </div>
+    <div class="demo-status" id="demo-status" aria-live="polite"></div>
+    <div class="presets" role="group" aria-label="Ready examples">
+      <button type="button" class="chip" data-preset="example">The worked example</button>
+      <button type="button" class="chip" data-preset="flat">Flat slice in the cream</button>
+      <button type="button" class="chip" data-preset="upright">Upright cut through all layers</button>
+      <button type="button" class="chip" data-preset="outside">Triangle that leaves the cake</button>
+      <button type="button" class="chip" data-preset="legs">Unequal legs</button>
+      <button type="button" class="chip" data-preset="line">Three points on one line</button>
+    </div>
+    <div class="demo-controls">
+      <fieldset class="pt">
+        <legend><span class="l">a</span> the apex</legend>
+        <div class="axis-row"><label for="demo-a-x">x</label><input type="range" id="demo-a-x" min="-3" max="12" step="0.5" value="5"><output for="demo-a-x">5</output></div>
+        <div class="axis-row"><label for="demo-a-y">y</label><input type="range" id="demo-a-y" min="-3" max="12" step="0.5" value="0"><output for="demo-a-y">0</output></div>
+        <div class="axis-row"><label for="demo-a-z">z</label><input type="range" id="demo-a-z" min="-3" max="12" step="0.5" value="8"><output for="demo-a-z">8</output></div>
+      </fieldset>
+      <fieldset class="pt">
+        <legend><span class="l">b</span> start of the base</legend>
+        <div class="axis-row"><label for="demo-b-x">x</label><input type="range" id="demo-b-x" min="-3" max="12" step="0.5" value="1"><output for="demo-b-x">1</output></div>
+        <div class="axis-row"><label for="demo-b-y">y</label><input type="range" id="demo-b-y" min="-3" max="12" step="0.5" value="6"><output for="demo-b-y">6</output></div>
+        <div class="axis-row"><label for="demo-b-z">z</label><input type="range" id="demo-b-z" min="-3" max="12" step="0.5" value="0"><output for="demo-b-z">0</output></div>
+      </fieldset>
+      <fieldset class="pt">
+        <legend><span class="l">c</span> end of the base</legend>
+        <div class="axis-row"><label for="demo-c-x">x</label><input type="range" id="demo-c-x" min="-3" max="12" step="0.5" value="9"><output for="demo-c-x">9</output></div>
+        <div class="axis-row"><label for="demo-c-y">y</label><input type="range" id="demo-c-y" min="-3" max="12" step="0.5" value="6"><output for="demo-c-y">6</output></div>
+        <div class="axis-row"><label for="demo-c-z">z</label><input type="range" id="demo-c-z" min="-3" max="12" step="0.5" value="0"><output for="demo-c-z">0</output></div>
+      </fieldset>
+    </div>
+    <details class="demo-facts" open>
+      <summary>The computation, step by step</summary>
+      <div class="table-wrap"><table><thead><tr><th>What is computed</th><th>In the code</th><th>Result</th></tr></thead><tbody id="demo-steps"></tbody></table></div>
+    </details>
+  </div>
+
+  <h2>Things to try</h2>
+  <ul>
+    <li>Click <b>Flat slice in the cream</b>. The triangle lies at <span class="l">z = 4</span>, so the whole image is cream: the axial view of 3D Slicer.</li>
+    <li>Click <b>Upright cut through all layers</b>. The three layers show one above the other: chocolate at the top, cream in the middle, biscuit at the bottom.</li>
+    <li>Click <b>Triangle that leaves the cake</b> and check a black square inside the triangle. Its point is outside the cake, so it gets 0.</li>
+    <li>Swap <code>b</code> and <code>c</code>. The direction to the right turns around, and the image comes out mirrored.</li>
+    <li>Move <code>a</code> slowly to the side. When the legs differ by more than half a voxel a warning appears, but the triangle is still drawn.</li>
+  </ul>
+
+  <h2>How a square gets its value</h2>
+  <p>The image is a sheet of squares, one voxel apart in both directions, laid on the plane of the triangle.
+    Each square has a point in the volume, and takes the value of the nearest voxel. Squares outside the triangle, and points outside the volume, get 0.</p>
+<pre>point(row, col) = corner + col · right + row · down
+voxel           = floor(point + 0.5)      # on each axis
+value           = M[voxel], or 0</pre>
+  <p>The page computes every step the way the program does, in
+    <a href="https://github.com/aviya1221/ASG1_OOP/blob/main/plane_projection/geometry.py">geometry.py</a> and
+    <a href="https://github.com/aviya1221/ASG1_OOP/blob/main/plane_projection/projector.py">projector.py</a>.
+    The full description is in the <a href="https://github.com/aviya1221/ASG1_OOP/blob/main/docs/ALGORITHM.md">algorithm document</a>,
+    and the worked example is its <a href="https://github.com/aviya1221/ASG1_OOP/blob/main/docs/ALGORITHM.md#53-worked-example">section 5.3</a>.</p>
+
+  <footer>Part of <a href="https://github.com/aviya1221/ASG1_OOP">aviya1221/ASG1_OOP</a>, Introduction to Software Engineering, exercise 1.</footer>
+</main>
+
+<script>
+// The cut of a triangle through a small volume, computed the way plane_projection/geometry.py and
+// plane_projection/projector.py compute it (docs/SRS.md, FR-15 to FR-20).
+
+const EPS = 1e-6;
+const TOLERANCE = 0.5;
+
+function sub(u, v) { return [u[0] - v[0], u[1] - v[1], u[2] - v[2]]; }
+function add(u, v) { return [u[0] + v[0], u[1] + v[1], u[2] + v[2]]; }
+function scale(u, k) { return [u[0] * k, u[1] * k, u[2] * k]; }
+function divide(u, k) { return [u[0] / k, u[1] / k, u[2] / k]; }
+function dot(u, v) { return u[0] * v[0] + u[1] * v[1] + u[2] * v[2]; }
+function norm(u) { return Math.sqrt(dot(u, u)); }
+
+// The setup of one triangle a, b, c: the reason it is bad, or everything the projection needs (geometry.setup).
+function setupTriangle(a, b, c) {
+  const base = sub(c, b);
+  const baseLength = norm(base);
+  if (baseLength < EPS) return { reason: "same" };
+  const right = divide(base, baseLength);
+  const ab = sub(b, a);
+  const w = sub(ab, scale(right, dot(ab, right)));
+  const wLength = norm(w);
+  if (wLength < EPS) return { reason: "line" };
+  const down = divide(w, wLength);
+
+  const corners = [a, c, b];                       // around the shape, as in geometry.py
+  const s = corners.map(v => dot(sub(v, a), right));
+  const t = corners.map(v => dot(sub(v, a), down));
+  const sMin = Math.min(...s), tMin = Math.min(...t);
+  const width = Math.max(...s) - sMin, height = Math.max(...t) - tMin;
+  const cols = Math.floor(width + EPS) + 1;
+  const rows = Math.floor(height + EPS) + 1;
+  const corner = add(add(a, scale(right, sMin)), scale(down, tMin));
+  const spans = rowSpans(s, t, rows, cols);
+  const legs = Math.abs(norm(sub(b, a)) - norm(sub(c, a)));
+  return {
+    reason: null, right, down, w, wLength, s, t, sMin, tMin, rows, cols, corner,
+    c0: spans.c0, c1: spans.c1, legs, warning: legs > TOLERANCE,
+  };
+}
+
+// The columns c0[r] to c1[r] of the shape on every row (geometry.row_spans).
+function rowSpans(s, t, rows, cols) {
+  const sMin = Math.min(...s), tMin = Math.min(...t);
+  const low = new Array(rows).fill(Infinity);
+  const high = new Array(rows).fill(-Infinity);
+  const n = s.length;
+  for (let i = 0; i < n; i++) {
+    const sp = s[i], tp = t[i], sq = s[(i + 1) % n], tq = t[(i + 1) % n];
+    for (let r = 0; r < rows; r++) {
+      const line = tMin + r;
+      if (tp !== tq) {
+        if (line >= Math.min(tp, tq) - EPS && line <= Math.max(tp, tq) + EPS) {
+          const f = Math.min(1, Math.max(0, (line - tp) / (tq - tp)));
+          const where = sp + f * (sq - sp);
+          low[r] = Math.min(low[r], where);
+          high[r] = Math.max(high[r], where);
+        }
+      } else if (Math.abs(line - tp) <= EPS) {
+        low[r] = Math.min(low[r], Math.min(sp, sq));
+        high[r] = Math.max(high[r], Math.max(sp, sq));
+      }
+    }
+  }
+  const c0 = [], c1 = [];
+  for (let r = 0; r < rows; r++) {
+    if (low[r] <= high[r]) {
+      c0.push(Math.max(Math.ceil(low[r] - sMin - EPS), 0));
+      c1.push(Math.min(Math.floor(high[r] - sMin + EPS), cols - 1));
+    } else {
+      c0.push(0);
+      c1.push(-1);
+    }
+  }
+  return { c0, c1 };
+}
+
+// The point of pixel (r, c) and the nearest voxel to it (FR-17, FR-19), in the order projector.sample adds them.
+function pixelPoint(setup, r, c) {
+  return [0, 1, 2].map(k => setup.corner[k] + c * setup.right[k] + r * setup.down[k]);
+}
+
+function nearestVoxel(setup, r, c) {
+  return [0, 1, 2].map(k => Math.floor((setup.corner[k] + 0.5) + r * setup.down[k] + c * setup.right[k]));
+}
+
+// The image E: rows of values, 0 outside the shape or the volume (FR-20). valueAt(x, y, z) reads the volume.
+function projectTriangle(setup, sizes, valueAt) {
+  const image = [];
+  for (let r = 0; r < setup.rows; r++) {
+    const row = new Array(setup.cols).fill(0);
+    for (let c = setup.c0[r]; c <= setup.c1[r]; c++) {
+      const v = nearestVoxel(setup, r, c);
+      if (v.every((index, k) => index >= 0 && index < sizes[k])) row[c] = valueAt(v[0], v[1], v[2]);
+    }
+    image.push(row);
+  }
+  return image;
+}
+
+// The cake of the worked example (docs/ALGORITHM.md, section 5.3): biscuit for z 0 to 2, cream for z 3 to 6, chocolate for z 7 to 9.
+const CAKE_SIZES = [10, 10, 10];
+const CHOCOLATE = 1, CREAM = 2, BISCUIT = 3;
+function cakeValue(x, y, z) { return z <= 2 ? BISCUIT : z <= 6 ? CREAM : CHOCOLATE; }
+</script>
+<script>
+// The live demo: three points of a triangle, the cake with the sheet inside it, and the image that comes out.
+(() => {
+  const root = document.getElementById("demo");
+  if (!root) return;
+  const view = document.getElementById("demo-3d");
+  const flat = document.getElementById("demo-image");
+  const status = document.getElementById("demo-status");
+  const pixelBox = document.getElementById("demo-pixel");
+  const steps = document.getElementById("demo-steps");
+  const NAMES = ["a", "b", "c"], AXES = ["x", "y", "z"];
+  const LAYER_NAME = { 1: "chocolate", 2: "cream", 3: "biscuit" };
+  const LAYERS = [[-0.5, 2.5, "--bis"], [2.5, 6.5, "--cream"], [6.5, 9.5, "--choc"]];
+  const PRESETS = {
+    example: [[5, 0, 8], [1, 6, 0], [9, 6, 0]],
+    flat: [[4.5, 0, 4], [0, 9, 4], [9, 9, 4]],
+    upright: [[4.5, 4.5, 9], [0, 4.5, 0], [9, 4.5, 0]],
+    outside: [[4.5, -2.5, 12], [0, 9, 1], [9, 9, 1]],
+    legs: [[2, 0, 8], [1, 6, 0], [9, 6, 0]],
+    line: [[0, 0, 0], [4, 4, 4], [8, 8, 8]],
+  };
+  let points = PRESETS.example.map(p => p.slice());
+  let setup = null, image = null, selected = [5, 2];
+  let azimuth = -60, elevation = 24;
+  let layout = null;
+
+  const color = name => getComputedStyle(root).getPropertyValue(name).trim();
+  const minus = text => text.replace(/-/g, "−");
+  function fmt(x) {
+    let v = Math.round(x * 1000) / 1000;
+    if (Object.is(v, -0)) v = 0;
+    return minus(String(v));
+  }
+  const vec = v => `<span class="l">(${v.map(fmt).join(", ")})</span>`;
+
+  // ----- inputs
+  const inputs = NAMES.map(n => AXES.map(axis => document.getElementById(`demo-${n}-${axis}`)));
+  function showInputs() {
+    inputs.forEach((row, i) => row.forEach((input, k) => {
+      input.value = points[i][k];
+      input.nextElementSibling.textContent = fmt(points[i][k]);
+    }));
+  }
+  inputs.forEach((row, i) => row.forEach((input, k) => input.addEventListener("input", () => {
+    points[i][k] = Number(input.value);
+    input.nextElementSibling.textContent = fmt(points[i][k]);
+    update();
+  })));
+  root.querySelectorAll("[data-preset]").forEach(button => button.addEventListener("click", () => {
+    points = PRESETS[button.dataset.preset].map(p => p.slice());
+    selected = null;
+    showInputs();
+    update();
+  }));
+
+  // ----- the cut
+  function update() {
+    setup = setupTriangle(points[0], points[1], points[2]);
+    image = setup.reason ? null : projectTriangle(setup, CAKE_SIZES, cakeValue);
+    if (image) {
+      const fits = selected && selected[0] < setup.rows && selected[1] < setup.cols;
+      if (!fits) {
+        const r = Math.floor(setup.rows / 2);
+        selected = [r, Math.max(0, Math.floor((setup.c0[r] + setup.c1[r]) / 2))];
+      }
+    }
+    draw();
+    describe();
+  }
+
+  // ----- drawing
+  function prepare(canvas, height) {
+    const ratio = window.devicePixelRatio || 1;
+    const width = canvas.clientWidth || canvas.parentElement.clientWidth;
+    canvas.style.height = `${height}px`;
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    return { ctx, width, height };
+  }
+
+  function camera(width, height) {
+    const p = azimuth * Math.PI / 180, t = elevation * Math.PI / 180;
+    const v = [Math.cos(t) * Math.cos(p), Math.cos(t) * Math.sin(p), Math.sin(t)];
+    const u = [-Math.sin(p), Math.cos(p), 0];
+    const up = [-Math.sin(t) * Math.cos(p), -Math.sin(t) * Math.sin(p), Math.cos(t)];
+    const scale = Math.min(width, height) / 25;
+    const center = [4.5, 4.5, 4.5];
+    const at = q => {
+      const d = [q[0] - center[0], q[1] - center[1], q[2] - center[2]];
+      return [width / 2 + scale * (d[0] * u[0] + d[1] * u[1] + d[2] * u[2]),
+              height / 2 - scale * (d[0] * up[0] + d[1] * up[1] + d[2] * up[2])];
+    };
+    const depth = q => q[0] * v[0] + q[1] * v[1] + q[2] * v[2];
+    return { v, at, depth, scale };
+  }
+
+  function faces(z0, z1) {
+    const x0 = -0.5, x1 = 9.5, y0 = -0.5, y1 = 9.5;
+    return [
+      [[1, 0, 0], [[x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1]]],
+      [[-1, 0, 0], [[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]]],
+      [[0, 1, 0], [[x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [x1, y1, z0]]],
+      [[0, -1, 0], [[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]]],
+      [[0, 0, 1], [[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]]],
+      [[0, 0, -1], [[x0, y0, z0], [x0, y1, z0], [x1, y1, z0], [x1, y0, z0]]],
+    ];
+  }
+
+  function shape(ctx, cam, corners) {
+    ctx.beginPath();
+    corners.forEach((q, i) => { const [x, y] = cam.at(q); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+    ctx.closePath();
+  }
+
+  function valueColor(value) {
+    return value === 1 ? color("--choc") : value === 2 ? color("--cream") : value === 3 ? color("--bis") : color("--void");
+  }
+
+  function square(r, c) {
+    const center = pixelPoint(setup, r, c);
+    return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([i, j]) =>
+      [0, 1, 2].map(k => center[k] + 0.5 * i * setup.right[k] + 0.5 * j * setup.down[k]));
+  }
+
+  function drawView() {
+    const width = view.clientWidth || view.parentElement.clientWidth;
+    const { ctx, height } = prepare(view, Math.round(width * 0.82));
+    const cam = camera(width, height);
+    const ink = color("--ink");
+    const all = LAYERS.flatMap(([z0, z1, name]) => faces(z0, z1).map(([n, corners]) => ({ n, corners, fill: color(name) })));
+    const facing = f => f.n[0] * cam.v[0] + f.n[1] * cam.v[1] + f.n[2] * cam.v[2] > 0;
+
+    ctx.lineJoin = "round";
+    for (const face of all.filter(f => !facing(f))) {
+      shape(ctx, cam, face.corners);
+      ctx.globalAlpha = 0.3; ctx.fillStyle = face.fill; ctx.fill();
+      ctx.globalAlpha = 0.25; ctx.strokeStyle = ink; ctx.lineWidth = 0.8; ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    if (image) {
+      const squares = [];
+      for (let r = 0; r < setup.rows; r++) {
+        for (let c = setup.c0[r]; c <= setup.c1[r]; c++) {
+          squares.push({ depth: cam.depth(pixelPoint(setup, r, c)), corners: square(r, c), value: image[r][c] });
+        }
+      }
+      squares.sort((p, q) => p.depth - q.depth);
+      ctx.lineWidth = 0.6;
+      for (const sq of squares) {
+        shape(ctx, cam, sq.corners);
+        ctx.globalAlpha = sq.value ? 1 : 0.75;
+        ctx.fillStyle = valueColor(sq.value); ctx.fill();
+        ctx.globalAlpha = 0.35; ctx.strokeStyle = ink; ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+    for (const face of all.filter(facing)) {
+      shape(ctx, cam, face.corners);
+      ctx.globalAlpha = 0.13; ctx.fillStyle = face.fill; ctx.fill();
+      ctx.globalAlpha = 0.5; ctx.strokeStyle = ink; ctx.lineWidth = 1; ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    shape(ctx, cam, points);
+    ctx.strokeStyle = color("--accent"); ctx.lineWidth = 2;
+    if (setup.reason) ctx.setLineDash([6, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (image && selected && selected[1] >= setup.c0[selected[0]] && selected[1] <= setup.c1[selected[0]]) {
+      shape(ctx, cam, square(selected[0], selected[1]));
+      ctx.strokeStyle = color("--mark"); ctx.lineWidth = 2.6; ctx.stroke();
+    }
+    ctx.font = `700 15px ${color("--font-mono")}`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    points.forEach((q, i) => {
+      const [x, y] = cam.at(q);
+      ctx.fillStyle = ink;
+      ctx.beginPath(); ctx.arc(x, y, 4, 0, 2 * Math.PI); ctx.fill();
+      ctx.fillText(NAMES[i], x + 12, y - 10);
+    });
+    const origin = [-0.5, -0.5, -0.5];
+    ctx.font = `italic 600 13px ${color("--font-mono")}`;
+    ctx.strokeStyle = ink; ctx.fillStyle = ink; ctx.lineWidth = 1.4;
+    AXES.forEach((name, k) => {
+      const end = origin.slice(); end[k] += 3;
+      const tip = origin.slice(); tip[k] += 4;
+      const [x0, y0] = cam.at(origin), [x1, y1] = cam.at(end), [tx, ty] = cam.at(tip);
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      ctx.fillText(name, tx, ty);
+    });
+  }
+
+  function drawImage() {
+    const width = flat.clientWidth || flat.parentElement.clientWidth;
+    if (!image) {
+      const { ctx, height } = prepare(flat, Math.round(Math.min(width, 300) * 0.8));
+      const side = Math.min(width - 40, height - 40);
+      ctx.fillStyle = color("--void");
+      ctx.fillRect((width - side) / 2, (height - side) / 2, side, side);
+      layout = null;
+      return;
+    }
+    const margin = 30;
+    const cell = Math.max(5, Math.min(30, Math.floor((width - 2 * margin) / setup.cols), Math.floor(380 / setup.rows)));
+    const height = setup.rows * cell + 2 * margin;
+    const { ctx } = prepare(flat, height);
+    const left = Math.round((width - setup.cols * cell) / 2), top = margin;
+    layout = { left, top, cell };
+    const ink = color("--ink");
+    for (let r = 0; r < setup.rows; r++) {
+      for (let c = 0; c < setup.cols; c++) {
+        ctx.fillStyle = valueColor(image[r][c]);
+        ctx.fillRect(left + c * cell, top + r * cell, cell, cell);
+      }
+    }
+    if (cell >= 8) {
+      ctx.strokeStyle = ink; ctx.globalAlpha = 0.25; ctx.lineWidth = 0.7;
+      for (let r = 0; r <= setup.rows; r++) { ctx.beginPath(); ctx.moveTo(left, top + r * cell); ctx.lineTo(left + setup.cols * cell, top + r * cell); ctx.stroke(); }
+      for (let c = 0; c <= setup.cols; c++) { ctx.beginPath(); ctx.moveTo(left + c * cell, top); ctx.lineTo(left + c * cell, top + setup.rows * cell); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    }
+    if (cell >= 14) {
+      ctx.fillStyle = color("--muted");
+      ctx.font = `11px ${color("--font-mono")}`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      for (let c = 0; c < setup.cols; c++) ctx.fillText(String(c), left + c * cell + cell / 2, top - 11);
+      ctx.textAlign = "right";
+      for (let r = 0; r < setup.rows; r++) ctx.fillText(String(r), left - 7, top + r * cell + cell / 2);
+    }
+    if (selected) {
+      ctx.strokeStyle = color("--mark"); ctx.lineWidth = 2.6;
+      ctx.strokeRect(left + selected[1] * cell + 1, top + selected[0] * cell + 1, cell - 2, cell - 2);
+    }
+  }
+
+  function draw() {
+    drawView();
+    drawImage();
+  }
+
+  // ----- words
+  function describe() {
+    const rows = [];
+    if (setup.reason) {
+      status.className = "demo-status bad";
+      status.innerHTML = setup.reason === "same"
+        ? "<b>Bad plane.</b> Points <code>b</code> and <code>c</code> are the same point, so there is no base and no direction to the right. The program gives a black frame here and prints a warning."
+        : "<b>Bad plane.</b> The three points are on one line, so they do not fix a plane and there is no direction down. The program gives a black frame here and prints a warning.";
+      pixelBox.innerHTML = "<p>No image: the whole frame is black.</p>";
+      if (setup.reason === "same") {
+        rows.push(["Length of the base", "<code>|c − b|</code>", "0, so nothing can be divided by it"]);
+      } else {
+        const base = sub(points[2], points[1]);
+        rows.push(["Direction to the right, along the base", "<code>right = (c − b) / |c − b|</code>", vec(divide(base, norm(base)))]);
+        rows.push(["The part of <code>b − a</code> across the base", "<code>w</code>", "length 0, so nothing can be divided by it"]);
+      }
+      steps.innerHTML = rows.map(row => `<tr><td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td></tr>`).join("");
+      return;
+    }
+    const sideA = Math.hypot(...points[1].map((x, k) => x - points[0][k]));
+    const sideC = Math.hypot(...points[2].map((x, k) => x - points[0][k]));
+    const misses = image.every(row => row.every(value => value === 0));
+    if (setup.warning) {
+      status.className = "demo-status warn";
+      status.innerHTML = `<b>Doubtful plane.</b> The legs differ: <span class="l">|ab| = ${fmt(sideA)}</span> and <span class="l">|ac| = ${fmt(sideC)}</span>, ${fmt(setup.legs)} voxels apart, more than 0.5. The program draws the triangle as given and prints a warning.`;
+    } else if (misses) {
+      status.className = "demo-status ok";
+      status.innerHTML = "<b>A valid plane that misses the cake.</b> All the squares are black. This is valid input, so there is no warning.";
+    } else {
+      status.className = "demo-status ok";
+      status.innerHTML = `<b>Valid plane.</b> The image has ${setup.rows} rows and ${setup.cols} columns.`;
+    }
+    const st = NAMES.map((n, i) => {
+      const v = [setup.s[[0, 2, 1][i]], setup.t[[0, 2, 1][i]]];
+      return `<span class="l">${n}: (${v.map(fmt).join(", ")})</span>`;
+    }).join(" &nbsp; ");
+    const spans = setup.c0.map((c0, r) => c0 <= setup.c1[r] ? `${r}: ${c0 === setup.c1[r] ? c0 : `${c0}–${setup.c1[r]}`}` : `${r}: empty`);
+    rows.push(["Direction to the right, along the base", "<code>right = (c − b) / |c − b|</code>", vec(setup.right)]);
+    rows.push(["The part of <code>b − a</code> across the base", "<code>w</code>", `${vec(setup.w)}, length <span class="l">${fmt(setup.wLength)}</span>`]);
+    rows.push(["Direction down, from the apex to the base", "<code>down = w / |w|</code>", vec(setup.down)]);
+    rows.push(["Where each point lies on the sheet: how far right, how far down", "<code>s</code>, <code>t</code>", st]);
+    rows.push(["Size of the image", "<code>cols</code>, <code>rows</code>", `${setup.cols} columns, ${setup.rows} rows`]);
+    rows.push(["Top left corner of the sheet", "<code>corner</code>", vec(setup.corner)]);
+    rows.push(["Columns of the shape on each row", "<code>c0[r]</code>–<code>c1[r]</code>", `${spans.join(", ")}`]);
+    steps.innerHTML = rows.map(row => `<tr><td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td></tr>`).join("");
+    describePixel();
+  }
+
+  function describePixel() {
+    if (!image || !selected) return;
+    const [r, c] = selected;
+    const where = `<b>Row ${r}, column ${c}.</b> `;
+    if (c < setup.c0[r] || c > setup.c1[r]) {
+      pixelBox.innerHTML = `<p>${where}The square is outside the triangle, so it gets 0 and stays black.</p>`;
+      return;
+    }
+    const point = pixelPoint(setup, r, c), voxel = nearestVoxel(setup, r, c);
+    const inside = voxel.every((index, k) => index >= 0 && index < CAKE_SIZES[k]);
+    const formula = `<span class="l">corner + ${c}·right + ${r}·down = (${point.map(fmt).join(", ")})</span>`;
+    pixelBox.innerHTML = inside
+      ? `<p>${where}Its point in the cake: ${formula}. The nearest voxel is ${vec(voxel)}, in the <b>${LAYER_NAME[cakeValue(...voxel)]}</b>.</p>`
+      : `<p>${where}Its point: ${formula}. The nearest voxel, ${vec(voxel)}, is outside the cake, so the square gets 0 and stays black.</p>`;
+  }
+
+  // ----- choosing a pixel, turning the view
+  function choose(r, c) {
+    if (!image) return;
+    selected = [Math.min(setup.rows - 1, Math.max(0, r)), Math.min(setup.cols - 1, Math.max(0, c))];
+    draw();
+    describePixel();
+  }
+  flat.addEventListener("click", event => {
+    if (!layout) return;
+    const box = flat.getBoundingClientRect();
+    const c = Math.floor((event.clientX - box.left - layout.left) / layout.cell);
+    const r = Math.floor((event.clientY - box.top - layout.top) / layout.cell);
+    if (r >= 0 && c >= 0 && r < setup.rows && c < setup.cols) choose(r, c);
+  });
+  flat.addEventListener("keydown", event => {
+    if (!image || !selected) return;
+    const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+    const move = moves[event.key];
+    if (!move) return;
+    event.preventDefault();
+    choose(selected[0] + move[0], selected[1] + move[1]);
+  });
+  let drag = null;
+  view.addEventListener("pointerdown", event => { drag = [event.clientX, event.clientY]; view.setPointerCapture(event.pointerId); });
+  view.addEventListener("pointermove", event => {
+    if (!drag) return;
+    azimuth -= (event.clientX - drag[0]) * 0.5;
+    elevation = Math.max(-10, Math.min(80, elevation + (event.clientY - drag[1]) * 0.3));
+    drag = [event.clientX, event.clientY];
+    drawView();
+  });
+  const stop = () => { drag = null; };
+  view.addEventListener("pointerup", stop);
+  view.addEventListener("pointercancel", stop);
+  view.addEventListener("keydown", event => {
+    const turn = { ArrowLeft: 8, ArrowRight: -8 }[event.key];
+    const tilt = { ArrowUp: 5, ArrowDown: -5 }[event.key];
+    if (turn === undefined && tilt === undefined) return;
+    event.preventDefault();
+    if (turn !== undefined) azimuth += turn;
+    if (tilt !== undefined) elevation = Math.max(-10, Math.min(80, elevation + tilt));
+    drawView();
+  });
+
+  // ----- redraw when the size or the theme changes
+  let frame = null;
+  const redraw = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(draw); };
+  if (window.ResizeObserver) new ResizeObserver(redraw).observe(root);
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw);
+  if (document.fonts) document.fonts.ready.then(redraw);
+  showInputs();
+  update();
+})();
+</script>
+</body>
+</html>

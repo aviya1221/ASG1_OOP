@@ -12,6 +12,11 @@ the "cut" that 3D Slicer shows in its axial, coronal and sagittal views, but alo
 *A 10 × 10 × 10 cake of three layers, a triangle placed at an angle inside it, and the image that comes out.
 Each square of the output image takes the value of the voxel under its point in the volume.*
 
+[![The interactive demo: the cake is turned, the apex of an upright triangle moves down and up, and squares of the image are clicked](docs/demo/preview.gif)](https://aviya1221.github.io/ASG1_OOP/demo/)
+
+*Try it yourself in the [interactive demo](https://aviya1221.github.io/ASG1_OOP/demo/): turn the cake, move the three points,
+and click a square of the image to see where its value comes from. It computes every step the way the program does.*
+
 ## The problem
 
 **Input**
