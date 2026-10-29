@@ -142,36 +142,23 @@ The planes file has the format of the lecturer's example, [demo/lecturer_example
 ### 3.4 Projection geometry
 
 These requirements define the image of a valid plane, for the triangle and the trapezoid alike.
-`P0` is the first point of the plane: `a` for a triangle, `a'` for a trapezoid.
+The first point of a plane is `a` for a triangle and `a'` for a trapezoid. The formulas are in [ALGORITHM 4.2](ALGORITHM.md#42-steps).
 
-**FR-15. Directions in the plane.** The directions of the image shall be
+**FR-15. Directions in the plane.** The image shall have two directions, each one voxel unit long: `right`, along the base from `b` to `c`,
+and `down`, perpendicular to `right` in the plane of the first point and the base, pointing from the first point toward the base.
 
-```
-right = (c − b) / |c − b|
-w     = (b − P0) − ((b − P0) · right) · right
-down  = w / |w|
-```
+**FR-16. Image size.** The image shall have one column for each whole voxel unit in the width of the shape along `right`, plus one,
+and one row for each whole voxel unit in its height along `down`, plus one. A width or height at most `1e-6` short of a whole number shall count as that number.
 
-**FR-16. Image size.** With `s(v) = (v − P0) · right` and `t(v) = (v − P0) · down` for every input point `v`, the image shall have
+**FR-17. Pixel position.** Pixel `(r, c)`, row `r` and column `c`, shall sit `c` voxel units along `right` and `r` along `down`
+from the top left corner of the smallest rectangle along these directions that holds the shape.
 
-```
-cols = floor(s_max − s_min + 1e-6) + 1
-rows = floor(t_max − t_min + 1e-6) + 1
-```
+**FR-18. Inside the shape.** A pixel shall belong to the shape if its point lies inside the triangle `a, b, c`,
+or inside the quadrilateral `a', a'', c, b` projected onto the plane of FR-15, or on its edge, within `1e-6`.
 
-**FR-17. Pixel position.** Pixel `(r, c)`, row `r` and column `c`, shall sit at the point
+**FR-19. Sampling.** The value at a point shall be that of the nearest voxel: each coordinate is rounded to the nearest whole number, with halves rounded up.
 
-```
-corner  = P0 + s_min · right + t_min · down
-p(r, c) = corner + c · right + r · down
-```
-
-**FR-18. Inside the shape.** Pixel `(r, c)` shall belong to the shape if its plane point `(s_min + c, t_min + r)` lies inside the triangle `a, b, c`,
-or inside the quadrilateral `a', a'', c, b`, or on its edge, with a tolerance of `1e-6`.
-
-**FR-19. Sampling.** The value at a point `p` shall be that of the nearest voxel: `index = floor(p + 0.5)` on each axis.
-
-**FR-20. Pixel value.** `E[r][c]` shall be `M[index]` if the pixel belongs to the shape and `0 <= index < size` on all three axes, and 0 otherwise.
+**FR-20. Pixel value.** `E[r][c]` shall be the value of the voxel nearest to the pixel's point if the pixel belongs to the shape and that voxel lies inside `M`, and 0 otherwise.
 
 **FR-21. Orientation.** Row 0 shall hold the apex, or the top side of a trapezoid, and the last row the base, with `b` on the left and `c` on the right.
 
@@ -185,8 +172,8 @@ or inside the quadrilateral `a', a'', c, b`, or on its edge, with a tolerance of
 |---|---|
 | count | its first field is not 3 or 4, or it does not have 3 numbers for each point |
 | numbers | a field is not a number, or is infinite or not a number (`inf`, `nan`) |
-| base | `\|c − b\| < 1e-6` |
-| one line | `\|w\| < 1e-6`: `P0` lies on the line of the base |
+| base | `b` and `c` are less than `1e-6` apart |
+| one line | the first point is less than `1e-6` from the line of the base |
 | flat trapezoid | `a''` is more than 0.5 from the plane through `a'`, `b` and `c` |
 | trapezoid shape | the quadrilateral `a', a'', c, b` is not convex, for example because its sides cross |
 | size | the image would have more than 4096 rows or columns |
@@ -195,8 +182,8 @@ or inside the quadrilateral `a', a'', c, b`, or on its edge, with a tolerance of
 
 | Check | Warning when |
 |---|---|
-| equal legs | the two legs differ by more than 0.5: `\|ab\|` and `\|ac\|`, or `\|a'b\|` and `\|a''c\|` |
-| parallel sides | in a trapezoid, `\|t(a'')\| > 0.5`: the top side is not parallel to the base |
+| equal legs | the lengths of the two legs differ by more than 0.5 |
+| parallel sides | in a trapezoid, `a''` is more than 0.5 from `a'` along `down`: the top side is not parallel to the base |
 
 **FR-26.** A valid plane that does not meet the volume shall give a black image, without a warning.
 
@@ -216,13 +203,9 @@ warning: line 7, frame 5: points a, b and c are on one line; the frame is black
 
 **FR-30b.** If no plane is valid, the frames shall be 64 × 64.
 
-**FR-31.** Each image shall be placed in its frame at column `(W − cols) // 2` and row `(H − rows) // 2`, and the rest of the frame shall be black.
+**FR-31.** Each image shall be centered in its frame, and the rest of the frame shall be black. When the margins cannot be equal, the left or top margin shall be one pixel smaller than the right or bottom one.
 
-**FR-32a.** Values shall become gray levels by one map for the whole video, where `lo` and `hi` are the smallest and largest values of `M`:
-
-```
-gray(v) = round(255 · (v − lo) / (hi − lo)), clipped to 0 … 255
-```
+**FR-32a.** Values shall become gray levels by one linear map for the whole video, from 0, black, at `lo`, the smallest value of `M`, to 255, white, at `hi`, the largest, rounded to the nearest level with halves rounded up, and clipped to 0 … 255. The formula is in [ALGORITHM 7.2](ALGORITHM.md#72-gray-levels).
 
 **FR-32b.** A value of 0 shall always be black. If `hi = lo`, every value above 0 shall be white.
 

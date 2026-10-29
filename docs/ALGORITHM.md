@@ -140,6 +140,8 @@ The steps run in this order, and the first check that fails makes the plane bad,
 
 ### 4.2 Steps
 
+These are the formulas of the geometry that [SRS 3.4](SRS.md#34-projection-geometry) states in words.
+
 1. **Base.** `base = c − b`. If its length is below `1e-6`, the plane is bad. Otherwise `right = base / |base|` (FR-15).
 2. **Down.** `w = (b − P0) − ((b − P0) · right) · right`, the part of `b − P0` that is perpendicular to the base.
    If its length is below `1e-6`, `P0` is on the line of the base and the plane is bad. Otherwise `down = w / |w|` (FR-15).
@@ -151,7 +153,7 @@ The steps run in this order, and the first check that fails makes the plane bad,
    A cross product near 0 is allowed, so a trapezoid with `a' = a''`, which is really a triangle, passes.
 6. **Size.** `cols = floor(s_max − s_min + 1e-6) + 1` and `rows = floor(t_max − t_min + 1e-6) + 1` (FR-16).
    If either is above 4096, the plane is bad (FR-24).
-7. **Corner.** `corner = P0 + s_min · right + t_min · down` (FR-17).
+7. **Corner.** `corner = P0 + s_min · right + t_min · down`. Pixel `(r, c)` lies at `p(r, c) = corner + c · right + r · down` (FR-17).
 8. **Warnings** (FR-25). The plane stays valid.
    - Equal legs: `abs(|b − P0| − |c − Q|) > 0.5`.
    - Parallel sides, trapezoid only: `abs(t(a'')) > 0.5`. `t(a')` is always 0, because `a'` is `P0`.
@@ -198,6 +200,7 @@ If on some axis all four lie below `−0.5`, or all lie at `size − 0.5` or abo
 
 `E` starts as an array of zeros. Its rows are split into bands, and the pixels of each band are computed at once with NumPy arrays.
 A band computes only the columns that the shape reaches in its rows: it is trimmed.
+The voxel of a point `p` is `floor(p + 0.5)` on each axis, the nearest one with halves rounded up (FR-19).
 
 ```
 R  = rows of the band, as a column                             (shape: band × 1)
@@ -233,7 +236,7 @@ The memory used grows with `rows × cols`, never with the volume (NFR-6).
 
 The cake in the picture below is 10 × 10 × 10 voxels of three layers. The plane is the triangle `a = (5, 0, 8)`, `b = (1, 6, 0)`, `c = (9, 6, 0)`.
 
-**Setup**, by the formulas of [SRS 3.4](SRS.md#34-projection-geometry):
+**Setup**, by the formulas of [4.2](#42-steps):
 
 | Step | Result |
 |---|---|
@@ -334,7 +337,7 @@ With no valid plane, the frames are 64 × 64 (FR-30). The sizes come from the se
 
 ### 7.2 Gray levels
 
-`GrayMap` turns an image of raw values into gray levels by the formula of FR-32:
+`GrayMap` turns an image of raw values into gray levels (FR-32) by this formula:
 
 ```
 gray(v) = floor(255 · (v − lo) / (hi − lo) + 0.5), clipped to 0 … 255
