@@ -135,7 +135,7 @@ The assignment leaves these questions open. The [Software Requirements Specifica
 
 ## Data
 
-The data set is described in [DATA/README.md](DATA/README.md): the lecturer's MRI head scan,
+The data set is described in [docs/DATA.md](docs/DATA.md): the lecturer's MRI head scan,
 simulated MRI scans of layered foods (including a 500³ file for the speed test), test volumes with known answers,
 and a few real CT scans. Preview images are in [DATA/images/](DATA/images/).
 
@@ -161,7 +161,7 @@ On the development laptop the benchmark gives about 300 frames per second, again
 - [x] Create a repository, define the problem and the scope (this README)
 - [x] Software Requirements Specification ([docs/SRS.md](docs/SRS.md))
 - [x] Detailed description of the main algorithm ([docs/ALGORITHM.md](docs/ALGORITHM.md))
-- [x] Data set of NRRD files (first version, see [DATA/README.md](DATA/README.md))
+- [x] Data set of NRRD files (first version, see [docs/DATA.md](docs/DATA.md))
 - [x] Testing strategy, including the demo ([docs/TESTING.md](docs/TESTING.md))
 - [x] Implementation ([plane_projection/](plane_projection/), [tests/](tests/))
 - [x] Demo: `python Ex0.py file.nrrd file.csv file.mp4` ([Ex0.py](Ex0.py), planes files in [demo/](demo/))

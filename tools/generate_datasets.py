@@ -11,7 +11,7 @@ data set, the food scans, is made by generate_foods.py. By default the files are
 
 Every volume is indexed vol[x, y, z], like M[x][y][z] in the assignment, and is saved on an LPS
 grid with origin (0, 0, 0), so the IJK index that 3D Slicer shows is exactly (x, y, z).
-The full spec is in DATA/README.md.
+The full spec is in docs/DATA.md.
 
 Usage:
     python tools/generate_datasets.py [--out DIR] [--only {cake,tomato,dice}]

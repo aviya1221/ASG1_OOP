@@ -125,7 +125,7 @@ This checks the axis order of FR-8 on the real files of the data set.
 ### 3.5 Shapes known in advance
 
 `DATA/synthetic/dice.nrrd` holds exact values, 100000 for the body and 200000 for the pips, so some images are known before they are computed
-([DATA/README.md](../DATA/README.md#syntheticdicenrrd)):
+([DATA.md](DATA.md#syntheticdicenrrd)):
 
 | Plane | Expected image |
 |---|---|
