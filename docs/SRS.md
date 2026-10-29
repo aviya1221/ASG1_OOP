@@ -91,12 +91,7 @@ The IDs of removed requirements are not used again.
 
 **FR-1.** The program shall run as `python Ex0.py file.nrrd file.csv file.mp4 [--fps N]`: the volume, the planes and the output video, in this order.
 
-**FR-2.** The program shall accept these options:
-
-| Option | Meaning | Default |
-|---|---|---|
-| `--fps N` | frame rate of the output video, a positive number | `30` |
-| `--help` | print the usage and exit | |
+**FR-2.** The program shall accept the options `--fps N`, the frame rate of the video, a positive number with a default of 30, and `--help`, which prints the usage and exits.
 
 **FR-3.** The program shall exit with code `0` when the video was written, even if some planes gave warnings,
 `1` after a fatal error, and `2` for wrong command-line arguments.
@@ -123,13 +118,7 @@ The IDs of removed requirements are not used again.
 
 ### 3.3 Planes file
 
-The planes file has the format of the lecturer's example, [demo/lecturer_example.csv](../demo/lecturer_example.csv):
-
-```
-Number of Points (3 or 4),x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4
-3,200,200,0,0,200,400,400,200,400,,,
-4,200,0,0,200,0,500,200,400,0,200,400,500
-```
+The planes file has the format of the lecturer's example, [demo/lecturer_example.csv](../demo/lecturer_example.csv).
 
 **FR-10a.** Every line that is not blank and not a comment shall be one plane.
 
@@ -243,17 +232,7 @@ gray(v) = round(255 · (v − lo) / (hi − lo)), clipped to 0 … 255
 
 ### 3.7 Run report
 
-**FR-35. Summary (Should).** When the video is written, the program shall print a summary:
-
-```
-volume:      DATA/croissant.nrrd, 500 x 500 x 500, uint8
-frames:      120 (2 black, 3 warnings)
-load:        1.42 s
-projection:  0.95 s total, 7.9 ms per frame, 126 fps
-video:       3.10 s
-```
-
-`projection` is the time of NFR-3, `load` covers reading both input files, and `video` the gray levels, the placement and the encoding.
+**FR-35. Summary (Should).** When the video is written, the program shall print a summary of five lines, in this order: `volume`, the file with its size and value type; `frames`, such as `120 (2 black, 3 warnings)`; `load`, the time to read both input files; `projection`, the time of NFR-3 in total, per frame and in frames per second; and `video`, the time of the gray levels, the placement and the encoding.
 
 **FR-36.** The summary shall go to the standard output, and warnings and errors to the standard error, as they happen.
 
@@ -266,15 +245,7 @@ video:       3.10 s
 **NFR-3. What is measured.** The time of a plane shall run from its points to its image `E`, including FR-15 to FR-17, and shall not include reading the files,
 the gray levels, the placement or the encoding. The rate is the number of planes divided by the total of these times.
 
-**NFR-4. Benchmark.**
-
-| Item | Value |
-|---|---|
-| volume | `DATA/croissant.nrrd`, 500 × 500 × 500 voxels of `uint8` |
-| planes | 100 isosceles triangles with a base of 500 and a height of 500, so each image is 501 × 501 pixels |
-| position | the point halfway between the apex and the middle of the base is at the center of the volume, `(249.5, 249.5, 249.5)` |
-| directions | spread evenly over all directions, made with a fixed random seed, and kept in the repository as a CSV file |
-| record | the result is written down with the processor, memory, operating system, and Python and NumPy versions |
+**NFR-4. Benchmark.** The benchmark is `DATA/croissant.nrrd`, 500 × 500 × 500 voxels of `uint8`, cut by the 100 isosceles triangles of `demo/croissant.csv`. Each triangle has a base and a height of 500, so its image is 501 × 501 pixels, the point halfway between its apex and the middle of its base lies at the center of the volume, `(249.5, 249.5, 249.5)`, and the directions are spread evenly by a fixed random seed. The result shall be recorded with the processor, memory, operating system, and Python and NumPy versions.
 
 **NFR-6. Memory.** The program shall hold the volume in memory once, in its own value type, and the rest of its memory shall grow with the size of an image, not with the size of the volume or the number of planes.
 
