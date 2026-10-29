@@ -1,6 +1,6 @@
 """Draw the picture at the top of the README: a sheet of squares inside a layered cake, and the flat image it becomes.
 
-The cake is the worked example of docs/SRS.md, section 3.4: a 10 x 10 x 10 volume of three layers, cut by
+The cake is the worked example of docs/ALGORITHM.md, section 5.3: a 10 x 10 x 10 volume of three layers, cut by
 the triangle a = (5, 0, 8), b = (1, 6, 0), c = (9, 6, 0). One square, row 5 and column 2, is followed from
 the sheet to the cake and back to the image.
 

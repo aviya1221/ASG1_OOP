@@ -231,8 +231,21 @@ The memory used grows with `rows × cols`, never with the volume (NFR-6).
 
 ### 5.3 Worked example
 
-The cake from [SRS 3.4](SRS.md#34-projection-geometry): a 10 × 10 × 10 volume and the triangle `a = (5, 0, 8)`, `b = (1, 6, 0)`, `c = (9, 6, 0)`.
-The setup gives `right = (1, 0, 0)`, `down = (0, 0.6, −0.8)`, `s_min = −4`, `t_min = 0`, `corner = (1, 0, 8)`, 11 rows and 9 columns.
+The cake in the picture below is 10 × 10 × 10 voxels of three layers. The plane is the triangle `a = (5, 0, 8)`, `b = (1, 6, 0)`, `c = (9, 6, 0)`.
+
+**Setup**, by the formulas of [SRS 3.4](SRS.md#34-projection-geometry):
+
+| Step | Result |
+|---|---|
+| `right` | `(8, 0, 0) / 8 = (1, 0, 0)` |
+| `w` | `(−4, 6, −8) − (−4) · (1, 0, 0) = (0, 6, −8)` |
+| `down` | `(0, 6, −8) / 10 = (0, 0.6, −0.8)` |
+| `s` of `a, b, c` | `0, −4, 4`, so `s_min = −4` |
+| `t` of `a, b, c` | `0, 10, 10`, so `t_min = 0` |
+| image size | 9 columns, 11 rows |
+| `corner` | `(5, 0, 8) − 4 · (1, 0, 0) = (1, 0, 8)` |
+
+![The worked example: the triangle inside the cake, and the image it gives](../DATA/images/explain/how_a_cut_is_made.png)
 
 **Row spans.** The edges `a → b` and `a → c` give `s_lo(r) = −0.4·r` and `s_hi(r) = 0.4·r`, so `c0[r] = ceil(4 − 0.4·r − 1e-6)` and `c1[r] = floor(4 + 0.4·r + 1e-6)`:
 
@@ -240,7 +253,7 @@ The setup gives `right = (1, 0, 0)`, `down = (0, 0.6, −0.8)`, `s_min = −4`, 
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | columns | 4 | 4 | 4 | 3 to 5 | 3 to 5 | 2 to 6 | 2 to 6 | 2 to 6 | 1 to 7 | 1 to 7 | 0 to 8 |
 
-These are exactly the colored squares of the image in the [picture](../DATA/images/explain/how_a_cut_is_made.png).
+These are exactly the colored squares of the image in the picture above.
 In row 5, `4 − 0.4·5 = 2` exactly, and the tolerance keeps column 2 inside the triangle.
 
 **Two pixels.**

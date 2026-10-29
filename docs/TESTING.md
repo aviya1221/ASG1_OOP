@@ -91,7 +91,7 @@ A test is only as good as its expected result. These are the sources, from the s
 
 ### 3.1 Results worked out by hand
 
-The worked example of [SRS 3.4](SRS.md#34-projection-geometry) is a 10 × 10 × 10 cake of three layers, with chocolate, cream and biscuit as the values 1, 2 and 3.
+The worked example of [ALGORITHM 5.3](ALGORITHM.md#53-worked-example) is a 10 × 10 × 10 cake of three layers, with chocolate, cream and biscuit as the values 1, 2 and 3.
 Its image for the triangle `a = (5, 0, 8)`, `b = (1, 6, 0)`, `c = (9, 6, 0)` is written out in the test as an 11 × 9 matrix,
 copied from the [picture](../DATA/images/explain/how_a_cut_is_made.png) square by square.
 The setup values, `right`, `down`, `corner` and the row spans, are written out too, from [ALGORITHM 5.3](ALGORITHM.md#53-worked-example).
