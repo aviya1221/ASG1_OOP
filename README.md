@@ -81,7 +81,7 @@ python Ex0.py file.nrrd file.csv file.mp4
 For example, on the lecturer's head scan:
 
 ```
-python Ex0.py DATA/MRHead_1.nrrd demo/head.csv demo/output/head.mp4
+python Ex0.py DATA/MRHead_1.nrrd DATA/head.csv output/head.mp4
 ```
 
 ```
@@ -96,7 +96,7 @@ A line of the planes file that is not a valid plane gives a black frame and a wa
 `python Ex0.py --help` describes the format. The code is in [plane_projection/](plane_projection/), one module for each step
 ([algorithm document, section 9](docs/ALGORITHM.md#9-program-structure)).
 
-The planes files of the demo, one for each volume of the main data set and one of edge cases, are in [demo/](demo/).
+The planes files of the demo, one for each volume of the main data set and one of edge cases, sit next to their volumes in [DATA/](DATA/).
 They are made by `tools/make_demo_planes.py` and described in the [testing strategy](docs/TESTING.md#61-demo-planes-files).
 
 **Performance:** on a volume of 500³ bytes the projection must run at **30 frames per second at least**, and **100 is expected**.
@@ -169,5 +169,5 @@ On the development laptop the benchmark gives about 300 frames per second, again
 - [x] Data set of NRRD files (first version, see [docs/DATA.md](docs/DATA.md))
 - [x] Testing strategy, including the demo ([docs/TESTING.md](docs/TESTING.md))
 - [x] Implementation ([plane_projection/](plane_projection/), [tests/](tests/))
-- [x] Demo: `python Ex0.py file.nrrd file.csv file.mp4` ([Ex0.py](Ex0.py), planes files in [demo/](demo/))
+- [x] Demo: `python Ex0.py file.nrrd file.csv file.mp4` ([Ex0.py](Ex0.py), planes files in [DATA/](DATA/))
 - [x] Experiment and a short description of its results, with the output videos ([experiment/](experiment/README.md))

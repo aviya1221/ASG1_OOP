@@ -1,20 +1,21 @@
-"""Write the planes files of the demo into demo/ (docs/TESTING.md, section 6.1).
+"""Write the planes files of the demo into DATA/, each next to its volume (docs/TESTING.md, section 6.1).
 
-Each file has the format of the lecturer's example file, demo/lecturer_example.csv (docs/SRS.md, section 3.3):
+Each file has the format of the lecturer's example file, DATA/lecturer_example.csv (docs/SRS.md, section 3.3):
 its header, then one plane per line, the number of points and x, y, z of each point, in voxel indices of the volume:
 3 points a, b, c for a triangle, or 4 points a', b, a'', c for a trapezoid. The five clean files have nothing else,
 like the lecturer's example; edge_cases.csv adds comments and blank lines (FR-11).
 All the numbers are fixed, so every run writes the same files:
 
-    head.csv           DATA/MRHead_1.nrrd        280 frames: 130 slices along z, a square turning around the y axis,
-                                                 and a triangle turning within an oblique plane
-    onion.csv          DATA/onion.nrrd           120 frames: a square turning around an axis tilted 30 degrees
-    biscuit_cake.csv   DATA/biscuit_cake.nrrd    from upright; the same planes in all three files
-    swiss_roll.csv     DATA/swiss_roll.nrrd
-    croissant.csv      DATA/croissant.nrrd       the 100 triangles of the speed benchmark (docs/SRS.md, NFR-4),
-                                                 the same planes that tools/prototype_speed.py measured
-    edge_cases.csv     DATA/synthetic/dice.nrrd  16 frames: images of the die known in advance, a plane outside the
-                                                 volume, and one line for each bad and doubtful case of FR-24 and FR-25
+    head.csv                   DATA/MRHead_1.nrrd        280 frames: 130 slices along z, a square turning around the y axis,
+                                                         and a triangle turning within an oblique plane
+    onion.csv                  DATA/onion.nrrd           120 frames: a square turning around an axis tilted 30 degrees
+    biscuit_cake.csv           DATA/biscuit_cake.nrrd    from upright; the same planes in all three files
+    swiss_roll.csv             DATA/swiss_roll.nrrd
+    croissant.csv              DATA/croissant.nrrd       the 100 triangles of the speed benchmark (docs/SRS.md, NFR-4),
+                                                         the same planes that tools/prototype_speed.py measured
+    synthetic/edge_cases.csv   DATA/synthetic/dice.nrrd  16 frames: images of the die known in advance, a plane outside
+                                                         the volume, and one line for each bad and doubtful case of
+                                                         FR-24 and FR-25
 
 After writing a file, the script reads it back as the program will, checks every plane by the rules of docs/SRS.md,
 sections 3.4 and 3.5, and prints the number of frames and the frame size of the video (FR-30).
@@ -84,7 +85,7 @@ def turned(vector, axis, degrees: float):
 
 
 def run_comment(volume: str, name: str) -> str:
-    return f"# python Ex0.py {volume} demo/{name} demo/output/{Path(name).stem}.mp4"
+    return f"# python Ex0.py {volume} {Path(volume).with_name(name).as_posix()} output/{Path(name).stem}.mp4"
 
 
 def head_lines():
@@ -331,13 +332,12 @@ def check_file(path: Path, grid, expected=None) -> str:
 
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Write the planes files of the demo.")
-    parser.add_argument("--out", type=Path, default=PROJECT_ROOT / "demo", help="output folder (default: demo/)")
+    parser.add_argument("--out", type=Path, default=PROJECT_ROOT / "DATA", help="the data folder (default: DATA/)")
     return parser.parse_args(argv)
 
 
 def main(argv=None) -> None:
     args = parse_args(argv)
-    args.out.mkdir(parents=True, exist_ok=True)
     edge_lines, edge_results = edge_case_lines()
     files = [  # (file name, lines, grid of the volume, expected results or None for a clean file)
         ("head.csv", head_lines(), HEAD_GRID, None),
@@ -345,12 +345,13 @@ def main(argv=None) -> None:
         ("biscuit_cake.csv", food_lines(), HEAD_GRID, None),
         ("swiss_roll.csv", food_lines(), HEAD_GRID, None),
         ("croissant.csv", croissant_lines(), CROISSANT_GRID, None),
-        ("edge_cases.csv", edge_lines, DICE_GRID, edge_results),
+        ("synthetic/edge_cases.csv", edge_lines, DICE_GRID, edge_results),
     ]
     for name, lines, grid, expected in files:
         path = args.out / name
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
-        print(f"{name:18s} {check_file(path, grid, expected)}")
+        print(f"{name:24s} {check_file(path, grid, expected)}")
 
 
 if __name__ == "__main__":

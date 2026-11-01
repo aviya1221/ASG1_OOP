@@ -55,7 +55,7 @@ def demos(tmp_path_factory):
     results = {}
     for name, (volume, _, _) in DEMOS.items():
         video = out / f"{name}.mp4"
-        command = [sys.executable, "Ex0.py", str(DATA / volume), str(PROJECT_ROOT / "demo" / f"{name}.csv"), str(video)]
+        command = [sys.executable, "Ex0.py", str(DATA / volume), str((DATA / volume).with_name(f"{name}.csv")), str(video)]
         results[name] = (subprocess.run(command, cwd=PROJECT_ROOT, capture_output=True, text=True), video)
     return results
 

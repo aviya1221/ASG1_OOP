@@ -80,7 +80,8 @@ def run_demos() -> None:
         folder.mkdir(parents=True, exist_ok=True)
     log = [f"# Demo runs, commit {commit()}", f"# {machine()}", ""]
     for name, volume in DEMOS.items():
-        command = [sys.executable, "Ex0.py", f"DATA/{volume}", f"demo/{name}.csv", f"experiment/videos/{name}.mp4"]
+        planes = Path("DATA", volume).with_name(f"{name}.csv").as_posix()       # the planes file sits next to its volume
+        command = [sys.executable, "Ex0.py", f"DATA/{volume}", planes, f"experiment/videos/{name}.mp4"]
         process = subprocess.run(command, cwd=PROJECT_ROOT, capture_output=True, text=True)
         log += [f"$ python {' '.join(command[1:])}", process.stderr + process.stdout + f"exit code {process.returncode}", ""]
         print(f"{name}: exit code {process.returncode}")
@@ -140,7 +141,7 @@ def run_speed() -> None:
     """Every configuration runs once in each round, in turn, so changes of the clock over time affect all of them alike."""
     import benchmark
     volume = read_volume(DATA / "croissant.nrrd")
-    planes = read_planes(PROJECT_ROOT / "demo" / "croissant.csv")
+    planes = read_planes(DATA / "croissant.csv")
     copies = {np.dtype(t).name: Volume(np.asfortranarray(volume.data.astype(t))) for t in (np.uint16, np.uint32)}
     copies["uint8"] = volume
     configurations = (
@@ -149,7 +150,7 @@ def run_speed() -> None:
         + [("size", f"{s + 1} x {s + 1}", "uint8", resized(planes, s), 4) for s in SIZES])
     found = {label: [] for _, label, *_ in configurations}
     lines = [f"# Speed of the projection, commit {commit()}", f"# {machine()}", f"# at the start: {power()}",
-             f"# DATA/croissant.nrrd, the {len(planes)} planes of demo/croissant.csv (docs/SRS.md, NFR-4) and resized copies;",
+             f"# DATA/croissant.nrrd, the {len(planes)} planes of DATA/croissant.csv (docs/SRS.md, NFR-4) and resized copies;",
              f"# {ROUNDS} rounds, each running every configuration once, in turn;",
              "# fps = planes / time of plane_setup and Projector.project (NFR-3)"]
     for round_number in range(ROUNDS):
@@ -224,7 +225,7 @@ def run_slicer(slicer_exe: Path) -> None:
     with tempfile.TemporaryDirectory() as folder:
         for volume_name, name in SLICER_SETS:
             volume = read_volume(DATA / volume_name)
-            setups = [setup for setup in map(plane_setup, read_planes(PROJECT_ROOT / "demo" / f"{name}.csv")) if setup.valid]
+            setups = [setup for setup in map(plane_setup, read_planes((DATA / volume_name).with_name(f"{name}.csv"))) if setup.valid]
             report, nearest, linear = resliced_by_slicer(slicer_exe, DATA / volume_name, setups, Path(folder), name)
             with Projector(volume) as projector:
                 ours = [projector.project(setup) for setup in setups]
@@ -237,7 +238,7 @@ def run_slicer(slicer_exe: Path) -> None:
                 rows, cols = np.nonzero(mask & ~same)
                 differ_halfway += int(halfway(setup, rows, cols).sum())
             differ = compared - identical
-            lines += [f"{volume_name} with demo/{name}.csv: {report}",
+            lines += [f"{volume_name} with {name}.csv: {report}",
                       f"    {len(setups)} planes, {compared} pixels inside the shapes",
                       f"    identical: {identical} ({100 * identical / compared:.4f}%)",
                       f"    different: {differ}, of which {differ_halfway} lie halfway between two voxels, within 1e-5 of a voxel", ""]

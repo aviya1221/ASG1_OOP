@@ -286,7 +286,7 @@ automatically, to check that every run produces the right video, and by eye, to 
 
 ### 6.1 Demo planes files
 
-The planes files of the demo are made by `tools/make_demo_planes.py`, with fixed numbers and seeds, and kept in `demo/`.
+The planes files of the demo are made by `tools/make_demo_planes.py`, with fixed numbers and seeds, and kept in `DATA/`, each next to its volume.
 After writing a file, the script reads it back and checks every plane by the rules of [SRS 3.4 and 3.5](SRS.md#34-projection-geometry):
 the five clean files must give no warning and no black frame, and each line of `edge_cases.csv` must give the result listed below.
 
@@ -296,13 +296,13 @@ python tools/make_demo_planes.py
 
 | Planes file | Volume | Frames | Frame size | What the video shows |
 |---|---|---|---|---|
-| `demo/head.csv` | `DATA/MRHead_1.nrrd` | 280 | 256 × 256 | 130 slices `z = 0 … 129`, from one side of the head to the other; then 90 frames of a 256 × 256 square through the center, turning 2° per frame around the `y` axis, so the cut sweeps through oblique angles; then 60 frames of an equilateral triangle with sides of 180, turning 6° per frame around its middle within a plane tilted 40° from the axial plane |
-| `demo/onion.csv` | `DATA/onion.nrrd` (`uint8`) | 120 | 256 × 256 | a square through the center, turning 3° per frame around an axis tilted 30° from upright |
-| `demo/biscuit_cake.csv` | `DATA/biscuit_cake.nrrd` (`uint16`) | 120 | 256 × 256 | the same planes |
-| `demo/swiss_roll.csv` | `DATA/swiss_roll.nrrd` (`uint32`) | 120 | 256 × 256 | the same planes |
-| `demo/croissant.csv` | `DATA/croissant.nrrd` | 100 | 502 × 502 | the 100 planes of the speed benchmark (NFR-4), the same that `tools/prototype_speed.py` measured |
-| `demo/edge_cases.csv` | `DATA/synthetic/dice.nrrd` | 16 | 282 × 244 | a header, comments, good triangles and trapezoids, a plane outside the volume, and one line for each bad and doubtful case of FR-24 and FR-25 |
-| `demo/lecturer_example.csv` | `DATA/croissant.nrrd` | 4 | 454 × 502 | the example file the lecturer shared, unchanged: a triangle and a rectangle, then a triangle that is not isosceles and reaches out of the volume, and an isosceles trapezoid; the third line gives a warning for its legs (FR-25) |
+| `DATA/head.csv` | `DATA/MRHead_1.nrrd` | 280 | 256 × 256 | 130 slices `z = 0 … 129`, from one side of the head to the other; then 90 frames of a 256 × 256 square through the center, turning 2° per frame around the `y` axis, so the cut sweeps through oblique angles; then 60 frames of an equilateral triangle with sides of 180, turning 6° per frame around its middle within a plane tilted 40° from the axial plane |
+| `DATA/onion.csv` | `DATA/onion.nrrd` (`uint8`) | 120 | 256 × 256 | a square through the center, turning 3° per frame around an axis tilted 30° from upright |
+| `DATA/biscuit_cake.csv` | `DATA/biscuit_cake.nrrd` (`uint16`) | 120 | 256 × 256 | the same planes |
+| `DATA/swiss_roll.csv` | `DATA/swiss_roll.nrrd` (`uint32`) | 120 | 256 × 256 | the same planes |
+| `DATA/croissant.csv` | `DATA/croissant.nrrd` | 100 | 502 × 502 | the 100 planes of the speed benchmark (NFR-4), the same that `tools/prototype_speed.py` measured |
+| `DATA/synthetic/edge_cases.csv` | `DATA/synthetic/dice.nrrd` | 16 | 282 × 244 | a header, comments, good triangles and trapezoids, a plane outside the volume, and one line for each bad and doubtful case of FR-24 and FR-25 |
+| `DATA/lecturer_example.csv` | `DATA/croissant.nrrd` | 4 | 454 × 502 | the example file the lecturer shared, unchanged: a triangle and a rectangle, then a triangle that is not isosceles and reaches out of the volume, and an isosceles trapezoid; the third line gives a warning for its legs (FR-25) |
 
 The three foods use the three value types of the assignment, so together they show that the demo handles all of them.
 All the files are in the format of the lecturer's example ([SRS 3.3](SRS.md#33-planes-file)), and start with its header line.
@@ -333,16 +333,16 @@ The lines of `edge_cases.csv`, with the frame and line numbers that the warnings
 The commands, from the project folder:
 
 ```
-python Ex0.py DATA/MRHead_1.nrrd demo/head.csv demo/output/head.mp4
-python Ex0.py DATA/onion.nrrd demo/onion.csv demo/output/onion.mp4
-python Ex0.py DATA/biscuit_cake.nrrd demo/biscuit_cake.csv demo/output/biscuit_cake.mp4
-python Ex0.py DATA/swiss_roll.nrrd demo/swiss_roll.csv demo/output/swiss_roll.mp4
-python Ex0.py DATA/croissant.nrrd demo/croissant.csv demo/output/croissant.mp4
-python Ex0.py DATA/synthetic/dice.nrrd demo/edge_cases.csv demo/output/edge_cases.mp4
-python Ex0.py DATA/croissant.nrrd demo/lecturer_example.csv demo/output/lecturer_example.mp4
+python Ex0.py DATA/MRHead_1.nrrd DATA/head.csv output/head.mp4
+python Ex0.py DATA/onion.nrrd DATA/onion.csv output/onion.mp4
+python Ex0.py DATA/biscuit_cake.nrrd DATA/biscuit_cake.csv output/biscuit_cake.mp4
+python Ex0.py DATA/swiss_roll.nrrd DATA/swiss_roll.csv output/swiss_roll.mp4
+python Ex0.py DATA/croissant.nrrd DATA/croissant.csv output/croissant.mp4
+python Ex0.py DATA/synthetic/dice.nrrd DATA/synthetic/edge_cases.csv output/edge_cases.mp4
+python Ex0.py DATA/croissant.nrrd DATA/lecturer_example.csv output/lecturer_example.mp4
 ```
 
-The videos go to `demo/output/`, which git ignores. The ones chosen for the experiment report are copied next to it.
+The videos go to `output/`, which git ignores. The experiment keeps its own copies in `experiment/videos/`.
 
 ### 6.2 Automatic checks
 
@@ -384,7 +384,7 @@ The experiment report shows frames of the program next to `vtkImageReslice` with
 
 `tools/benchmark.py` measures what NFR-3 defines, on the benchmark of NFR-4:
 
-1. Read `DATA/croissant.nrrd`, and the 100 planes of `demo/croissant.csv`.
+1. Read `DATA/croissant.nrrd`, and the 100 planes of `DATA/croissant.csv`.
 2. For every plane, time `plane_setup` and `Projector.project` together.
 3. Repeat the 100 planes 3 times, and report the median rate, with the processor, memory, system and versions.
 

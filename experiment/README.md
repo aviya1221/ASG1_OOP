@@ -25,7 +25,7 @@ The speed measurements of [section 3](#3-speed) ran on the charger, while Window
 ## 1. The demo videos
 
 ```
-python Ex0.py DATA/MRHead_1.nrrd demo/head.csv experiment/videos/head.mp4
+python Ex0.py DATA/MRHead_1.nrrd DATA/head.csv experiment/videos/head.mp4
 ```
 
 and the same for the other five files. All six runs ended with exit code 0 ([results/demo_runs.txt](results/demo_runs.txt)).
@@ -82,7 +82,7 @@ The third column shows linear interpolation, as 3D Slicer shows a slice by defau
 
 ## 3. Speed
 
-The benchmark of [NFR-4](../docs/SRS.md#38-non-functional-requirements) is the 100 triangles of `demo/croissant.csv` through the 500 × 500 × 500 croissant, each an image of 501 × 501 pixels.
+The benchmark of [NFR-4](../docs/SRS.md#38-non-functional-requirements) is the 100 triangles of `DATA/croissant.csv` through the 500 × 500 × 500 croissant, each an image of 501 × 501 pixels.
 The time of a plane is that of `plane_setup` and `Projector.project` together ([NFR-3](../docs/SRS.md#38-non-functional-requirements)).
 Each configuration ran 5 rounds, every round running all configurations in turn, so that changes of the processor clock affect them alike
 ([results/speed.txt](results/speed.txt)). The laptop was on the charger.

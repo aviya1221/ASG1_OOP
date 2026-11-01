@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from conftest import PROJECT_ROOT
+from conftest import DATA
 from plane_projection.errors import InputError
 from plane_projection.planes import read_planes
 
@@ -64,7 +64,7 @@ def test_header_on_second_line_is_a_bad_plane(write_csv):
 
 def test_the_lecturer_example():
     """FR-10 to FR-12: the example file the lecturer shared, read as it is"""
-    planes = read_planes(PROJECT_ROOT / "demo" / "lecturer_example.csv")
+    planes = read_planes(DATA / "lecturer_example.csv")
     assert [(p.line, len(p.points)) for p in planes] == [(2, 3), (3, 4), (4, 3), (5, 4)]
     assert [list(point) for point in planes[0].points] == [[200, 200, 0], [0, 200, 400], [400, 200, 400]]
     a1, a2, b, c = planes[3].points
