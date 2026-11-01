@@ -1,4 +1,5 @@
-"""Shared fixtures: small volumes built in memory, and a writer for small NRRD files (docs/TESTING.md, section 2)."""
+"""Shared fixtures: small volumes built in memory, a writer for small NRRD files (docs/TESTING.md, section 2),
+and failure messages that say where the failure is (docs/TESTING.md, section 1)."""
 
 import re
 import subprocess
@@ -11,6 +12,7 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA = PROJECT_ROOT / "DATA"
+SHOWN = 5                                   # differences that a failure message lists
 
 CHOCOLATE, CREAM, BISCUIT = 1, 2, 3
 
@@ -49,7 +51,26 @@ def index_volume(shape) -> np.ndarray:
 
 def decode(value: int) -> tuple[int, int, int]:
     """The voxel that a value of the index volume came from."""
+    value = int(value)
     return value % 1000, value // 1000 % 1000, value // 1000000
+
+
+def assert_same(actual, expected, what: str = "pixels", show=str) -> None:
+    """Fail with the places where two arrays differ, and the values found and expected there.
+
+    expected may be a single value, for an array that must hold only that value. show formats a value, such as decode.
+    """
+    __tracebackhide__ = True                # the failure points at the line of the test, not at this function
+    actual = np.asarray(actual)
+    expected = np.broadcast_to(expected, actual.shape) if np.ndim(expected) == 0 else np.asarray(expected)
+    if actual.shape != expected.shape:
+        raise AssertionError(f"the shape is {actual.shape}, expected {expected.shape}")
+    places = np.argwhere(actual != expected)
+    if len(places):
+        listed = "; ".join(f"{tuple(int(i) for i in place)} is {show(actual[tuple(place)])}, "
+                           f"expected {show(expected[tuple(place)])}" for place in places[:SHOWN])
+        more = f"; and {len(places) - SHOWN} more" if len(places) > SHOWN else ""
+        raise AssertionError(f"{len(places)} of {actual.size} {what} differ: {listed}{more}")
 
 
 def video_info(path) -> dict:
@@ -97,3 +118,51 @@ def write_csv(tmp_path):
         return path
 
     return write
+
+
+# ----- where each failure is: listed as file:line at the end of the run (docs/TESTING.md, section 1)
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_makereport(item, call):
+    report = yield
+    if report.failed and call.excinfo is not None:
+        report.where = where(call.excinfo)
+    return report
+
+
+def where(excinfo) -> tuple[str | None, str | None, str]:
+    """The line of the test that failed, the deeper line of the project that raised the error if there is one, and the message."""
+    ours = [entry for entry in excinfo.traceback if not entry.ishidden(excinfo) and in_project(entry.path)]
+    places = [f"{Path(entry.path).resolve().relative_to(PROJECT_ROOT).as_posix()}:{entry.lineno + 1}" for entry in ours]
+    text = str(excinfo.value) if excinfo.errisinstance(AssertionError) else f"{excinfo.typename}: {excinfo.value}"
+    lines = [line for line in text.splitlines() if line.strip()]
+    message = lines[0] if lines else excinfo.typename
+    if not places:
+        return None, None, message
+    return places[0], places[-1] if len(places) > 1 else None, message
+
+
+def in_project(path) -> bool:
+    """A file of the project, not of Python or of an installed package."""
+    path = Path(path)
+    if not path.is_file():
+        return False
+    try:
+        relative = path.resolve().relative_to(PROJECT_ROOT)
+    except ValueError:
+        return False
+    return not relative.parts[0].startswith(".")     # .venv
+
+
+def pytest_terminal_summary(terminalreporter):
+    """List the failures by file and line, between the details of pytest and its short summary."""
+    reports = [report for key in ("failed", "error") for report in terminalreporter.stats.get(key, [])
+               if hasattr(report, "where")]
+    if not reports:
+        return
+    terminalreporter.section("where the tests failed")
+    for report in reports:
+        test, raised, message = report.where
+        name = report.head_line if report.when == "call" else f"{report.head_line}, in {report.when}"
+        terminalreporter.line(f"{test or report.nodeid}  {name}")
+        terminalreporter.line(f"    {raised}  {message}" if raised else f"    {message}")

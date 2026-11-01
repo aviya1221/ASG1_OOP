@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from scipy import ndimage
 
-from conftest import CAKE_IMAGE, CAKE_TRIANGLE, DATA, cake, decode, index_volume
+from conftest import CAKE_IMAGE, CAKE_TRIANGLE, DATA, assert_same, cake, decode, index_volume
 from plane_projection.geometry import plane_setup
 from plane_projection.planes import Plane
 from plane_projection.projector import Projector
@@ -30,11 +30,16 @@ def rectangle(origin, right, down):
     return o, o + r, o + d, o + r + d
 
 
+def read(value):
+    """The voxel that a value of index_volume(...) + 1 came from, or 0 where the pixel is outside the volume."""
+    return decode(value - 1) if value else 0
+
+
 def test_worked_example():
     """FR-17 to FR-21: the image of docs/SRS.md, section 3.4"""
     image = project(cake(), *CAKE_TRIANGLE)
     assert image.dtype == np.uint8
-    assert np.array_equal(image, CAKE_IMAGE)
+    assert_same(image, CAKE_IMAGE)
 
 
 @pytest.mark.parametrize("shape", [(1, 1, 1), (1, 5, 7), (9, 1, 4), (12, 12, 12), (40, 30, 20)])
@@ -43,7 +48,7 @@ def test_random_planes_agree_with_the_reference(shape):
     data = index_volume(shape)
     rng = np.random.default_rng(sum(shape))
     with Projector(Volume(data), threads=1) as projector:
-        for _ in range(200):
+        for number in range(1, 201):
             points = random_plane(rng, shape, max_side=30)
             reference = Reference(points)
             image = projector.project(setup_of(*points))
@@ -51,8 +56,8 @@ def test_random_planes_agree_with_the_reference(shape):
             differ = image != expected
             for row, col in zip(*np.nonzero(differ)):
                 assert reference.near_edge(row, col), (
-                    f"pixel {(row, col)} read voxel {decode(image[row, col])}, "
-                    f"the reference read {decode(expected[row, col])}")
+                    f"plane {number}: pixel {(int(row), int(col))} read voxel {decode(image[row, col])}, "
+                    f"the reference read {decode(expected[row, col])}; the points are {[p.tolist() for p in points]}")
 
 
 def test_halves_round_up():
@@ -62,20 +67,19 @@ def test_halves_round_up():
     assert decode(image[3, 3]) == (4, 3, 3)
 
 
-@pytest.mark.parametrize("z, inside", [(-0.5, True), (-0.51, False), (4.49, True), (4.5, False)])
-def test_edges_of_the_volume(z, inside):
+@pytest.mark.parametrize("z, voxel", [(-0.5, 0), (-0.51, None), (4.49, 4), (4.5, None)])
+def test_edges_of_the_volume(z, voxel):
     """FR-20: voxel 0 reaches down to -0.5, voxel 4 up to just below 4.5"""
     data = index_volume((5, 5, 5)) + 1
     image = project(data, *rectangle((0, 0, z), (4, 0, 0), (0, 4, 0)))
-    assert (image > 0).all() == inside
-    assert (image == 0).all() == (not inside)
+    assert_same(image, 0 if voxel is None else data[:, :, voxel].T, show=read)
 
 
 def test_plane_that_misses_the_volume():
     """FR-26"""
     image = project(index_volume((5, 5, 5)) + 1, (20, 0, 0), (15, 6, 0), (25, 6, 0))
     assert image.shape == (7, 11)
-    assert not image.any()
+    assert_same(image, 0, show=read)
 
 
 def test_plane_far_away_gives_zeros_without_numpy_warnings():
@@ -84,7 +88,7 @@ def test_plane_far_away_gives_zeros_without_numpy_warnings():
         warnings.simplefilter("error")
         image = project(index_volume((5, 5, 5)) + 1, (1e9, 1e9, 1e9), (1e9 - 5, 1e9 + 9, 1e9), (1e9 + 5, 1e9 + 9, 1e9))
     assert image.shape == (10, 11)
-    assert not image.any()
+    assert_same(image, 0, show=read)
 
 
 @pytest.mark.parametrize("dtype", [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32])
@@ -110,7 +114,8 @@ def test_number_of_threads_does_not_change_the_image():
         with Projector(Volume(data), threads=threads) as projector:
             images[threads] = [projector.project(setup_of(*points)) for points in planes]
     for threads in (2, 4, 8):
-        assert all(np.array_equal(a, b) for a, b in zip(images[1], images[threads]))
+        for number, (one, many) in enumerate(zip(images[1], images[threads]), start=1):
+            assert_same(many, one, f"pixels of plane {number} with {threads} threads", show=decode)
 
 
 def test_bad_plane_cannot_be_projected():
@@ -133,9 +138,9 @@ def test_slices_along_the_axes(name):
     x, y, z = (n // 2 for n in data.shape)
     with Projector(volume) as projector:
         cut = lambda *points: projector.project(setup_of(*points))  # noqa: E731
-        assert np.array_equal(cut(*rectangle((0, 0, z), (sx, 0, 0), (0, sy, 0))), data[:, :, z].T)
-        assert np.array_equal(cut(*rectangle((0, y, 0), (sx, 0, 0), (0, 0, sz))), data[:, y, :].T)
-        assert np.array_equal(cut(*rectangle((x, 0, 0), (0, sy, 0), (0, 0, sz))), data[x, :, :].T)
+        assert_same(cut(*rectangle((0, 0, z), (sx, 0, 0), (0, sy, 0))), data[:, :, z].T, f"pixels of the slice z = {z}")
+        assert_same(cut(*rectangle((0, y, 0), (sx, 0, 0), (0, 0, sz))), data[:, y, :].T, f"pixels of the slice y = {y}")
+        assert_same(cut(*rectangle((x, 0, 0), (0, sy, 0), (0, 0, sz))), data[x, :, :].T, f"pixels of the slice x = {x}")
 
 
 @pytest.fixture(scope="module")

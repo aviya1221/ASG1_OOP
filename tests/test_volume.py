@@ -5,6 +5,7 @@ import gzip
 import numpy as np
 import pytest
 
+from conftest import assert_same
 from plane_projection.errors import InputError
 from plane_projection.volume import read_volume
 
@@ -21,7 +22,7 @@ def test_unsigned_types_keep_type_and_values(write_nrrd, dtype):
     data = values((4, 3, 2), dtype)
     volume = read_volume(write_nrrd(data))
     assert volume.data.dtype == dtype
-    assert np.array_equal(volume.data, data)
+    assert_same(volume.data, data, "voxels")
 
 
 @pytest.mark.parametrize("dtype", [np.int8, np.int16, np.int32])
@@ -30,7 +31,7 @@ def test_signed_types_read_negative_values_as_zero(write_nrrd, dtype):
     data = values((4, 3, 2), dtype) - 5
     volume = read_volume(write_nrrd(data))
     assert volume.data.dtype == dtype
-    assert np.array_equal(volume.data, np.maximum(data, 0))
+    assert_same(volume.data, np.maximum(data, 0), "voxels")
 
 
 @pytest.mark.parametrize("dtype", [np.float32, np.float64, np.int64, np.uint64])
@@ -48,7 +49,7 @@ def test_raw_and_gzip_give_the_same_array(write_nrrd):
     data = values((5, 4, 3), np.uint16)
     raw = read_volume(write_nrrd(data, "raw.nrrd", encoding="raw"))
     packed = read_volume(write_nrrd(data, "gzip.nrrd", encoding="gzip"))
-    assert np.array_equal(raw.data, packed.data)
+    assert_same(raw.data, packed.data, "voxels")
 
 
 def test_ascii_encoding_is_fatal(write_nrrd):
@@ -109,7 +110,7 @@ def test_header_geometry_does_not_change_the_array(write_nrrd):
         data, "placed.nrrd", space="left-posterior-superior",
         **{"space origin": np.array([86.6, -133.9, 116.8]),
            "space directions": np.array([[0.0, 1.0, 0.0], [0.0, 0.0, -1.3], [-2.0, 0.0, 0.0]])}))
-    assert np.array_equal(plain.data, placed.data)
+    assert_same(placed.data, plain.data, "voxels")
 
 
 def test_lo_and_hi_after_negatives_are_zero(write_nrrd):
