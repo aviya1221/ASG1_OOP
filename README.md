@@ -141,8 +141,8 @@ The assignment leaves these questions open. The [Software Requirements Specifica
 ## Data
 
 The data set is described in [docs/DATA.md](docs/DATA.md): the lecturer's MRI head scan,
-simulated MRI scans of layered foods (including a 500³ file for the speed test), test volumes with known answers,
-and a few real CT scans. Preview images are in [DATA/images/](DATA/images/).
+simulated MRI scans of layered foods (including a 500³ file for the speed test), and test volumes with known answers.
+Preview images are in [DATA/images/](DATA/images/).
 
 The scripts that make the data are in [tools/](tools/).
 

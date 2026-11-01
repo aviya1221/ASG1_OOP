@@ -19,10 +19,7 @@ The assignment allows a voxel to be an unsigned integer of 8, 16 or 32 bits, and
 The head scan is a signed 16-bit file, but all its values are positive, so it reads like an unsigned one.
 The food scans are simulated MRI scans, made by `tools/generate_foods.py`.
 
-All the files are in the `DATA/` folder. Two more folders:
-- `DATA/synthetic/` holds test volumes with an exact answer for every voxel: a cake, a tomato and a die.
-- `DATA/real_scans/` holds four real CT scans from an earlier step: a teapot, a tooth, an engine and a carp.
-  They are not single objects with many layers, so they are not part of the main set.
+All the files are in the `DATA/` folder. `DATA/synthetic/` holds test volumes with an exact answer for every voxel: a cake, a tomato and a die.
 
 ## What each part checks
 
@@ -35,14 +32,13 @@ All the files are in the `DATA/` folder. Two more folders:
 | `MRHead_1.nrrd` | the lecturer's file: a signed type ([FR-6](SRS.md#32-volume-file)), and the main demo |
 | `onion.nrrd`, `biscuit_cake.nrrd`, `swiss_roll.nrrd` | demo videos in all three value types of the assignment |
 | `croissant.nrrd` | the speed benchmark, [NFR-1 to NFR-4](SRS.md#38-non-functional-requirements) |
-| `real_scans/` | extra runs on real CT scans |
 
 ## Preview images
 
 `DATA/images/` holds a picture of every volume: the cuts through its middle that 3D Slicer shows
 in its three views, turned the same way and marked with the directions (R/L, A/P, S/I), and one oblique cut.
 Each cut is zoomed in on the object and has a scale bar.
-`images/overview.png` shows the main set, one row per file; `images/synthetic/` and `images/real_scans/` hold the others.
+`images/overview.png` shows the main set, one row per file; `images/synthetic/` holds the test volumes.
 
 ![The main data set](../DATA/images/overview.png)
 
@@ -269,29 +265,6 @@ Expected images:
 - **Axial z = 139:** a 120 × 120 square with one pip in the middle; **axial z = 20:** six pips; **coronal y = 30:** four pips.
 - **Plane through the center, perpendicular to the main diagonal (x + y + z = 268.5):** a regular hexagon with side 60√2 ≈ 84.9.
 - **Plane x + y + z = 408.5:** cuts off the corner (159, 149, 139) as an equilateral triangle with side 40√2 ≈ 56.6.
-
----
-
-# Other real scans: `DATA/real_scans/`
-
-Four real CT scans from the Open Scientific Visualization Datasets collection, https://klacansky.com/open-scivis-datasets/,
-converted to NRRD with the conventions of `synthetic/` above. They are not single objects with many layers, so they are not part of the main set.
-
-| File | Object | Voxel type | Size (x × y × z) | Spacing (mm) | Credit |
-|---|---|---|---|---|---|
-| `boston_teapot.nrrd` | ceramic teapot with a small lobster inside | `uint8` | 256 × 178 × 256 | 1 × 1 × 1 | volvis.org and Terarecon Inc, MERL, Brigham and Women's Hospital |
-| `tooth.nrrd` | tooth (micro-CT) | `uint8` | 103 × 94 × 161 | 1 × 1 × 1 | GE Aircraft Engines, Evendale, Ohio, USA |
-| `engine.nrrd` | two cylinders of an engine block | `uint8` | 256 × 256 × 128 | 1 × 1 × 1 | volvis.org and General Electric |
-| `carp.nrrd` | carp fish | `uint16` | 256 × 256 × 512 | 0.78125 × 0.390625 × 1 | Michael Scheuring, Computer Graphics Group, University of Erlangen, Germany |
-
-Keep the credits with the data. To download them again:
-
-```
-python tools/fetch_real_scans.py
-```
-
-The script downloads each raw file over plain HTTP (the collection's HTTPS port does not answer), checks it against the collection's SHA-512 checksum,
-and converts it. The teapot and the carp are turned so that they stand upright; both turns are rotations, so nothing is mirrored.
 
 ---
 
