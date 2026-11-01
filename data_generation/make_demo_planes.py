@@ -152,14 +152,14 @@ def croissant_lines():
 
 
 def frame_list(frames) -> str:
-    """Frame numbers with runs joined: [6, 9, 10, 11] gives "frames 6, 9 to 11"."""
+    """Frame numbers with runs joined: [6, 9, 10, 11] gives "frames 6, 9 to 11", and [6] gives "frame 6"."""
     runs = []
     for frame in frames:
         if runs and frame == runs[-1][1] + 1:
             runs[-1][1] = frame
         else:
             runs.append([frame, frame])
-    return "frames " + ", ".join(str(a) if a == b else f"{a} to {b}" for a, b in runs)
+    return ("frame " if len(frames) == 1 else "frames ") + ", ".join(str(a) if a == b else f"{a} to {b}" for a, b in runs)
 
 
 def dice_triangle(centroid, side: float):
@@ -200,7 +200,7 @@ def edge_case_lines():
             ("warning: parallel sides", "equal legs of 130, but a'' is 16 lower than a', so the top side is not parallel"
              " to the base", plane_line([(100, 40, 150), (100, 112, 134), (100, -10, 30), (100, 190, 30)])),
         ]),
-        ("Bad planes: a black frame and a warning (FR-24)", [
+        ("Bad planes: an error frame and a warning (FR-24)", [
             ("bad: count", "4 points, but only the 9 numbers of a triangle", "4,99.5,0,139,0,179,139,199,179,139,,,"),
             ("bad: numbers", "a word", "3,99.5,0,139,0,179,139,199,179,abc,,,"),
             ("bad: numbers", "an infinite number", "3,99.5,0,139,0,179,inf,199,179,139,,,"),
@@ -215,7 +215,8 @@ def edge_case_lines():
         ]),
     ]
     cases = [case for _, section in sections for case in section]
-    black = [frame for frame, (result, _, _) in enumerate(cases, start=1) if result.startswith("bad") or result == "outside"]
+    black = [frame for frame, (result, _, _) in enumerate(cases, start=1) if result == "outside"]
+    errors = [frame for frame, (result, _, _) in enumerate(cases, start=1) if result.startswith("bad")]
     warned = [frame for frame, (result, _, _) in enumerate(cases, start=1) if result.startswith(("bad", "warning"))]
     lines = [
         HEADER,
@@ -224,7 +225,8 @@ def edge_case_lines():
         "# The line above is the header of the lecturer's format (FR-11). Each plane starts with its number of points:",
         "# 3 for a triangle a, b, c, or 4 for a trapezoid a', b, a'', c (FR-12).",
         run_comment("DATA/synthetic/dice.nrrd", "edge_cases.csv"),
-        f"# Expected: {len(cases)} frames; black: {frame_list(black)}; a warning for {frame_list(warned)}.",
+        f"# Expected: {len(cases)} frames; black: {frame_list(black)}; error frames: {frame_list(errors)}; "
+        f"a warning for {frame_list(warned)}.",
     ]
     frame = 0
     for title, section in sections:
@@ -327,9 +329,10 @@ def check_file(path: Path, grid, expected=None) -> str:
         raise SystemExit(f"{path}: " + ("; ".join(wrong) or f"{len(results)} planes, expected {len(expected)}"))
     even = lambda n: n + n % 2                                  # noqa: E731
     width, height = (even(max(c for c, _ in sizes)), even(max(r for _, r in sizes))) if sizes else (64, 64)
-    black = sum(r.startswith("bad") or r == "outside" for r in results)
+    errors = sum(r.startswith("bad") for r in results)
+    black = sum(r == "outside" for r in results)
     warnings = sum(r.startswith("warning") for r in results)
-    return f"{len(results)} frames of {width} x {height}, {black} black, {warnings} warnings"
+    return f"{len(results)} frames of {width} x {height}, {errors} errors, {black} black, {warnings} warnings"
 
 
 def parse_args(argv=None) -> argparse.Namespace:

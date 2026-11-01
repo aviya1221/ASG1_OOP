@@ -4,7 +4,7 @@ Number of Points (3 or 4),x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4
 # The line above is the header of the lecturer's format (FR-11). Each plane starts with its number of points:
 # 3 for a triangle a, b, c, or 4 for a trapezoid a', b, a'', c (FR-12).
 # python Ex0.py DATA/synthetic/dice.nrrd DATA/synthetic/edge_cases.csv output/edge_cases.mp4
-# Expected: 16 frames; black: frames 6, 9 to 16; a warning for frames 7 to 16.
+# Expected: 16 frames; black: frame 6; error frames: frames 9 to 16; a warning for frames 7 to 16.
 
 # Good planes, whose images are known in advance (docs/TESTING.md, section 3.5)
 # frame 1: the top face, z = 139, as a rectangle over the whole slice: a 120 x 120 square with one pip
@@ -30,7 +30,7 @@ Number of Points (3 or 4),x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4
 # frame 8: equal legs of 130, but a'' is 16 lower than a', so the top side is not parallel to the base
 4,100,40,150,100,-10,30,100,112,134,100,190,30
 
-# Bad planes: a black frame and a warning (FR-24)
+# Bad planes: an error frame and a warning (FR-24)
 # frame 9: 4 points, but only the 9 numbers of a triangle
 4,99.5,0,139,0,179,139,199,179,139,,,
 # frame 10: a word
