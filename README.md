@@ -7,7 +7,7 @@ Introduction to Software Engineering (OOP, OOD), exercise 1.
 Given a 3D volume and a plane, produce the 2D image the volume shows on that plane:
 the "cut" that 3D Slicer shows in its axial, coronal and sagittal views, but along any plane, not only the three axes.
 
-![How a cut is made: a sheet of grid squares placed at an angle inside a layered cake, then laid flat as an image](DATA/images/explain/how_a_cut_is_made.png)
+![How a cut is made: a sheet of grid squares placed at an angle inside a layered cake, then laid flat as an image](docs/images/how_a_cut_is_made.png)
 
 *A 10 × 10 × 10 cake of three layers, a triangle placed at an angle inside it, and the image that comes out.
 Each square of the output image takes the value of the voxel under its point in the volume.*

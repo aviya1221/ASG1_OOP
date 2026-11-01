@@ -248,7 +248,7 @@ The cake in the picture below is 10 × 10 × 10 voxels of three layers. The plan
 | image size | 9 columns, 11 rows |
 | `corner` | `(5, 0, 8) − 4 · (1, 0, 0) = (1, 0, 8)` |
 
-![The worked example: the triangle inside the cake, and the image it gives](../DATA/images/explain/how_a_cut_is_made.png)
+![The worked example: the triangle inside the cake, and the image it gives](images/how_a_cut_is_made.png)
 
 **Row spans.** The edges `a → b` and `a → c` give `s_lo(r) = −0.4·r` and `s_hi(r) = 0.4·r`, so `c0[r] = ceil(4 − 0.4·r − 1e-6)` and `c1[r] = floor(4 + 0.4·r + 1e-6)`:
 

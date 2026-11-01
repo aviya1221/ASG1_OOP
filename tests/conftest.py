@@ -15,7 +15,7 @@ DATA = PROJECT_ROOT / "DATA"
 CHOCOLATE, CREAM, BISCUIT = 1, 2, 3
 
 # The image of the worked example (docs/ALGORITHM.md, section 5.3): the triangle a = (5, 0, 8), b = (1, 6, 0),
-# c = (9, 6, 0) through the cake, copied square by square from DATA/images/explain/how_a_cut_is_made.png.
+# c = (9, 6, 0) through the cake, copied square by square from docs/images/how_a_cut_is_made.png.
 CAKE_TRIANGLE = ((5, 0, 8), (1, 6, 0), (9, 6, 0))
 CAKE_IMAGE = np.array([
     [0, 0, 0, 0, 1, 0, 0, 0, 0],

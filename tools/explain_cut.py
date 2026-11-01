@@ -164,7 +164,7 @@ def draw(out):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--out", type=Path, default=PROJECT_ROOT / "DATA" / "images" / "explain" / "how_a_cut_is_made.png")
+    parser.add_argument("--out", type=Path, default=PROJECT_ROOT / "docs" / "images" / "how_a_cut_is_made.png")
     draw(parser.parse_args().out)
 
 
