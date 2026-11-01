@@ -95,4 +95,4 @@ The [experiment](experiment/README.md) has the runs on every volume with their v
 | [Ex0.py](Ex0.py), [plane_projection/](plane_projection/) | the demo, and the package with one module for each step |
 | [tests/](tests/) | the tests, which run on every push on Windows, Ubuntu and macOS |
 | [DATA/](DATA/) | the volumes and their planes files |
-| [tools/](tools/), [data_generation/](data_generation/) | the benchmark and the experiment; the scripts that made the data set |
+| [tools/](tools/), [dataSet_generation/](dataSet_generation/) | the benchmark and the experiment; the scripts that made the data set |

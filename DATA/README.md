@@ -2,7 +2,7 @@
 
 The data set, with the planes files that the demo and the tests run on next to their volumes.
 It is described in [docs/DATA.md](../docs/DATA.md), and the planes files in the [testing strategy](../docs/TESTING.md#61-demo-planes-files).
-The scripts that made it are in [data_generation/](../data_generation/).
+The scripts that made it are in [dataSet_generation/](../dataSet_generation/).
 
 | Volume | Planes files |
 |---|---|

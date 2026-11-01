@@ -306,12 +306,12 @@ automatically, to check that every run produces the right video, and by eye, to 
 
 ### 6.1 Demo planes files
 
-The planes files of the demo are made by `data_generation/make_demo_planes.py`, with fixed numbers and seeds, and kept in `DATA/`, each next to its volume.
+The planes files of the demo are made by `dataSet_generation/make_demo_planes.py`, with fixed numbers and seeds, and kept in `DATA/`, each next to its volume.
 After writing a file, the script reads it back and checks every plane by the rules of [SRS 3.4 and 3.5](SRS.md#34-projection-geometry):
 the five clean files must give no warning, no error frame and no black frame, and each line of `edge_cases.csv` must give the result listed below.
 
 ```
-python data_generation/make_demo_planes.py
+python dataSet_generation/make_demo_planes.py
 ```
 
 | Planes file | Volume | Frames | Frame size | What the video shows |

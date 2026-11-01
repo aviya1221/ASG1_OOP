@@ -21,7 +21,7 @@ head scan's, multiplied to suit each value type.
 By default the files are written to DATA/, next to MRHead_1.nrrd.
 
 Usage:
-    python data_generation/generate_foods.py [--out DIR] [--only {onion,biscuit_cake,swiss_roll,croissant}]
+    python dataSet_generation/generate_foods.py [--out DIR] [--only {onion,biscuit_cake,swiss_roll,croissant}]
 """
 
 import argparse

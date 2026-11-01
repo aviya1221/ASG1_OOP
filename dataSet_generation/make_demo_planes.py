@@ -23,7 +23,7 @@ A clean file must have no bad plane, no warning, and no plane that misses the vo
 each plane of edge_cases.csv must give the result that its comment names.
 
 Usage:
-    python data_generation/make_demo_planes.py [--out FOLDER]
+    python dataSet_generation/make_demo_planes.py [--out FOLDER]
 """
 
 import argparse

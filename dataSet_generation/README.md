@@ -15,8 +15,8 @@ The data set itself is described in [docs/DATA.md](../docs/DATA.md).
 and `garnish.py` the strawberries of the cake and the roll.
 
 ```
-python data_generation/generate_foods.py         # about five minutes, for the 500³ croissant
-python data_generation/generate_datasets.py
-python data_generation/make_demo_planes.py
-python data_generation/make_previews.py
+python dataSet_generation/generate_foods.py         # about five minutes, for the 500³ croissant
+python dataSet_generation/generate_datasets.py
+python dataSet_generation/make_demo_planes.py
+python dataSet_generation/make_previews.py
 ```
