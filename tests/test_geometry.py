@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from conftest import CAKE_TRIANGLE
-from plane_projection.geometry import MAX_SIDE, plane_setup
+from plane_projection.geometry import MAX_SIDE, SHAPES, Trapezoid, Triangle, plane_setup
 from plane_projection.planes import Plane
 from reference import Reference, random_plane
 
@@ -33,6 +33,18 @@ def test_worked_example():
     assert np.allclose(setup.corner, (1, 0, 8))
     assert (setup.rows, setup.cols) == (11, 9)
     assert spans(setup) == [(4, 4), (4, 4), (4, 4), (3, 5), (3, 5), (2, 6), (2, 6), (2, 6), (1, 7), (1, 7), (0, 8)]
+
+
+def test_each_shape_knows_its_corners_and_its_own_checks():
+    """FR-12, FR-24: the setup picks the class by the number of points, and the class does the rest"""
+    a1, a2, b, c = (np.array(p, dtype=np.float64) for p in ((0, 0, 0), (4, 0, 0), (-2, 5, 0), (6, 5, 0)))
+    assert SHAPES == {3: Triangle, 4: Trapezoid}
+    triangle, trapezoid = Triangle(a1, b, c), Trapezoid(a1, a2, b, c)
+    assert [list(v) for v in triangle.corners] == [list(a1), list(c), list(b)]
+    assert [list(v) for v in trapezoid.corners] == [list(a1), list(a2), list(c), list(b)]
+    normal = np.array([0.0, 0.0, 1.0])
+    assert triangle.off_plane(normal) is None and trapezoid.off_plane(normal) is None
+    assert trapezoid.off_plane(np.array([1.0, 0.0, 0.0]))[1] == "TRAPEZOID NOT FLAT"     # a' to a'' is 4 along it
 
 
 def test_swapping_b_and_c_mirrors_the_image():

@@ -2,6 +2,8 @@
 
 plane_setup runs once per plane, before any projection. It finds where the image of the plane lies in the
 volume, and which columns of every row belong to the shape, or the reason the plane gives an error frame.
+What a triangle and a trapezoid do differently is in their classes, Triangle and Trapezoid; the setup works on
+the corners of either one, and never asks which shape it has.
 """
 
 import math
@@ -56,16 +58,83 @@ def bad(plane: Plane, reason: str, title: str) -> PlaneSetup:
     return PlaneSetup(plane, reason=reason, title=title)
 
 
+class Shape:
+    """The points of a shape and the checks that belong to it alone, so that the setup never asks which shape it has.
+
+    first and last are the two ends of the top, which for a triangle are both the apex; b and c are the ends of the base.
+    The checks here suit a shape whose points always lie on one plane and whose sides cannot cross.
+    """
+
+    first_name = ""                         # the name of the first point, in messages
+
+    def __init__(self, first: np.ndarray, last: np.ndarray, b: np.ndarray, c: np.ndarray):
+        self.first, self.last, self.b, self.c = first, last, b, c
+
+    @property
+    def corners(self) -> tuple[np.ndarray, ...]:
+        """The corners in order around the shape."""
+        raise NotImplementedError
+
+    def off_plane(self, normal: np.ndarray) -> tuple[str, str] | None:
+        """The reason and the short cause if the points are not on the plane with this unit normal (FR-24)."""
+        return None
+
+    def sides_cross(self, s: np.ndarray, t: np.ndarray) -> tuple[str, str] | None:
+        """The reason and the short cause if the sides cross; s and t are the plane coordinates of the corners (FR-24)."""
+        return None
+
+    def doubts(self, t: np.ndarray) -> list[str]:
+        """The promises of the assignment that the shape breaks (FR-25); t holds the t coordinates of the corners."""
+        legs = abs(np.linalg.norm(self.b - self.first) - np.linalg.norm(self.c - self.last))
+        return [f"the legs differ by {legs:.3g} voxels"] if legs > TOLERANCE else []
+
+
+class Triangle(Shape):
+    """The triangle a, b, c: the apex a, and the base from b to c."""
+
+    first_name = "a"
+
+    def __init__(self, a: np.ndarray, b: np.ndarray, c: np.ndarray):
+        super().__init__(a, a, b, c)
+
+    @property
+    def corners(self) -> tuple[np.ndarray, ...]:
+        return self.first, self.c, self.b
+
+
+class Trapezoid(Shape):
+    """The trapezoid a', a'', b, c: the top side from a' to a'', and the base from b to c."""
+
+    first_name = "a'"
+
+    @property
+    def corners(self) -> tuple[np.ndarray, ...]:
+        return self.first, self.last, self.c, self.b
+
+    def off_plane(self, normal: np.ndarray) -> tuple[str, str] | None:
+        off = abs((self.last - self.first) @ normal)
+        if not off <= TOLERANCE:
+            return f"point a'' is {off:.3g} voxels off the plane of a', b and c", "TRAPEZOID NOT FLAT"
+        return None
+
+    def sides_cross(self, s: np.ndarray, t: np.ndarray) -> tuple[str, str] | None:
+        if not convex(s, t):
+            return "the sides of the trapezoid a', a'', c, b cross each other", "TRAPEZOID SIDES CROSS"
+        return None
+
+    def doubts(self, t: np.ndarray) -> list[str]:
+        found = super().doubts(t)
+        if abs(t[1]) > TOLERANCE:           # t of a'', the second corner; t of a' is always 0
+            found.append(f"the top side a' a'' is not parallel to the base: its ends differ by {abs(t[1]):.3g} voxels")
+        return found
+
+
+SHAPES = {3: Triangle, 4: Trapezoid}        # by the number of points of the plane
+
+
 def setup(plane: Plane) -> PlaneSetup:
-    if plane.is_trapezoid:
-        p0, q, b, c = plane.points
-        corners = (p0, q, c, b)
-        first = "a'"
-    else:
-        p0, b, c = plane.points
-        q = p0
-        corners = (p0, c, b)
-        first = "a"
+    shape = SHAPES[len(plane.points)](*plane.points)
+    p0, b, c = shape.first, shape.b, shape.c
 
     base = c - b
     base_length = np.linalg.norm(base)
@@ -79,20 +148,19 @@ def setup(plane: Plane) -> PlaneSetup:
     if not np.isfinite(w_length):
         return bad(plane, TOO_FAR, TOO_LARGE)
     if w_length < EPS:
-        return bad(plane, f"points {first}, b and c are on one line", "POINTS ON ONE LINE")
+        return bad(plane, f"points {shape.first_name}, b and c are on one line", "POINTS ON ONE LINE")
     down = w / w_length
+    problem = shape.off_plane(np.cross(right, down))
+    if problem:
+        return bad(plane, *problem)
 
-    if plane.is_trapezoid:
-        off = abs((q - p0) @ np.cross(right, down))
-        if not off <= TOLERANCE:
-            return bad(plane, f"point a'' is {off:.3g} voxels off the plane of a', b and c", "TRAPEZOID NOT FLAT")
-
-    s = np.array([(v - p0) @ right for v in corners])
-    t = np.array([(v - p0) @ down for v in corners])
+    s = np.array([(v - p0) @ right for v in shape.corners])
+    t = np.array([(v - p0) @ down for v in shape.corners])
     if not (np.isfinite(s).all() and np.isfinite(t).all()):
         return bad(plane, TOO_FAR, TOO_LARGE)
-    if plane.is_trapezoid and not convex(s, t):
-        return bad(plane, "the sides of the trapezoid a', a'', c, b cross each other", "TRAPEZOID SIDES CROSS")
+    problem = shape.sides_cross(s, t)
+    if problem:
+        return bad(plane, *problem)
 
     width, height = s.max() - s.min(), t.max() - t.min()
     if width + EPS >= MAX_SIDE or height + EPS >= MAX_SIDE:
@@ -102,7 +170,7 @@ def setup(plane: Plane) -> PlaneSetup:
     rows = math.floor(height + EPS) + 1
     corner = p0 + s.min() * right + t.min() * down
     c0, c1 = row_spans(s, t, rows, cols)
-    return PlaneSetup(plane, warnings=doubts(plane, p0, q, b, c, t), corner=corner, right=right, down=down,
+    return PlaneSetup(plane, warnings=tuple(shape.doubts(t)), corner=corner, right=right, down=down,
                       rows=rows, cols=cols, c0=c0, c1=c1)
 
 
@@ -114,17 +182,6 @@ def convex(s: np.ndarray, t: np.ndarray) -> bool:
         j, k = (i + 1) % n, (i + 2) % n
         turns.append((s[j] - s[i]) * (t[k] - t[j]) - (t[j] - t[i]) * (s[k] - s[j]))
     return all(turn >= -EPS for turn in turns) or all(turn <= EPS for turn in turns)
-
-
-def doubts(plane: Plane, p0, q, b, c, t: np.ndarray) -> tuple[str, ...]:
-    """The promises of the assignment that the plane breaks (FR-25)."""
-    found = []
-    legs = abs(np.linalg.norm(b - p0) - np.linalg.norm(c - q))
-    if legs > TOLERANCE:
-        found.append(f"the legs differ by {legs:.3g} voxels")
-    if plane.is_trapezoid and abs(t[1]) > TOLERANCE:
-        found.append(f"the top side a' a'' is not parallel to the base: its ends differ by {abs(t[1]):.3g} voxels")
-    return tuple(found)
 
 
 def row_spans(s: np.ndarray, t: np.ndarray, rows: int, cols: int) -> tuple[np.ndarray, np.ndarray]:

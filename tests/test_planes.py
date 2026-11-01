@@ -18,7 +18,6 @@ def test_triangle_and_trapezoid_points_in_order(write_csv):
     assert len(triangle.points) == 3 and len(trapezoid.points) == 4
     assert [list(point) for point in triangle.points] == [[127.5, 0, 65], [0, 255, 65], [255, 255, 65]]
     assert [list(point) for point in trapezoid.points] == [[60, 40, 20], [190, 40, 20], [20, 200, 110], [230, 200, 110]]
-    assert not triangle.is_trapezoid and trapezoid.is_trapezoid
 
 
 def test_triangle_without_the_empty_fields(write_csv):

@@ -34,10 +34,6 @@ class Plane:
     def readable(self) -> bool:
         return self.points is not None
 
-    @property
-    def is_trapezoid(self) -> bool:
-        return self.points is not None and len(self.points) == 4
-
 
 def read_planes(path: str | Path) -> list[Plane]:
     """Read every plane line of the file. A line that is not a plane does not stop the reading (FR-23)."""
