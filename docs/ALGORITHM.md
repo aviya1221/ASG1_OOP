@@ -222,8 +222,9 @@ E[R, C] = values
   This keeps the rounding of FR-19 exact, and the result identical on every run (NFR-9).
 - **`+ 0.5` once.** `corner_k + 0.5` is computed once per plane, so rounding to the nearest voxel costs a single `floor`.
 - **Clamping.** After `ok` is known, each index is clamped into the volume. The read is then always a real voxel, even for pixels that are masked out,
-  and the flat index always fits in `int32`: the largest is `1023³ − 1`, about `1.07 · 10⁹`, below `2³¹`.
-- **`int32` indices** take half the memory traffic of `int64`.
+  and the flat index is at most the number of voxels minus one.
+- **`int32` indices** take half the memory traffic of `int64`. They fit every volume of FR-7: the largest index is `1023³ − 1`, about `1.07 · 10⁹`, below `2³¹`.
+  The projector picks the type from the number of voxels (`index_type`), so a volume of more than `2³¹` voxels gets `int64` indices instead of wrong ones.
 - **Trimmed bands.** Near the apex of a triangle, the shape covers only a few columns. Trimming each band to the columns of its rows
   skips most of the empty corners of the rectangle: with 4 bands, about a third of the pixels of a triangle's rectangle.
 - **Bands in threads.** NumPy releases Python's global lock inside its array operations, so bands of rows run at the same time on different cores.

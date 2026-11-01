@@ -11,6 +11,11 @@ THREADS = 4                                 # the number that measured fastest (
 MARGIN = 1e-6                               # the early exit skips a plane only when it is clearly outside
 
 
+def index_type(voxels: int) -> type:
+    """The type of the flat index: int32 when every index fits, as for every volume of FR-7 (1023³ < 2³¹), else int64."""
+    return np.int32 if voxels <= 2**31 else np.int64
+
+
 class Projector:
     """Projects planes through one volume.
 
@@ -25,6 +30,7 @@ class Projector:
         self.sizes = volume.shape
         sx, sy, _ = volume.shape
         self.strides = (1, sx, sx * sy)
+        self.index_type = index_type(volume.data.size)
         self.pool = ThreadPoolExecutor(max_workers=self.threads) if self.threads > 1 else None
 
     def __enter__(self) -> "Projector":
@@ -75,13 +81,13 @@ class Projector:
         cols = np.arange(first, last, dtype=np.float64)[None, :]
         columns = np.arange(first, last)[None, :]
         ok = (columns >= c0[:, None]) & (columns <= c1[:, None])           # inside the shape, FR-18
-        index = np.zeros(ok.shape, dtype=np.int32)
+        index = np.zeros(ok.shape, dtype=self.index_type)
         for k in range(3):
             # each point straight from the corner, with the + 0.5 of rounding to the nearest voxel (FR-19)
             p = np.floor((setup.corner[k] + 0.5) + rows * setup.down[k] + cols * setup.right[k])
             ok &= (p >= 0) & (p < self.sizes[k])                           # inside the volume, FR-20
             np.clip(p, 0, self.sizes[k] - 1, out=p)
-            index += p.astype(np.int32) * np.int32(self.strides[k])
+            index += p.astype(self.index_type) * self.index_type(self.strides[k])
         values = self.volume.flat.take(index)
         values[~ok] = 0
         image[r0:r1, first:last] = values

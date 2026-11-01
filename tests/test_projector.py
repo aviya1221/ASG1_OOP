@@ -10,7 +10,7 @@ from scipy import ndimage
 from conftest import CAKE_IMAGE, CAKE_TRIANGLE, DATA, assert_same, cake, decode, index_volume
 from plane_projection.geometry import plane_setup
 from plane_projection.planes import Plane
-from plane_projection.projector import Projector
+from plane_projection.projector import Projector, index_type
 from plane_projection.volume import Volume, read_volume
 from reference import Reference, random_plane
 
@@ -116,6 +116,13 @@ def test_number_of_threads_does_not_change_the_image():
     for threads in (2, 4, 8):
         for number, (one, many) in enumerate(zip(images[1], images[threads]), start=1):
             assert_same(many, one, f"pixels of plane {number} with {threads} threads", show=decode)
+
+
+def test_index_type_fits_every_index():
+    """FR-7, FR-20: int32 for every volume of up to 1023 on a side, int64 beyond 2³¹ voxels"""
+    assert index_type(1023 ** 3) is np.int32
+    assert index_type(2 ** 31) is np.int32
+    assert index_type(2 ** 31 + 1) is np.int64
 
 
 def test_bad_plane_cannot_be_projected():
