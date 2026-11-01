@@ -29,6 +29,9 @@ and on the [algorithm document](ALGORITHM.md), whose [section 9](ALGORITHM.md#9-
 - **Small data first.** Most tests build a tiny volume in memory, a few voxels on a side, where every pixel can be checked.
   The files of the data set are used where real sizes, types and content matter.
 - **Fixed seeds.** Every random input comes from a generator with a fixed seed, so a failure can be repeated.
+- **A failure says where.** At the end of a run, the section "where the tests failed" lists each failure by the file and line of the test,
+  the line in the code that raised the error if there is one, and the message. Image comparisons go through `assert_same` (`tests/conftest.py`),
+  which names the first pixels that differ with the value found and the value expected, and the random-plane test names the plane and its points.
 - **Fast by default.** The everyday suite runs in under a minute. Slow tests are marked and run before every push.
 - **Tests before code.** During the implementation, the tests of a module are written from this document before the module itself.
 
