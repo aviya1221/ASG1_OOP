@@ -86,14 +86,15 @@ python Ex0.py DATA/MRHead_1.nrrd DATA/head.csv output/head.mp4
 
 ```
 volume:      DATA/MRHead_1.nrrd, 256 x 256 x 130, int16
-frames:      280 (0 black, 0 warnings)
+frames:      280 (0 errors, 0 warnings)
 load:        0.09 s
 projection:  0.73 s total, 2.6 ms per frame, 384 fps
 video:       0.22 s
 ```
 
-A line of the planes file that is not a valid plane gives a black frame and a warning that names the line;
-`python Ex0.py --help` describes the format. The code is in [plane_projection/](plane_projection/), one module for each step
+A line of the planes file that is not a valid plane does not stop the run: it gives a warning that names the line,
+and an error frame that shows the frame, the line and a short cause. After the summary, the program lists every error frame with its full cause.
+`python Ex0.py --help` describes the format of the planes file. The code is in [plane_projection/](plane_projection/), one module for each step
 ([algorithm document, section 9](docs/ALGORITHM.md#9-program-structure)).
 
 The planes files of the demo, one for each volume of the main data set and one of edge cases, sit next to their volumes in [DATA/](DATA/).
@@ -132,7 +133,7 @@ The assignment leaves these questions open. The [Software Requirements Specifica
 | 3 | `Dab`, `Dbc`, `d12` and `x` are real numbers: how are they rounded? The loop skips the apex row: is that intended? | an exact image geometry with square pixels and the apex in row 0 ([3.4](docs/SRS.md#34-projection-geometry), [deviations from the assignment](docs/DEVIATIONS.md)) |
 | 4 | `E` is a rectangle and the triangle covers about half of it: what do the other pixels get? | 0 ([FR-20](docs/SRS.md#34-projection-geometry)) |
 | 5 | In which order are the 4 points of a trapezoid written? | `a', b, a'', c`: the two legs one after the other, which makes the lecturer's example an isosceles trapezoid ([FR-12](docs/SRS.md#33-planes-file)) |
-| 6 | What if the triangle is not isosceles, the points are on one line, or two points are the same? | a black frame and a warning for bad planes, a warning for doubtful ones ([3.5](docs/SRS.md#35-input-validation)) |
+| 6 | What if the triangle is not isosceles, the points are on one line, or two points are the same? | an error frame and a warning for bad planes, a warning for doubtful ones ([3.5](docs/SRS.md#35-input-validation)) |
 | 7 | What does the CSV file look like? | the format of the lecturer's example: a header, then one plane per line, the number of points (3 or 4) and then `x, y, z` of each point; comments are allowed ([3.3](docs/SRS.md#33-planes-file)) |
 | 8 | Each image has its own size, but a video needs one frame size; how are 16 and 32-bit values shown; at what rate? | images centered in a fixed frame, one gray-level map for the whole video, 30 fps by default ([3.6](docs/SRS.md#36-video-output)) |
 | 9 | How do NRRD axes map to `M[x][y][z]`? `MRHead_1.nrrd` is signed. | `x` is the fastest axis on disk; signed types are accepted ([3.2](docs/SRS.md#32-volume-file)) |
