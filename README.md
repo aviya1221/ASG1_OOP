@@ -2,173 +2,100 @@
 
 [![tests](https://github.com/aviya1221/ASG1_OOP/actions/workflows/tests.yml/badge.svg)](https://github.com/aviya1221/ASG1_OOP/actions/workflows/tests.yml)
 
-Introduction to Software Engineering (OOP, OOD), exercise 1.
-
-Given a 3D volume and a plane, produce the 2D image the volume shows on that plane:
-the "cut" that 3D Slicer shows in its axial, coronal and sagittal views, but along any plane, not only the three axes.
-
-![How a cut is made: a sheet of grid squares placed at an angle inside a layered cake, then laid flat as an image](docs/images/how_a_cut_is_made.png)
-
-*A 10 × 10 × 10 cake of three layers, a triangle placed at an angle inside it, and the image that comes out.
-Each square of the output image takes the value of the voxel under its point in the volume.*
-
-[![The interactive demo: the cake is turned, the apex of an upright triangle moves down and up, and squares of the image are clicked](docs/demo/preview.gif)](https://aviya1221.github.io/ASG1_OOP/demo/)
-
-*Try it yourself in the [interactive demo](https://aviya1221.github.io/ASG1_OOP/demo/): turn the cake, move the three points,
-and click a square of the image to see where its value comes from. It computes every step the way the program does.*
+Introduction to Software Engineering, exercise 1.
 
 ## The problem
 
-**Input**
+Given a 3D volume and a plane, compute the 2D image that the volume shows on the plane:
+the cut that 3D Slicer shows along its three axes, but along any plane.
 
-- A 3D matrix `M` of size `sx × sy × sz`, with `1 <= sx, sy, sz < 2^10` (at most 1023 on each axis).
-  Each entry `M[x][y][z]` is an unsigned integer of 8, 16 or 32 bits.
-  The volume is read from an [NRRD](https://teem.sourceforge.net/nrrd/format.html) file, the format of the 3D Slicer project.
-- A plane `p`, given by 3 or 4 points in 3D:
-  - **3 points** `a, b, c`: an isosceles triangle with apex `a`, so `dist(a,b) = dist(a,c)`.
-  - **4 points**: an isosceles trapezoid, two sides of equal length on the same plane, `a' → b` and `a'' → c`.
+- **Volume:** an NRRD file of `sx × sy × sz` voxels, `1 <= sx, sy, sz <= 1023`, holding 8, 16 or 32-bit integers.
+- **Plane:** an isosceles triangle `a, b, c` with apex `a`, or an isosceles trapezoid `a', b, a'', c` with legs `a' → b` and `a'' → c`.
+- **Image:** each pixel takes the value of the nearest voxel, and 0 outside the volume.
+- **Demo:** `python Ex0.py file.nrrd file.csv file.mp4` cuts the volume by every plane of the CSV file and writes one video frame per plane.
+- **Speed:** on a 500³ volume, at least 30 planes per second, and 100 expected.
 
-**Output**
+The assignment calls the problem not well defined for implementation. The [SRS](docs/SRS.md) settles its open questions,
+and [DEVIATIONS.md](docs/DEVIATIONS.md) lists where the program departs from the assignment's pseudo-code, and why.
 
-- A 2D matrix (image) `E` holding the values of `M` along the triangle (or trapezoid).
-  Points of the plane that fall outside `M` get the value 0.
+![How a cut is made: a sheet of grid squares placed at an angle inside a layered cake, then laid flat as an image](docs/images/how_a_cut_is_made.png)
 
-**The algorithm given in the assignment** (for the triangle; the trapezoid works the same way):
+*A triangle placed at an angle inside a cake of three layers, and the image that comes out.*
 
-```
-Dab = dist(a,b) = dist(a,c)
-Dbc = dist(b,c)
-v(a,b) = vector(a,b) / Dab          # unit step from a toward b
-v(a,c) = vector(a,c) / Dab          # unit step from a toward c
-E = new matrix of size Dab * Dbc
+[![The interactive demo: the cake is turned, the apex of an upright triangle moves down and up, and squares of the image are clicked](docs/demo/preview.gif)](https://aviya1221.github.io/ASG1_OOP/demo/)
 
-a1 = a, a2 = a
-for y in 0 .. Dab-1:                # one output row per unit step down the sides
-    a1 = a1 + v(a,b)
-    a2 = a2 + v(a,c)
-    d12 = dist(a1, a2)
-    dp  = vector(a1, a2) / d12      # unit step along the row
-    p   = a1
-    for x1 in 0 .. d12:             # one output pixel per unit step along the row
-        v = M[p]  (0 if p is outside M)
-        x = Dbc/2 - d12/2 + x1      # center the row in E
-        E[x][y] = v
-        p = p + dp
-return E
-```
-
-The assignment states that this problem is **not well defined for implementation**:
-the pseudo-code leaves open questions that a detailed design has to answer (see [Open questions](#open-questions)).
-The exact requirements are in the [Software Requirements Specification](docs/SRS.md),
-the way the program meets them is in the [algorithm document](docs/ALGORITHM.md),
-and the way it is checked is in the [testing strategy](docs/TESTING.md).
-
-## The program
-
-The demo is run as:
-
-```
-python Ex0.py file.nrrd file.csv file.mp4
-```
-
-| Argument | Meaning |
-|---|---|
-| `file.nrrd` | the 3D volume |
-| `file.csv` | a list of planes, each given by the coordinates of 3 or 4 points |
-| `file.mp4` | the output video: one frame per plane, in the order of the CSV |
-| `--fps N` | frame rate of the video, 30 by default |
-
-For example, on the lecturer's head scan:
-
-```
-python Ex0.py DATA/MRHead_1.nrrd DATA/head.csv output/head.mp4
-```
-
-```
-volume:      DATA/MRHead_1.nrrd, 256 x 256 x 130, int16
-frames:      280 (0 errors, 0 warnings)
-load:        0.09 s
-projection:  0.73 s total, 2.6 ms per frame, 384 fps
-video:       0.22 s
-```
-
-A line of the planes file that is not a valid plane does not stop the run: it gives a warning that names the line,
-and an error frame that shows the frame, the line and a short cause. After the summary, the program lists every error frame with its full cause.
-`python Ex0.py --help` describes the format of the planes file. The code is in [plane_projection/](plane_projection/), one module for each step
-([algorithm document, section 9](docs/ALGORITHM.md#9-program-structure)).
-
-The planes files of the demo, one for each volume of the main data set and one of edge cases, sit next to their volumes in [DATA/](DATA/).
-They are made by `data_generation/make_demo_planes.py` and described in the [testing strategy](docs/TESTING.md#61-demo-planes-files).
-
-**Performance:** on a volume of 500³ bytes the projection must run at **30 frames per second at least**, and **100 is expected**.
+*The [interactive demo](https://aviya1221.github.io/ASG1_OOP/demo/): turn the cake, move the points, and click a pixel to see which voxel it comes from.*
 
 ## Scope
 
-**In scope**
+| In scope | Out of scope |
+|---|---|
+| NRRD volumes of 8, 16 and 32-bit integers, raw or gzip | other input formats, and points in millimeters |
+| triangles and trapezoids from a CSV file, in the lecturer's format | a graphical interface: 3D Slicer is used to look at the data |
+| the image of any plane, also partly or fully outside the volume | interpolation between voxels, and volume rendering |
+| an MP4 video with one frame per plane | other output formats |
+| the speed target, the documents, the tests, a data set and an experiment | editing or segmenting the volume |
 
-- Reading NRRD volumes of unsigned 8, 16 and 32-bit values, raw or gzip-compressed.
-- Reading the planes from a CSV file, triangles (3 points) and trapezoids (4 points).
-- Computing the projection image of each plane, correct and stable for any plane,
-  including planes that lie partly or fully outside the volume.
-- Writing the images as frames of an MP4 video.
-- Meeting the speed target on a 500³ volume.
-- Documents: this README, an SRS, a detailed description of the algorithm, the data set and a testing strategy.
-- Tests, including tests of the demo, and an experiment with its results and output video.
+## Dependencies
 
-**Out of scope**
+Python 3.12 or newer, on Windows, macOS or Linux.
 
-- A graphical interface or an interactive viewer (3D Slicer is used to look at the data).
-- Volume rendering: "projection" here means sampling the values on the plane, not summing or ray-casting through the volume.
-- File formats other than NRRD for input and MP4 for output.
-- Editing or segmenting the volume.
-
-## Open questions
-
-The assignment leaves these questions open. The [Software Requirements Specification](docs/SRS.md) answers each of them:
-
-| # | Question | Answer |
-|---|---|---|
-| 1 | Are the points voxel indices, or physical positions from the NRRD header (as 3D Slicer shows them)? | voxel indices ([FR-13](docs/SRS.md#33-planes-file)) |
-| 2 | `p` is almost never on a whole voxel: take the nearest one, or interpolate? | the nearest voxel ([FR-19](docs/SRS.md#34-projection-geometry)) |
-| 3 | `Dab`, `Dbc`, `d12` and `x` are real numbers: how are they rounded? The loop skips the apex row: is that intended? | an exact image geometry with square pixels and the apex in row 0 ([3.4](docs/SRS.md#34-projection-geometry), [deviations from the assignment](docs/DEVIATIONS.md)) |
-| 4 | `E` is a rectangle and the triangle covers about half of it: what do the other pixels get? | 0 ([FR-20](docs/SRS.md#34-projection-geometry)) |
-| 5 | In which order are the 4 points of a trapezoid written? | `a', b, a'', c`: the two legs one after the other, which makes the lecturer's example an isosceles trapezoid ([FR-12](docs/SRS.md#33-planes-file)) |
-| 6 | What if the triangle is not isosceles, the points are on one line, or two points are the same? | an error frame and a warning for bad planes, a warning for doubtful ones ([3.5](docs/SRS.md#35-input-validation)) |
-| 7 | What does the CSV file look like? | the format of the lecturer's example: a header, then one plane per line, the number of points (3 or 4) and then `x, y, z` of each point; comments are allowed ([3.3](docs/SRS.md#33-planes-file)) |
-| 8 | Each image has its own size, but a video needs one frame size; how are 16 and 32-bit values shown; at what rate? | images centered in a fixed frame, one gray-level map for the whole video, 30 fps by default ([3.6](docs/SRS.md#36-video-output)) |
-| 9 | How do NRRD axes map to `M[x][y][z]`? `MRHead_1.nrrd` is signed. | `x` is the fastest axis on disk; signed types are accepted ([3.2](docs/SRS.md#32-volume-file)) |
-| 10 | Does the speed target cover the projection alone, and for which planes? | the projection alone, on a fixed benchmark of 100 planes of 501 × 501 pixels ([3.8](docs/SRS.md#38-non-functional-requirements)) |
-
-## Data
-
-The data set is described in [docs/DATA.md](docs/DATA.md): the lecturer's MRI head scan,
-simulated MRI scans of layered foods (including a 500³ file for the speed test), and test volumes with known answers.
-Preview images are in [DATA/images/](DATA/images/).
-
-The scripts that made the data set and its planes files are in [data_generation/](data_generation/). They are not needed to run the program or the tests.
-
-## Setup, tests and benchmark
+| Package | Used for |
+|---|---|
+| `numpy` | the volume and the projection |
+| `pynrrd` | reading NRRD files |
+| `imageio-ffmpeg` | writing the H.264 video; it brings its own FFmpeg |
+| `scipy`, `matplotlib` | the tests, the experiment figures and the scripts that made the data set |
+| `pytest`, `pytest-cov` | the tests, from `requirements-dev.txt` |
 
 ```
 python -m venv .venv
-.venv\Scripts\activate                 # on macOS and Linux: source .venv/bin/activate
-pip install -r requirements-dev.txt    # the program itself needs only requirements.txt
-
-pytest                                 # the everyday suite, under a minute
-pytest -m slow                         # the data set files and the six demos
-python tools/benchmark.py              # speed on the 500³ croissant (docs/SRS.md, NFR-4)
+.venv\Scripts\activate                # macOS and Linux: source .venv/bin/activate
+pip install -r requirements-dev.txt   # requirements.txt alone is enough to run the program
 ```
 
-The tests run on every push, on Windows, Ubuntu and macOS ([testing strategy, section 8](docs/TESTING.md#8-portability-and-continuous-integration)).
-On the development laptop the benchmark gives about 300 frames per second, against the target of 100.
+## Running
 
-## Roadmap
+```
+python Ex0.py file.nrrd file.csv file.mp4 [--fps N]
+```
 
-- [x] Create a repository, define the problem and the scope (this README)
-- [x] Software Requirements Specification ([docs/SRS.md](docs/SRS.md))
-- [x] Detailed description of the main algorithm ([docs/ALGORITHM.md](docs/ALGORITHM.md))
-- [x] Data set of NRRD files (first version, see [docs/DATA.md](docs/DATA.md))
-- [x] Testing strategy, including the demo ([docs/TESTING.md](docs/TESTING.md))
-- [x] Implementation ([plane_projection/](plane_projection/), [tests/](tests/))
-- [x] Demo: `python Ex0.py file.nrrd file.csv file.mp4` ([Ex0.py](Ex0.py), planes files in [DATA/](DATA/))
-- [x] Experiment and a short description of its results, with the output videos ([experiment/](experiment/README.md))
+The CSV file has one plane per line: the number of points, 3 or 4, then `x, y, z` of each point, in voxel indices.
+`python Ex0.py --help` shows the format with an example. A line that is not a valid plane does not stop the run:
+it gives a warning and an error frame, and the summary at the end lists it.
+
+```
+pytest                                # the everyday tests, under a minute
+pytest -m slow                        # the tests on the data set, and the demos
+python tools/benchmark.py             # the speed on the 500³ volume
+```
+
+## A run
+
+The lecturer's head scan, cut by the 280 planes of `DATA/head.csv` ([the video](experiment/videos/head.mp4)):
+
+```
+$ python Ex0.py DATA/MRHead_1.nrrd DATA/head.csv head.mp4
+volume:      DATA/MRHead_1.nrrd, 256 x 256 x 130, int16
+frames:      280 (0 errors, 0 warnings)
+load:        0.14 s
+projection:  1.38 s total, 4.9 ms per frame, 203 fps
+video:       0.40 s
+```
+
+On the 500³ benchmark the projection runs at 317 planes per second, the median of 5 rounds, against 30 required and 100 expected.
+The [experiment](experiment/README.md) has the runs on every volume with their videos, the edge cases, and the comparison with 3D Slicer.
+
+## Documents and files
+
+| Path | Contents |
+|---|---|
+| [docs/SRS.md](docs/SRS.md) | the requirements |
+| [docs/ALGORITHM.md](docs/ALGORITHM.md) | the algorithm in detail, and the structure of the program |
+| [docs/TESTING.md](docs/TESTING.md) | the testing strategy |
+| [docs/DATA.md](docs/DATA.md) | the data set |
+| [experiment/](experiment/README.md) | the experiment, its results and the output videos |
+| [Ex0.py](Ex0.py), [plane_projection/](plane_projection/) | the demo, and the package with one module for each step |
+| [tests/](tests/) | the tests, which run on every push on Windows, Ubuntu and macOS |
+| [DATA/](DATA/) | the volumes and their planes files |
+| [tools/](tools/), [data_generation/](data_generation/) | the benchmark and the experiment; the scripts that made the data set |
