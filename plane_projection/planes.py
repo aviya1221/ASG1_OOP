@@ -10,6 +10,7 @@ from plane_projection.errors import InputError
 
 COUNTS = (3, 4)                             # points of a triangle and of a trapezoid
 FILE_ORDER = {3: (0, 1, 2), 4: (0, 2, 1, 3)}  # the file lists a, b, c and a', b, a'', c (FR-12)
+NOT_A_NUMBER = "NOT A NUMBER"               # the short cause of an empty, unreadable or infinite field
 
 
 @dataclass(frozen=True, eq=False)
@@ -19,13 +20,15 @@ class Plane:
     line counts every line of the file from 1, and frame counts the plane lines from 1 (FR-27).
     points holds 3 points (a, b, c) or 4 points (a', a'', b, c) as float64 arrays. A trapezoid line of the file
     lists its points as a', b, a'', c, so the reading swaps the middle two (FR-12).
-    A line that cannot be read has no points, and reason says why (FR-24).
+    A line that cannot be read has no points: reason says why, and title is the short cause that its error frame
+    shows (FR-24).
     """
 
     line: int
     frame: int
     points: tuple[np.ndarray, ...] | None
     reason: str | None = None
+    title: str | None = None
 
     @property
     def readable(self) -> bool:
@@ -73,16 +76,18 @@ def number(field: str) -> float | None:
 def make_plane(line: int, frame: int, fields: list[str], numbers: list[float | None]) -> Plane:
     for position, (field, value) in enumerate(zip(fields, numbers), start=1):
         if not field:
-            return Plane(line, frame, None, f"field {position} is empty")
+            return Plane(line, frame, None, f"field {position} is empty", NOT_A_NUMBER)
         if value is None:
-            return Plane(line, frame, None, f"field {position} is not a number: {field!r}")
+            return Plane(line, frame, None, f"field {position} is not a number: {field!r}", NOT_A_NUMBER)
         if not math.isfinite(value):
-            return Plane(line, frame, None, f"field {position} is not a finite number: {field!r}")
+            return Plane(line, frame, None, f"field {position} is not a finite number: {field!r}", NOT_A_NUMBER)
     count, coordinates = numbers[0], numbers[1:]
     if count not in COUNTS:
-        return Plane(line, frame, None, f"the number of points is {fields[0]}, not 3 (triangle) or 4 (trapezoid)")
+        return Plane(line, frame, None, f"the number of points is {fields[0]}, not 3 (triangle) or 4 (trapezoid)",
+                     "WRONG NUMBER OF POINTS")
     count = int(count)
     if len(coordinates) != 3 * count:
-        return Plane(line, frame, None, f"{len(coordinates)} numbers for {count} points instead of {3 * count}")
+        return Plane(line, frame, None, f"{len(coordinates)} numbers for {count} points instead of {3 * count}",
+                     "WRONG NUMBER OF VALUES")
     points = [np.array(coordinates[i:i + 3], dtype=np.float64) for i in range(0, len(coordinates), 3)]
     return Plane(line, frame, tuple(points[i] for i in FILE_ORDER[count]))

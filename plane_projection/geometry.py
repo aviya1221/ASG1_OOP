@@ -1,7 +1,7 @@
 """Plane setup and checks (docs/SRS.md, sections 3.4 and 3.5; docs/ALGORITHM.md, section 4).
 
 plane_setup runs once per plane, before any projection. It finds where the image of the plane lies in the
-volume, and which columns of every row belong to the shape, or the reason the plane gives a black frame.
+volume, and which columns of every row belong to the shape, or the reason the plane gives an error frame.
 """
 
 import math
@@ -15,6 +15,7 @@ EPS = 1e-6                                  # lengths and areas below this count
 TOLERANCE = 0.5                             # voxels allowed off the promises of the assignment
 MAX_SIDE = 4096                             # pixels on a side of an image
 TOO_FAR = f"the points are too far apart for an image of at most {MAX_SIDE} pixels on a side"
+TOO_LARGE = "IMAGE TOO LARGE"               # the short cause of TOO_FAR and of the size check
 
 
 @dataclass(frozen=True, eq=False)
@@ -23,10 +24,12 @@ class PlaneSetup:
 
     A valid plane has no reason. Pixel (r, c) of its image is at corner + c·right + r·down in the volume,
     and belongs to the shape when c0[r] <= c <= c1[r] (FR-17, FR-18).
+    A bad plane has a reason, for the warning and the report, and a title, the short cause on its error frame (FR-24).
     """
 
     plane: Plane
     reason: str | None = None
+    title: str | None = None
     warnings: tuple[str, ...] = ()
     corner: np.ndarray | None = None
     right: np.ndarray | None = None
@@ -44,9 +47,13 @@ class PlaneSetup:
 def plane_setup(plane: Plane) -> PlaneSetup:
     """Set up one plane, or say why it is bad (FR-24). Warnings do not make it bad (FR-25)."""
     if not plane.readable:
-        return PlaneSetup(plane, plane.reason)
+        return bad(plane, plane.reason, plane.title)
     with np.errstate(all="ignore"):         # far-away points may overflow; the checks below catch them
         return setup(plane)
+
+
+def bad(plane: Plane, reason: str, title: str) -> PlaneSetup:
+    return PlaneSetup(plane, reason=reason, title=title)
 
 
 def setup(plane: Plane) -> PlaneSetup:
@@ -63,39 +70,40 @@ def setup(plane: Plane) -> PlaneSetup:
     base = c - b
     base_length = np.linalg.norm(base)
     if not np.isfinite(base_length):
-        return PlaneSetup(plane, TOO_FAR)
+        return bad(plane, TOO_FAR, TOO_LARGE)
     if base_length < EPS:
-        return PlaneSetup(plane, "b and c are the same point")
+        return bad(plane, "b and c are the same point", "B AND C ARE THE SAME POINT")
     right = base / base_length
     w = (b - p0) - ((b - p0) @ right) * right
     w_length = np.linalg.norm(w)
     if not np.isfinite(w_length):
-        return PlaneSetup(plane, TOO_FAR)
+        return bad(plane, TOO_FAR, TOO_LARGE)
     if w_length < EPS:
-        return PlaneSetup(plane, f"points {first}, b and c are on one line")
+        return bad(plane, f"points {first}, b and c are on one line", "POINTS ON ONE LINE")
     down = w / w_length
 
     if plane.is_trapezoid:
         off = abs((q - p0) @ np.cross(right, down))
         if not off <= TOLERANCE:
-            return PlaneSetup(plane, f"point a'' is {off:.3g} voxels off the plane of a', b and c")
+            return bad(plane, f"point a'' is {off:.3g} voxels off the plane of a', b and c", "TRAPEZOID NOT FLAT")
 
     s = np.array([(v - p0) @ right for v in corners])
     t = np.array([(v - p0) @ down for v in corners])
     if not (np.isfinite(s).all() and np.isfinite(t).all()):
-        return PlaneSetup(plane, TOO_FAR)
+        return bad(plane, TOO_FAR, TOO_LARGE)
     if plane.is_trapezoid and not convex(s, t):
-        return PlaneSetup(plane, "the sides of the trapezoid a', a'', c, b cross each other")
+        return bad(plane, "the sides of the trapezoid a', a'', c, b cross each other", "TRAPEZOID SIDES CROSS")
 
     width, height = s.max() - s.min(), t.max() - t.min()
     if width + EPS >= MAX_SIDE or height + EPS >= MAX_SIDE:
-        return PlaneSetup(plane, f"the image would be {width + 1:.6g} x {height + 1:.6g} pixels, "
-                                 f"more than {MAX_SIDE} on a side")
+        return bad(plane, f"the image would be {width + 1:.6g} x {height + 1:.6g} pixels, "
+                          f"more than {MAX_SIDE} on a side", TOO_LARGE)
     cols = math.floor(width + EPS) + 1
     rows = math.floor(height + EPS) + 1
     corner = p0 + s.min() * right + t.min() * down
     c0, c1 = row_spans(s, t, rows, cols)
-    return PlaneSetup(plane, None, doubts(plane, p0, q, b, c, t), corner, right, down, rows, cols, c0, c1)
+    return PlaneSetup(plane, warnings=doubts(plane, p0, q, b, c, t), corner=corner, right=right, down=down,
+                      rows=rows, cols=cols, c0=c0, c1=c1)
 
 
 def convex(s: np.ndarray, t: np.ndarray) -> bool:

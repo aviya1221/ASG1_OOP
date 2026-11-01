@@ -69,6 +69,7 @@ def test_same_b_and_c_is_bad():
     setup = setup_of((0, 0, 0), (3, 4, 5), (3, 4, 5))
     assert not setup.valid
     assert "same point" in setup.reason
+    assert setup.title == "B AND C ARE THE SAME POINT"
 
 
 @pytest.mark.parametrize("points", [[(0, 0, 0), (1, 1, 1), (3, 3, 3)],
@@ -78,6 +79,7 @@ def test_points_on_one_line_are_bad(points):
     setup = setup_of(*points)
     assert not setup.valid
     assert "one line" in setup.reason
+    assert setup.title == "POINTS ON ONE LINE"
 
 
 @pytest.mark.parametrize("off, valid", [(0.6, False), (0.4, True)])
@@ -87,6 +89,7 @@ def test_trapezoid_must_be_flat(off, valid):
     assert setup.valid == valid
     if not valid:
         assert "off the plane" in setup.reason
+        assert setup.title == "TRAPEZOID NOT FLAT"
 
 
 def test_crossed_trapezoid_is_bad():
@@ -94,6 +97,7 @@ def test_crossed_trapezoid_is_bad():
     setup = setup_of((10, 0, 0), (0, 0, 0), B, C)
     assert not setup.valid
     assert "cross" in setup.reason
+    assert setup.title == "TRAPEZOID SIDES CROSS"
 
 
 def test_trapezoid_with_one_top_point_is_the_triangle():
@@ -114,6 +118,7 @@ def test_size_limit(base, valid):
         assert setup.cols == MAX_SIDE
     else:
         assert str(MAX_SIDE) in setup.reason
+        assert setup.title == "IMAGE TOO LARGE"
 
 
 def test_far_points_are_bad_without_numpy_warnings():
@@ -122,6 +127,7 @@ def test_far_points_are_bad_without_numpy_warnings():
         warnings.simplefilter("error")
         setup = setup_of((1e300, 0, 0), (-1e300, 5, 0), (1e300, 5, 7))
     assert not setup.valid
+    assert setup.title == "IMAGE TOO LARGE"
 
 
 @pytest.mark.parametrize("difference, warned", [(0.6, True), (0.4, False)])
@@ -143,9 +149,9 @@ def test_tilted_top_side_gives_a_warning(tilt, warned):
 
 def test_plane_that_could_not_be_read_stays_bad():
     """FR-24"""
-    setup = plane_setup(Plane(line=4, frame=3, points=None, reason="field 2 is empty"))
+    setup = plane_setup(Plane(line=4, frame=3, points=None, reason="field 2 is empty", title="NOT A NUMBER"))
     assert not setup.valid
-    assert setup.reason == "field 2 is empty"
+    assert (setup.reason, setup.title) == ("field 2 is empty", "NOT A NUMBER")
 
 
 def test_row_spans_agree_with_the_reference():

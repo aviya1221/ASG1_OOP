@@ -78,6 +78,7 @@ def test_wrong_number_of_points_is_a_bad_plane(write_csv, count):
     (plane,) = read_planes(write_csv(",".join([count] + ["1"] * 9)))
     assert plane.points is None
     assert f"the number of points is {count}," in plane.reason
+    assert plane.title == "WRONG NUMBER OF POINTS"
 
 
 @pytest.mark.parametrize("points, numbers", [(3, 8), (3, 12), (4, 9), (4, 11), (4, 13)])
@@ -86,6 +87,7 @@ def test_wrong_count_of_numbers_is_a_bad_plane(write_csv, points, numbers):
     (plane,) = read_planes(write_csv(",".join([str(points)] + ["1"] * numbers + [""] * 3)))
     assert plane.points is None
     assert f"{numbers} numbers for {points} points instead of {3 * points}" in plane.reason
+    assert plane.title == "WRONG NUMBER OF VALUES"
 
 
 @pytest.mark.parametrize("field, words", [("abc", "not a number"), ("", "empty"),
@@ -97,6 +99,7 @@ def test_fields_that_are_not_numbers_are_bad_planes(write_csv, field, words):
     assert plane.points is None
     assert words in plane.reason
     assert "field 6" in plane.reason
+    assert plane.title == "NOT A NUMBER"
 
 
 def test_line_of_commas_is_a_bad_plane(write_csv):
@@ -104,6 +107,7 @@ def test_line_of_commas_is_a_bad_plane(write_csv):
     _, plane = read_planes(write_csv(TRIANGLE, ",,,,"))
     assert plane.points is None
     assert "field 1 is empty" in plane.reason
+    assert plane.title == "NOT A NUMBER"
 
 
 def test_bad_line_among_good_ones_keeps_numbering(write_csv):
