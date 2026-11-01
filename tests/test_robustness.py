@@ -7,10 +7,11 @@ import pytest
 
 import Ex0
 from conftest import DATA, index_volume, video_frames, video_info
-from plane_projection.frames import ERROR_GRAY, GrayMap, error_frame, frame_size, place
+from plane_projection.frames import ERROR_GRAY
 from plane_projection.geometry import plane_setup
 from plane_projection.planes import Plane, read_planes
 from plane_projection.projector import Projector
+from plane_projection.render import Renderer, safe_setup
 from plane_projection.volume import Volume, read_volume
 
 
@@ -132,19 +133,12 @@ def test_file_without_a_good_plane(tmp_path, write_nrrd, write_csv, capsys):
 def test_same_input_gives_the_same_frames(volume_name, planes_name):
     """NFR-9: the images and the frames before encoding are identical on a second run"""
     volume = read_volume(DATA / volume_name)
-    setups = [plane_setup(plane) for plane in read_planes((DATA / volume_name).with_name(planes_name))]
-    width, height = frame_size(setups)
-    gray = GrayMap(volume.lo, volume.hi, volume.dtype)
+    setups = [safe_setup(plane) for plane in read_planes((DATA / volume_name).with_name(planes_name))]
 
     def frames():
-        with Projector(volume) as projector:
-            for setup in setups:
-                frame = np.zeros((height, width), np.uint8)
-                if setup.valid:
-                    image = projector.project(setup)
-                    yield image.tobytes(), place(gray(image), frame).tobytes()
-                else:
-                    yield None, error_frame(setup, frame).tobytes()
+        with Renderer(volume, setups) as renderer:
+            for drawn in map(renderer.draw, setups):
+                yield None if drawn.image is None else drawn.image.tobytes(), drawn.frame.tobytes()
 
     first, second = list(frames()), list(frames())
     for number, (one, again) in enumerate(zip(first, second), start=1):

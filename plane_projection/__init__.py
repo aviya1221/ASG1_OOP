@@ -6,6 +6,7 @@ The modules follow the steps of the pipeline (docs/ALGORITHM.md, section 9):
     planes      read the planes file
     geometry    set up and check each plane
     projector   sample the volume on a plane
-    frames      frame size, gray levels and placement
+    frames      frame size, gray levels, placement and error frames
+    render      draw the frame of each plane: the loop of every run
     video       write the MP4 video
 """

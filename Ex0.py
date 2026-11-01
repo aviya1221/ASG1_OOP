@@ -12,13 +12,10 @@ import sys
 from pathlib import Path
 from time import perf_counter
 
-import numpy as np
-
 from plane_projection.errors import InputError
-from plane_projection.frames import GrayMap, error_frame, frame_size, place
-from plane_projection.geometry import PlaneSetup, plane_setup
+from plane_projection.geometry import PlaneSetup
 from plane_projection.planes import Plane, read_planes
-from plane_projection.projector import Projector
+from plane_projection.render import Renderer, safe_setup
 from plane_projection.video import VideoWriter
 from plane_projection.volume import read_volume
 
@@ -63,9 +60,6 @@ def parse_args(argv=None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-INTERNAL = "INTERNAL ERROR"                 # the short cause of an unexpected error (NFR-8)
-
-
 class Run:
     """One run of the demo: the warnings it printed, the error frames, and its timers (FR-35, NFR-3)."""
 
@@ -83,10 +77,7 @@ class Run:
 
     def set_up(self, plane: Plane) -> PlaneSetup:
         start = perf_counter()
-        try:
-            setup = plane_setup(plane)
-        except Exception as error:          # NFR-8: no plane line can stop the program
-            setup = PlaneSetup(plane, reason=f"internal error in the setup ({error})", title=INTERNAL)
+        setup = safe_setup(plane)
         self.projection += perf_counter() - start
         for doubt in setup.warnings:
             self.say(plane, f"{doubt}; drawn as given")
@@ -94,19 +85,6 @@ class Run:
         if not setup.valid:
             self.fail(setup)
         return setup
-
-    def project(self, projector: Projector, setup: PlaneSetup) -> np.ndarray | None:
-        """The image of the plane, or None when the plane gives an error frame."""
-        if not setup.valid:
-            return None
-        start = perf_counter()
-        try:
-            return projector.project(setup)
-        except Exception as error:          # NFR-8
-            self.fail(PlaneSetup(setup.plane, reason=f"internal error while projecting ({error})", title=INTERNAL))
-            return None
-        finally:
-            self.projection += perf_counter() - start
 
 
 def main(argv=None) -> int:
@@ -131,22 +109,20 @@ def run(args: argparse.Namespace) -> None:
     state.load = perf_counter() - start
 
     setups = [state.set_up(plane) for plane in planes]
-    width, height = frame_size(setups)
-    gray = GrayMap(volume.lo, volume.hi, volume.dtype)
-    frame = np.zeros((height, width), dtype=np.uint8)
 
-    start, projection_before = perf_counter(), state.projection
+    start = perf_counter()
     try:
-        with Projector(volume) as projector, VideoWriter(video_path, width, height, args.fps) as video:
+        with Renderer(volume, setups) as renderer, \
+                VideoWriter(video_path, renderer.width, renderer.height, args.fps) as video:
             for setup in setups:
-                image = state.project(projector, setup)
-                if image is None:
-                    video.write(error_frame(state.errors[setup.plane.frame], frame))
-                else:
-                    video.write(place(gray(image), frame))
+                drawn = renderer.draw(setup)
+                if drawn.setup is not setup:        # the projection failed (FR-24c)
+                    state.fail(drawn.setup)
+                video.write(drawn.frame)
     except (OSError, RuntimeError) as error:
         raise InputError(video_path, f"the video could not be written ({error})") from None
-    state.video = perf_counter() - start - (state.projection - projection_before)
+    state.projection += renderer.projection
+    state.video = perf_counter() - start - renderer.projection
 
     report(args, volume, len(setups), state)
 
