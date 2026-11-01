@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from conftest import DATA
+from conftest import DATA, assert_same
 from plane_projection.errors import InputError
 from plane_projection.planes import read_planes
 
@@ -16,9 +16,7 @@ def test_triangle_and_trapezoid_points_in_order(write_csv):
     """FR-10, FR-12: the trapezoid line a', b, a'', c is kept as a', a'', b, c"""
     triangle, trapezoid = read_planes(write_csv(TRIANGLE, TRAPEZOID))
     assert len(triangle.points) == 3 and len(trapezoid.points) == 4
-    assert np.array_equal(triangle.points[0], [127.5, 0, 65])
-    assert np.array_equal(triangle.points[1], [0, 255, 65])
-    assert np.array_equal(triangle.points[2], [255, 255, 65])
+    assert [list(point) for point in triangle.points] == [[127.5, 0, 65], [0, 255, 65], [255, 255, 65]]
     assert [list(point) for point in trapezoid.points] == [[60, 40, 20], [190, 40, 20], [20, 200, 110], [230, 200, 110]]
     assert not triangle.is_trapezoid and trapezoid.is_trapezoid
 
@@ -26,13 +24,13 @@ def test_triangle_and_trapezoid_points_in_order(write_csv):
 def test_triangle_without_the_empty_fields(write_csv):
     """FR-10, FR-12: the empty fields of the fourth point may be left out"""
     short, padded = read_planes(write_csv(TRIANGLE.rstrip(","), TRIANGLE))
-    assert np.array_equal(np.concatenate(short.points), np.concatenate(padded.points))
+    assert_same(np.concatenate(short.points), np.concatenate(padded.points), "coordinates")
 
 
 def test_number_formats_and_spaces(write_csv):
     """FR-10"""
     (plane,) = read_planes(write_csv("  3 , 1 , 2.5,-3e2,\t4,5 ,6,7,8,  9  , , ,"))
-    assert np.array_equal(np.concatenate(plane.points), [1, 2.5, -300, 4, 5, 6, 7, 8, 9])
+    assert_same(np.concatenate(plane.points), [1, 2.5, -300, 4, 5, 6, 7, 8, 9], "coordinates")
 
 
 def test_blank_lines_and_comments_are_skipped_but_counted(write_csv):

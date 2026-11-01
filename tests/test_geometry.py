@@ -136,7 +136,7 @@ def test_unequal_legs_give_a_warning(difference, warned):
     d = math.sqrt((10 + difference) ** 2 - 100)
     setup = setup_of((0, 0, 0), (0, 10, 0), (d, 10, 0))
     assert setup.valid
-    assert any("legs" in w for w in setup.warnings) == warned
+    assert any("legs" in w for w in setup.warnings) == warned, setup.warnings
 
 
 @pytest.mark.parametrize("tilt, warned", [(0.6, True), (0.4, False)])
@@ -144,7 +144,7 @@ def test_tilted_top_side_gives_a_warning(tilt, warned):
     """FR-25"""
     setup = setup_of((0, 0, 0), (10, tilt, 0), B, C)
     assert setup.valid
-    assert any("parallel" in w for w in setup.warnings) == warned
+    assert any("parallel" in w for w in setup.warnings) == warned, setup.warnings
 
 
 def test_plane_that_could_not_be_read_stays_bad():

@@ -122,7 +122,9 @@ def test_file_without_a_good_plane(tmp_path, write_nrrd, write_csv, capsys):
     capsys.readouterr()
     info = video_info(video)
     assert (info["width"], info["height"]) == (64, 64)
-    assert all(abs(np.median(frame) - ERROR_GRAY) <= 4 and frame.max() > 200 for frame in video_frames(video))
+    for number, frame in enumerate(video_frames(video), start=1):
+        assert abs(np.median(frame) - ERROR_GRAY) <= 4 and frame.max() > 200, (
+            f"frame {number} is not an error frame: median {np.median(frame)}, brightest {frame.max()}")
 
 
 @pytest.mark.parametrize("volume_name, planes_name", [("MRHead_1.nrrd", "head.csv"),
@@ -144,4 +146,6 @@ def test_same_input_gives_the_same_frames(volume_name, planes_name):
                 else:
                     yield None, error_frame(setup, frame).tobytes()
 
-    assert list(frames()) == list(frames())
+    first, second = list(frames()), list(frames())
+    for number, (one, again) in enumerate(zip(first, second), start=1):
+        assert one == again, f"frame {number} of {planes_name} differs on the second run"

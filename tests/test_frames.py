@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 
+from conftest import assert_same
 from plane_projection import font
 from plane_projection.frames import (EMPTY_SIZE, ERROR_BORDER, ERROR_GRAY, ERROR_TEXT, GrayMap, error_frame,
                                      frame_size, place)
@@ -38,10 +39,10 @@ def test_image_is_placed_in_the_middle():
     """FR-31"""
     frame = np.full((6, 8), 99, dtype=np.uint8)
     image = np.arange(1, 16, dtype=np.uint8).reshape(3, 5)
+    expected = np.zeros((6, 8), dtype=np.uint8)
+    expected[1:4, 1:6] = image
     place(image, frame)
-    assert np.array_equal(frame[1:4, 1:6], image)
-    frame[1:4, 1:6] = 0
-    assert not frame.any()
+    assert_same(frame, expected)
 
 
 def read_text(frame: np.ndarray) -> list[tuple[str, int]]:
@@ -83,8 +84,10 @@ def test_error_frame_is_gray_in_a_border():
     """FR-24b: no pixel is black"""
     frame = error_frame(BAD, np.zeros((244, 282), dtype=np.uint8))
     assert set(np.unique(frame)) == {ERROR_GRAY, ERROR_BORDER, ERROR_TEXT}
-    assert (frame[0] == ERROR_BORDER).all() and (frame[-1] == ERROR_BORDER).all()
-    assert (frame[:, 0] == ERROR_BORDER).all() and (frame[:, -1] == ERROR_BORDER).all()
+    assert_same(frame[0], ERROR_BORDER, "pixels of the top row")
+    assert_same(frame[-1], ERROR_BORDER, "pixels of the bottom row")
+    assert_same(frame[:, 0], ERROR_BORDER, "pixels of the left column")
+    assert_same(frame[:, -1], ERROR_BORDER, "pixels of the right column")
 
 
 def test_error_frame_covers_an_image_drawn_before():
@@ -123,7 +126,8 @@ def test_every_short_cause_can_be_drawn(title):
 
 
 def test_glyphs_are_5_by_7():
-    assert all(bitmap.shape == (font.HEIGHT, font.WIDTH) for bitmap in font.BITMAPS.values())
+    for char, bitmap in font.BITMAPS.items():
+        assert bitmap.shape == (font.HEIGHT, font.WIDTH), f"the glyph {char!r}"
     assert font.render("AB", 3).shape == (21, 33)
 
 
