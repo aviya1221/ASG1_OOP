@@ -37,20 +37,18 @@ Starting from the image gives every pixel exactly one value, and the work grows 
 ```
 volume = read_volume(nrrd_path)                          # once
 planes = read_planes(csv_path)                           # once
-setups = [plane_setup(plane) for plane in planes]        # geometry and checks, per plane
-W, H   = frame_size(setups)
-gray   = GrayMap(volume.lo, volume.hi)
-projector = Projector(volume, threads=4)
+setups = [safe_setup(plane) for plane in planes]         # geometry and checks, per plane
+renderer = Renderer(volume, setups)                      # frame size W × H, gray map, projector, one frame
 
-with VideoWriter(mp4_path, W, H, fps) as video:
+with VideoWriter(mp4_path, renderer.width, renderer.height, fps) as video:
     for setup in setups:
-        if setup.valid:
-            video.write(place(gray(projector.project(setup)), W, H))
-        else:
-            video.write(error_frame(setup, W, H))                # gray, with ERROR and the short cause
+        video.write(renderer.draw(setup).frame)
 
 print_report()                                           # the summary, then the list of error frames
 ```
+
+`Renderer.draw` makes the frame of one plane: `place(gray(projector.project(setup)))` for a valid plane,
+and `error_frame(setup)`, gray with `ERROR` and the short cause, for a bad one. The tests draw frames through the same method.
 
 All the planes are read and checked before the first one is projected, for two reasons:
 the frame size depends on the largest valid plane (FR-30), and every fatal error must be found before the video is started (FR-4).
@@ -74,11 +72,13 @@ the frame size depends on the largest valid plane (FR-30), and every fatal error
 |---|---|---|
 | `Volume` | `data`: the 3D array `M` in the type of the file; `flat`: a 1D view of the same memory; `shape`; `lo` and `hi`, the smallest and largest values | `read_volume` |
 | `Plane` | the line number, the frame number, and either the 3 or 4 points or the reason the line could not be read, with its short cause, `title` | `read_planes` |
+| `Triangle`, `Trapezoid` | the points of the shape, its corners in order, and the checks that belong to it alone ([4.1](#41-names)) | `plane_setup`, by the number of points |
 | `PlaneSetup` | `valid`, the reason and the short cause `title` when it is not, the warnings, and for a valid plane: `corner`, `right`, `down`, `rows`, `cols`, and the column span `c0[r]`, `c1[r]` of the shape on every row | `plane_setup` |
 | `GrayMap` | `lo`, `hi`, and a lookup table for 8 and 16-bit volumes | `GrayMap(lo, hi)` |
 | `Projector` | the volume and a pool of threads, kept for the whole run | `Projector(volume, threads)` |
+| `Renderer` | the frame size, the gray map, the projector, one frame buffer, and the projection time | `Renderer(volume, setups)` |
 | image `E` | `rows × cols` array of raw values, in the type of the volume | `Projector.project` |
-| frame | `H × W` array of `uint8` gray levels | `place`, or `error_frame` for a bad plane |
+| frame | `H × W` array of `uint8` gray levels | `Renderer.draw`: `place`, or `error_frame` for a bad plane |
 
 All points and vectors are 3-element `float64` arrays. Every image and frame is indexed `[row, column]`.
 
@@ -139,6 +139,10 @@ The steps run in this order, and the first check that fails makes the plane bad,
 |---|---|---|---|
 | triangle `a, b, c` | `a` | `a` | `a, c, b` |
 | trapezoid `a', a'', b, c` | `a'` | `a''` | `a', a'', c, b` |
+
+Each shape is a class, `Triangle` or `Trapezoid`, with the common base class `Shape`. The class holds what differs between them:
+the names in this table, step 3 (a flat trapezoid), step 5 (a convex trapezoid) and the warning of parallel sides in step 8.
+The setup picks the class once, by the number of points, and the steps below call it without asking which shape it is.
 
 ### 4.2 Steps
 
@@ -411,7 +415,7 @@ and the word ERROR sets it apart from an image. Bad planes are rare, and an erro
 | missing planes file, or no plane lines | `read_planes` | fatal error |
 | bad plane | `read_planes` or `plane_setup` | an error frame and a warning, and the frame in the list at the end (FR-24a, FR-35b) |
 | doubtful plane | `plane_setup` | drawn, with a warning (FR-25) |
-| unexpected error while setting up or projecting one plane | around `plane_setup` and `Projector.project` | the same as a bad plane, with the short cause `INTERNAL ERROR` (FR-24c, NFR-8) |
+| unexpected error while setting up or projecting one plane | `safe_setup` and `Renderer.draw` | the same as a bad plane, with the short cause `INTERNAL ERROR` (FR-24c, NFR-8) |
 | unexpected error while writing the video | around the encoder | fatal error, and the unfinished file is deleted |
 
 A fatal error is an `InputError` that carries the file and the cause. The main function catches it,
@@ -446,16 +450,18 @@ Only `Ex0.py` talks to the user; the modules return results or raise `InputError
 | `plane_projection/errors.py` | `InputError` | | FR-4 |
 | `plane_projection/volume.py` | `Volume`, `read_volume` | `errors`, `pynrrd` | FR-5 to FR-9 |
 | `plane_projection/planes.py` | `Plane`, `read_planes` | `errors` | FR-10 to FR-14 |
-| `plane_projection/geometry.py` | `PlaneSetup`, `plane_setup` | `planes` | FR-15 to FR-18, FR-21, FR-23 to FR-27 |
+| `plane_projection/geometry.py` | `PlaneSetup`, `plane_setup`, `Shape`, `Triangle`, `Trapezoid` | `planes` | FR-15 to FR-18, FR-21, FR-23 to FR-27 |
 | `plane_projection/projector.py` | `Projector` | `volume`, `geometry` | FR-19, FR-20, NFR-1 to NFR-3, NFR-12 |
 | `plane_projection/frames.py` | `frame_size`, `GrayMap`, `place`, `error_frame` | `geometry`, `font` | FR-24b, FR-29 to FR-32 |
+| `plane_projection/render.py` | `safe_setup`, `Renderer`: the frame of each plane, an image or an error frame | `geometry`, `projector`, `frames` | FR-24, FR-30 to FR-32, NFR-8 |
 | `plane_projection/font.py` | the pixel font of the error frames: `render`, `text_width` | | FR-24b |
 | `plane_projection/video.py` | `VideoWriter` | `errors`, `imageio-ffmpeg` | FR-28, FR-33, FR-34, NFR-6 |
 | `tests/` | one test file for each module | | NFR-14 |
 | `tools/benchmark.py` | the benchmark of NFR-4 | `geometry`, `projector` | NFR-1 to NFR-4 |
 
 `Volume`, `Plane` and `PlaneSetup` are frozen data classes: once made, they do not change.
-`Projector` and `VideoWriter` are classes because they hold something for the whole run, a pool of threads and an open encoder.
+`Projector`, `Renderer` and `VideoWriter` are classes because they hold something for the whole run: a pool of threads, a frame buffer and an open encoder.
+`Triangle` and `Trapezoid` are subclasses of `Shape`, so the setup works on either one through the same methods.
 `VideoWriter` is a context manager, so the file is closed, or deleted after a fatal error, whatever happens.
 
 The projection depends only on `Volume` and `PlaneSetup`, never on files, so the tests can build a small volume in memory,

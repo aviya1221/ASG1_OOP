@@ -71,6 +71,7 @@ tests/
     test_geometry.py
     test_projector.py
     test_frames.py
+    test_render.py
     test_video.py
     test_cli.py           Ex0.main() on temporary files
     test_demo.py          Ex0.py as a separate process on the data set
@@ -200,6 +201,7 @@ Each table lists the cases of one module, with the requirements they check. Smal
 | Case | Expected | Requirements |
 |---|---|---|
 | the worked example | `right = (1, 0, 0)`, `down = (0, 0.6, −0.8)`, `corner = (1, 0, 8)`, 9 columns, 11 rows, and the row spans of ALGORITHM 5.3 | FR-15 to FR-17 |
+| `Triangle` and `Trapezoid` | the class is chosen by the number of points; each lists its corners in order, and only the trapezoid can be off the plane | FR-12, FR-24 |
 | the same triangle with `b` and `c` swapped | `right` reversed, so the image is mirrored | FR-21 |
 | a rectangle written as a trapezoid | every row spans all the columns | FR-16, FR-18 |
 | the apex | in row 0, at the column of its own `s` | FR-21 |
@@ -252,7 +254,17 @@ All the tests in this table, except the slow ones, build their volume in memory 
 | all values equal | values above 0 are white, 0 is black | FR-32 |
 | any input type | the frame is `uint8` | FR-32 |
 
-### 4.6 `video.py`: writing the video
+### 4.6 `render.py`: from planes to frames
+
+| Case | Expected | Requirements |
+|---|---|---|
+| the cake triangle and a bad plane | the image of the worked example in the middle of a 10 × 12 frame, then the error frame of the bad plane | FR-24b, FR-30 to FR-32 |
+| several planes | every frame is drawn into the same buffer | NFR-6 |
+| a projection that raises an error | an error frame with the short cause `INTERNAL ERROR` | FR-24c, NFR-8 |
+| a setup that raises an error | a bad plane with the short cause `INTERNAL ERROR` | FR-24c, NFR-8 |
+| one plane drawn | its projection time is counted | NFR-3 |
+
+### 4.7 `video.py`: writing the video
 
 Each test writes a short video into a temporary folder and reads it back with `imageio-ffmpeg`.
 
@@ -425,7 +437,7 @@ and its result goes into the experiment report. A quick test in the suite runs i
 |---|---|---|
 | 1000 random lines from a fixed seed, the first of them a good plane so that it is not taken for a header: good planes, wrong numbers of points, wrong counts, words, empty fields, `±1e300`, `nan`, `inf`, repeated points, points on one line, lines of commas only, very long lines | exit code 0, 1000 frames, no traceback | NFR-8, FR-23 |
 | the same file with no good plane at all | exit code 0 and 64 × 64 error frames | FR-30, NFR-8 |
-| the demo planes projected twice | the images `E`, and the frames before encoding, identical byte for byte | NFR-9 |
+| the demo planes drawn twice by `Renderer.draw`, the loop of the program | the images `E`, and the frames before encoding, identical byte for byte | NFR-9 |
 
 ---
 
@@ -467,7 +479,7 @@ The data set is part of the repository, so the slow tests have their files. A ba
 | FR-15 to FR-18 | [4.3](#43-geometrypy-plane-setup-and-checks), [3.1](#31-results-worked-out-by-hand), [3.2](#32-a-slow-reference) |
 | FR-19 to FR-21 | [4.4](#44-projectorpy-the-projection), [3.2](#32-a-slow-reference) to [3.6](#36-label-volumes) |
 | FR-23 to FR-27 | [4.2](#42-planespy-reading-the-planes), [4.3](#43-geometrypy-plane-setup-and-checks), [4.5](#45-framespy-frame-size-gray-levels-placement-error-frames), [5](#5-command-line-tests), [6.2](#62-automatic-checks) |
-| FR-28 to FR-34 | [4.5](#45-framespy-frame-size-gray-levels-placement-error-frames), [4.6](#46-videopy-writing-the-video), [5](#5-command-line-tests), [6](#6-the-demo) |
+| FR-28 to FR-34 | [4.5](#45-framespy-frame-size-gray-levels-placement-error-frames), [4.7](#47-videopy-writing-the-video), [5](#5-command-line-tests), [6](#6-the-demo) |
 | FR-35, FR-36 | [5](#5-command-line-tests), [6.2](#62-automatic-checks) |
 | NFR-1 to NFR-4 | [7.1](#71-speed) |
 | NFR-6 | [7.2](#72-memory) |

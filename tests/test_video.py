@@ -1,4 +1,4 @@
-"""Writing the video (docs/TESTING.md, section 4.6)."""
+"""Writing the video (docs/TESTING.md, section 4.7)."""
 
 import numpy as np
 import pytest
