@@ -3,11 +3,11 @@
 import numpy as np
 
 from conftest import CAKE_IMAGE, CAKE_TRIANGLE, assert_same, cake
-from plane_projection import render
-from plane_projection.frames import GrayMap, error_frame, place
 from plane_projection.planes import Plane
 from plane_projection.projector import Projector
-from plane_projection.render import INTERNAL, Renderer, safe_setup
+from plane_projection.video import render
+from plane_projection.video.frames import GrayMap, error_frame, place
+from plane_projection.video.render import INTERNAL, Renderer, safe_setup
 from plane_projection.volume import Volume
 
 GOOD = Plane(line=2, frame=1, points=tuple(np.array(p, dtype=np.float64) for p in CAKE_TRIANGLE))

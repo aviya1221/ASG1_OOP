@@ -7,11 +7,11 @@ import pytest
 
 import Ex0
 from conftest import DATA, index_volume, video_frames, video_info
-from plane_projection.frames import ERROR_GRAY
 from plane_projection.geometry import plane_setup
 from plane_projection.planes import Plane, read_planes
 from plane_projection.projector import Projector
-from plane_projection.render import Renderer, safe_setup
+from plane_projection.video.frames import ERROR_GRAY
+from plane_projection.video.render import Renderer, safe_setup
 from plane_projection.volume import Volume, read_volume
 
 

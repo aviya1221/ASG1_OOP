@@ -15,8 +15,8 @@ from time import perf_counter
 from plane_projection.errors import InputError
 from plane_projection.geometry import PlaneSetup
 from plane_projection.planes import Plane, read_planes
-from plane_projection.render import Renderer, safe_setup
-from plane_projection.video import VideoWriter
+from plane_projection.video.render import Renderer, safe_setup
+from plane_projection.video.writer import VideoWriter
 from plane_projection.volume import read_volume
 
 PLANES_FORMAT = """\

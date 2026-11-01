@@ -8,7 +8,7 @@ from time import perf_counter
 
 import numpy as np
 
-from plane_projection.frames import GrayMap, error_frame, frame_size, place
+from plane_projection.video.frames import GrayMap, error_frame, frame_size, place
 from plane_projection.geometry import PlaneSetup, plane_setup
 from plane_projection.planes import Plane
 from plane_projection.projector import THREADS, Projector

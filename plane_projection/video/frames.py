@@ -5,7 +5,7 @@ from collections.abc import Iterable
 
 import numpy as np
 
-from plane_projection import font
+from plane_projection.video import font
 from plane_projection.geometry import PlaneSetup
 
 EMPTY_SIZE = (64, 64)                       # width and height of the frames when no plane is valid

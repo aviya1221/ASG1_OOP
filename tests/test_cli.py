@@ -7,9 +7,9 @@ import pytest
 
 import Ex0
 from conftest import index_volume, video_frames, video_info
-from plane_projection.frames import ERROR_GRAY
 from plane_projection.projector import Projector
-from plane_projection.video import VideoWriter
+from plane_projection.video.frames import ERROR_GRAY
+from plane_projection.video.writer import VideoWriter
 
 GOOD = [
     "3, 9.5,0,10, 0,19,10, 19,19,10,,,",    # a triangle of 20 x 20 pixels

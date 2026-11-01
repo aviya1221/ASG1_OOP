@@ -4,11 +4,11 @@ import numpy as np
 import pytest
 
 from conftest import assert_same
-from plane_projection import font
-from plane_projection.frames import (EMPTY_SIZE, ERROR_BORDER, ERROR_GRAY, ERROR_TEXT, GrayMap, error_frame,
-                                     frame_size, place)
 from plane_projection.geometry import PlaneSetup
 from plane_projection.planes import Plane
+from plane_projection.video import font
+from plane_projection.video.frames import (EMPTY_SIZE, ERROR_BORDER, ERROR_GRAY, ERROR_TEXT, GrayMap, error_frame,
+                                           frame_size, place)
 
 PLANE = Plane(line=1, frame=1, points=None)
 BAD = PlaneSetup(Plane(line=35, frame=9, points=None), reason="9 numbers for 4 points instead of 12",

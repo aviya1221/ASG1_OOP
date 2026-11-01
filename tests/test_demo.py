@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 from conftest import DATA, PROJECT_ROOT, video_frames, video_info
-from plane_projection.frames import ERROR_GRAY, GrayMap
+from plane_projection.video.frames import ERROR_GRAY, GrayMap
 from plane_projection.volume import read_volume
 
 pytestmark = pytest.mark.slow

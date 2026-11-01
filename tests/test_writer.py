@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from conftest import video_frames, video_info
-from plane_projection.video import VideoWriter
+from plane_projection.video.writer import VideoWriter
 
 
 def pattern(height, width, shift=0):
