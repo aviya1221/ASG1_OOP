@@ -44,10 +44,12 @@ projector = Projector(volume, threads=4)
 
 with VideoWriter(mp4_path, W, H, fps) as video:
     for setup in setups:
-        E = projector.project(setup) if setup.valid else black image
-        video.write(place(gray(E), W, H))
+        if setup.valid:
+            video.write(place(gray(projector.project(setup)), W, H))
+        else:
+            video.write(error_frame(setup, W, H))                # gray, with ERROR and the short cause
 
-print_report()
+print_report()                                           # the summary, then the list of error frames
 ```
 
 All the planes are read and checked before the first one is projected, for two reasons:
@@ -61,7 +63,7 @@ the frame size depends on the largest valid plane (FR-30), and every fatal error
 | read the planes | [3.2](#32-planes) | FR-10 to FR-14 |
 | set up and check each plane | [4](#4-plane-setup-and-checks) | FR-15 to FR-18, FR-23 to FR-27 |
 | project | [5](#5-projection) | FR-19 to FR-21, NFR-1 to NFR-3 |
-| gray levels, placement, video | [7](#7-frames-and-video) | FR-28 to FR-34 |
+| gray levels, placement, error frames, video | [7](#7-frames-and-video) | FR-24b, FR-28 to FR-34 |
 | errors and report | [8](#8-errors-and-the-run-report) | FR-1 to FR-4, FR-35, FR-36 |
 
 ---
@@ -71,12 +73,12 @@ the frame size depends on the largest valid plane (FR-30), and every fatal error
 | Name | Holds | Made by |
 |---|---|---|
 | `Volume` | `data`: the 3D array `M` in the type of the file; `flat`: a 1D view of the same memory; `shape`; `lo` and `hi`, the smallest and largest values | `read_volume` |
-| `Plane` | the line number, the frame number, and either the 3 or 4 points or the reason the line could not be read | `read_planes` |
-| `PlaneSetup` | `valid`, the reason when it is not, the warnings, and for a valid plane: `corner`, `right`, `down`, `rows`, `cols`, and the column span `c0[r]`, `c1[r]` of the shape on every row | `plane_setup` |
+| `Plane` | the line number, the frame number, and either the 3 or 4 points or the reason the line could not be read, with its short cause, `title` | `read_planes` |
+| `PlaneSetup` | `valid`, the reason and the short cause `title` when it is not, the warnings, and for a valid plane: `corner`, `right`, `down`, `rows`, `cols`, and the column span `c0[r]`, `c1[r]` of the shape on every row | `plane_setup` |
 | `GrayMap` | `lo`, `hi`, and a lookup table for 8 and 16-bit volumes | `GrayMap(lo, hi)` |
 | `Projector` | the volume and a pool of threads, kept for the whole run | `Projector(volume, threads)` |
 | image `E` | `rows × cols` array of raw values, in the type of the volume | `Projector.project` |
-| frame | `H × W` array of `uint8` gray levels | `place` |
+| frame | `H × W` array of `uint8` gray levels | `place`, or `error_frame` for a bad plane |
 
 All points and vectors are 3-element `float64` arrays. Every image and frame is indexed `[row, column]`.
 
@@ -121,7 +123,7 @@ A field is a number if Python's `float()` accepts it, so `12`, `12.5` and `-3e2`
 The empty fields at the end are the fourth point of a triangle, which the lecturer's example leaves empty (FR-12).
 A trapezoid line lists its legs one after the other, `a', b, a'', c`; the reading swaps the middle two points,
 so the rest of the program always sees `a', a'', b, c`, the order of the names in [4.1](#41-names).
-A bad line is not an error of the whole file: it becomes a `Plane` that carries its reason, and later a black frame (FR-23).
+A bad line is not an error of the whole file: it becomes a `Plane` that carries its reason, and later an error frame (FR-23, FR-24).
 If the file has no plane lines at all, the program stops with a fatal error (FR-14).
 
 ---
@@ -358,7 +360,7 @@ Negative values were already set to 0 when the volume was read ([3.1](#31-volume
 ### 7.3 Placement
 
 One frame buffer of `H × W` gray levels is kept for the whole run. For each plane it is set to 0, and the image is copied in at
-column `(W − cols) // 2` and row `(H − rows) // 2` (FR-31). A bad plane leaves the buffer all black.
+column `(W − cols) // 2` and row `(H − rows) // 2` (FR-31). For a bad plane, `error_frame` draws over the whole buffer instead ([7.5](#75-error-frames)).
 
 ### 7.4 Encoding
 
@@ -376,6 +378,25 @@ Frames go to the encoder one at a time, as they are made, so the video is never 
 The encoder starts only after all the checks have passed, so a fatal error never leaves a video behind (FR-3).
 OpenCV was considered and rejected: its `pip` package does not write H.264 without extra files.
 
+### 7.5 Error frames
+
+`error_frame` draws the frame of a bad plane over the whole buffer (FR-24b). It fills the buffer with gray level 64,
+draws a border of level 160, `max(1, min(W, H) // 64)` pixels wide, and writes four parts in white, 255:
+`ERROR`, `FRAME n`, `LINE m`, and the short cause of the plane, its `title`.
+
+- **Font.** `plane_projection/font.py` draws capital letters, digits and the space, each 5 × 7 pixels, written in the code as rows of `#` and `.`.
+  A character takes 6 columns, with the blank one after it, and at scale `s` each pixel of the font becomes an `s × s` square.
+  The font is part of the program, so an error frame needs no font file or library, and is the same on every machine (NFR-9).
+- **Layout.** Inside a margin of `border + max(1, min(W, H) // 32)` pixels, the scale `s` of the small lines goes down from 8 to 1,
+  and for each `s` the scale of ERROR goes down from `2s` to `s + 1`, or to 1 when `s` is 1. `FRAME n` and `LINE m` stay whole,
+  and the cause is wrapped at its words to the width. Lines are `10s` rows apart. The first combination whose lines all fit is drawn,
+  as a block in the middle of the frame, with each line centered.
+- **Small frames.** When nothing fits at scale 1, the cause is left out whole, and then lines from the bottom, so a frame never shows a cut word
+  or a cause without its end; the warning and the list at the end still give it in full. A frame too small for the word ERROR shows its two diagonals, an X.
+
+The gray field and its border set an error frame apart from the black frame of a plane that misses the volume (FR-26),
+and the word ERROR sets it apart from an image. Bad planes are rare, and an error frame takes about as long to draw as an image to place.
+
 ---
 
 ## 8. Errors and the run report
@@ -388,14 +409,15 @@ OpenCV was considered and rejected: its `pip` package does not write H.264 witho
 | missing output folder | at the start | fatal error |
 | unreadable or invalid volume | `read_volume` | fatal error |
 | missing planes file, or no plane lines | `read_planes` | fatal error |
-| bad plane | `read_planes` or `plane_setup` | a black frame and a warning (FR-24) |
+| bad plane | `read_planes` or `plane_setup` | an error frame and a warning, and the frame in the list at the end (FR-24a, FR-35b) |
 | doubtful plane | `plane_setup` | drawn, with a warning (FR-25) |
-| unexpected error while projecting one plane | around `Projector.project` | a black frame and a warning naming the plane (NFR-8) |
+| unexpected error while setting up or projecting one plane | around `plane_setup` and `Projector.project` | the same as a bad plane, with the short cause `INTERNAL ERROR` (FR-24c, NFR-8) |
 | unexpected error while writing the video | around the encoder | fatal error, and the unfinished file is deleted |
 
 A fatal error is an `InputError` that carries the file and the cause. The main function catches it,
 prints `error: <file>: <cause>` to the standard error without a traceback, and exits with code 1 (FR-4).
 A warning is printed to the standard error as soon as it is found, in the format of FR-27.
+The run keeps the `PlaneSetup` of every bad plane by its frame number, to draw its error frame and to list it at the end.
 
 ### 8.2 Run report
 
@@ -407,7 +429,9 @@ Three timers use `time.perf_counter`:
 | projection | `plane_setup` and `Projector.project` for every plane: the time of NFR-3 |
 | video | gray levels, placement, encoding and closing the file |
 
-At the end the program prints the summary of FR-35 to the standard output, with the projection rate as the number of planes divided by the projection time.
+At the end the program prints the summary of FR-35a to the standard output, with the projection rate as the number of planes divided by the projection time.
+The `frames` line counts the error frames and the warnings of doubtful planes apart, so a bad plane counts once, as an error.
+If there were error frames, the list of FR-35b follows, in the order of the frames, with the columns aligned.
 
 ---
 
@@ -424,7 +448,8 @@ Only `Ex0.py` talks to the user; the modules return results or raise `InputError
 | `plane_projection/planes.py` | `Plane`, `read_planes` | `errors` | FR-10 to FR-14 |
 | `plane_projection/geometry.py` | `PlaneSetup`, `plane_setup` | `planes` | FR-15 to FR-18, FR-21, FR-23 to FR-27 |
 | `plane_projection/projector.py` | `Projector` | `volume`, `geometry` | FR-19, FR-20, NFR-1 to NFR-3, NFR-12 |
-| `plane_projection/frames.py` | `frame_size`, `GrayMap`, `place` | `geometry` | FR-29 to FR-32 |
+| `plane_projection/frames.py` | `frame_size`, `GrayMap`, `place`, `error_frame` | `geometry`, `font` | FR-24b, FR-29 to FR-32 |
+| `plane_projection/font.py` | the pixel font of the error frames: `render`, `text_width` | | FR-24b |
 | `plane_projection/video.py` | `VideoWriter` | `errors`, `imageio-ffmpeg` | FR-28, FR-33, FR-34, NFR-6 |
 | `tests/` | one test file for each module | | NFR-14 |
 | `tools/benchmark.py` | the benchmark of NFR-4 | `geometry`, `projector` | NFR-1 to NFR-4 |

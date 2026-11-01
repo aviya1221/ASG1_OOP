@@ -1,5 +1,5 @@
-"""Frame size, gray levels, placement and error frames (docs/SRS.md, FR-24, FR-30 to FR-32;
-docs/ALGORITHM.md, sections 7.1 to 7.4)."""
+"""Frame size, gray levels, placement and error frames (docs/SRS.md, FR-24b, FR-30 to FR-32;
+docs/ALGORITHM.md, sections 7.1 to 7.3 and 7.5)."""
 
 from collections.abc import Iterable
 

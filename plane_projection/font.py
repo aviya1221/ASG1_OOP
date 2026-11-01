@@ -1,4 +1,4 @@
-"""A pixel font of capital letters and digits, for the text of the error frames (docs/ALGORITHM.md, section 7.4).
+"""A pixel font of capital letters and digits, for the text of the error frames (docs/ALGORITHM.md, section 7.5).
 
 Each character is 5 pixels wide and 7 high, drawn with # in the rows below, and is followed by one blank column.
 The font is part of the program, so an error frame is the same on every machine, with no font file to find.
