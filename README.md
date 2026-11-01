@@ -15,9 +15,6 @@ the cut that 3D Slicer shows along its three axes, but along any plane.
 - **Demo:** `python Ex0.py file.nrrd file.csv file.mp4` cuts the volume by every plane of the CSV file and writes one video frame per plane.
 - **Speed:** on a 500³ volume, at least 30 planes per second, and 100 expected.
 
-The assignment calls the problem not well defined for implementation. The [SRS](docs/SRS.md) settles its open questions,
-and [DEVIATIONS.md](docs/DEVIATIONS.md) lists where the program departs from the assignment's pseudo-code, and why.
-
 ![How a cut is made: a sheet of grid squares placed at an angle inside a layered cake, then laid flat as an image](docs/images/how_a_cut_is_made.png)
 
 *A triangle placed at an angle inside a cake of three layers, and the image that comes out.*
