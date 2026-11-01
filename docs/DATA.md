@@ -20,6 +20,7 @@ The head scan is a signed 16-bit file, but all its values are positive, so it re
 The food scans are simulated MRI scans, made by `data_generation/generate_foods.py`.
 
 All the files are in the `DATA/` folder. `DATA/synthetic/` holds test volumes with an exact answer for every voxel: a cake, a tomato and a die.
+Next to the volumes are the planes files that the demo and the tests run on, listed in [DATA/README.md](../DATA/README.md).
 
 ## What each part checks
 
