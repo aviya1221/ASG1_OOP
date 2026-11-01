@@ -287,6 +287,6 @@ Design sections are in the [algorithm document](ALGORITHM.md), and test files in
 | FR-23 to FR-27, input validation and error frames | UC-01, UC-03 | [4](ALGORITHM.md#4-plane-setup-and-checks), [7.5](ALGORITHM.md#75-error-frames), [8.1](ALGORITHM.md#81-errors) | `test_planes`, `test_geometry`, `test_frames`, `test_cli`, `test_demo` | passed |
 | FR-28 to FR-36, video and run report | UC-01 | [7](ALGORITHM.md#7-frames-and-video), [8.2](ALGORITHM.md#82-run-report) | `test_frames`, `test_video`, `test_cli`, `test_demo` | passed |
 | NFR-1 to NFR-4, speed | UC-02 | [6](ALGORITHM.md#6-speed) | `test_benchmark`, and the benchmark of the [experiment](../experiment/README.md#3-speed) | passed, 317 fps |
-| NFR-6 to NFR-15, other qualities | UC-01, UC-03 | [5.2](ALGORITHM.md#52-sampling), [7.4](ALGORITHM.md#74-encoding), [9](ALGORITHM.md#9-program-structure), [10](ALGORITHM.md#10-complexity) | `test_volume`, `test_robustness`, `test_projector`, `test_cli`, and the continuous integration | passed on Windows, 98% of the lines covered |
+| NFR-6 to NFR-15, other qualities | UC-01, UC-03 | [5.2](ALGORITHM.md#52-sampling), [7.4](ALGORITHM.md#74-encoding), [9](ALGORITHM.md#9-program-structure), [10](ALGORITHM.md#10-complexity) | `test_volume`, `test_robustness`, `test_projector`, `test_cli`, and the continuous integration | passed on Windows, 99% of the lines covered |
 
-Status of 2026-11-01: the 180 everyday tests and the 43 slow tests pass on Windows.
+Status of 2026-11-01: the 186 everyday tests and the 43 slow tests pass on Windows.
