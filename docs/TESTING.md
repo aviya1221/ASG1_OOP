@@ -59,6 +59,8 @@ and on the [algorithm document](ALGORITHM.md), whose [section 9](ALGORITHM.md#9-
 | 3D Slicer | shows the same plane with its Reformat module, for the checks by eye |
 
 `pytest` and `pytest-cov` are only needed for development, so they go in `requirements-dev.txt`, not in `requirements.txt`.
+So do `scipy`, which one test uses to count the parts of an image, and `matplotlib`, which draws the experiment figures;
+the data-set scripts use both. The program itself needs neither.
 
 **Layout.**
 

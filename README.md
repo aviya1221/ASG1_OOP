@@ -42,8 +42,8 @@ Python 3.12 or newer, on Windows, macOS or Linux.
 | `numpy` | the volume and the projection |
 | `pynrrd` | reading NRRD files |
 | `imageio-ffmpeg` | writing the H.264 video; it brings its own FFmpeg |
-| `scipy`, `matplotlib` | the tests, the experiment figures and the scripts that made the data set |
 | `pytest`, `pytest-cov` | the tests, from `requirements-dev.txt` |
+| `scipy`, `matplotlib` | the tests, the experiment figures and the scripts that made the data set, from `requirements-dev.txt` |
 
 ```
 python -m venv .venv

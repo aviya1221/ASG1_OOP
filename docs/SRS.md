@@ -254,7 +254,7 @@ the gray levels, the placement or the encoding. The rate is the number of planes
 
 **NFR-10. Portability.** The program shall run on Python 3.12 or newer, on Windows, macOS and Linux.
 
-**NFR-11. Installation.** Every dependency, the video encoder included, shall install with `pip` from `requirements.txt`.
+**NFR-11. Installation.** Every dependency of the program, the video encoder included, shall install with `pip` from `requirements.txt`.
 
 **NFR-12. Testability.** The projection shall be a function of a volume array and a plane, with no file access.
 
