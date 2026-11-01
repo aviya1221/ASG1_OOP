@@ -14,7 +14,7 @@ grid with origin (0, 0, 0), so the IJK index that 3D Slicer shows is exactly (x,
 The full spec is in docs/DATA.md.
 
 Usage:
-    python tools/generate_datasets.py [--out DIR] [--only {cake,tomato,dice}]
+    python data_generation/generate_datasets.py [--out DIR] [--only {cake,tomato,dice}]
 """
 
 import argparse

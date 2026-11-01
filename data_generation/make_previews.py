@@ -13,7 +13,7 @@ directions at its edges (R/L, A/P, S/I). The brightness is set from each file's 
 3D Slicer does. For every folder there is also an overview image with one row per file.
 
 Usage:
-    python tools/make_previews.py [--data DIR] [--out DIR]
+    python data_generation/make_previews.py [--data DIR] [--out DIR]
 """
 
 import argparse

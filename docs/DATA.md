@@ -17,7 +17,7 @@ the size of the speed test in the assignment (a matrix of 500³ bytes at 100 fra
 All five are gzip-compressed NRRD.
 The assignment allows a voxel to be an unsigned integer of 8, 16 or 32 bits, and the foods use all three sizes.
 The head scan is a signed 16-bit file, but all its values are positive, so it reads like an unsigned one.
-The food scans are simulated MRI scans, made by `tools/generate_foods.py`.
+The food scans are simulated MRI scans, made by `data_generation/generate_foods.py`.
 
 All the files are in the `DATA/` folder. `DATA/synthetic/` holds test volumes with an exact answer for every voxel: a cake, a tomato and a die.
 
@@ -45,7 +45,7 @@ Each cut is zoomed in on the object and has a scale bar.
 To make the images again, for example after changing a volume:
 
 ```
-python tools/make_previews.py
+python data_generation/make_previews.py
 ```
 
 ## What each view shows
@@ -156,16 +156,16 @@ with its tips toward the front. The file is 63 MB.
 - **Tray:** the croissant sits on a tray, which gives no MRI signal, so its bottom is flat.
 
 GitHub accepts a file of this size but warns about files over 50 MB. Instead of sharing the file, it can be made again with
-`python tools/generate_foods.py --only croissant`, which takes about five minutes and about 1.5 GB of memory.
+`python data_generation/generate_foods.py --only croissant`, which takes about five minutes and about 1.5 GB of memory.
 
 ## Making the food scans again
 
 ```
-python tools/generate_foods.py                    # all four foods into DATA/
-python tools/generate_foods.py --only onion       # just one: onion, biscuit_cake, swiss_roll or croissant
+python data_generation/generate_foods.py                    # all four foods into DATA/
+python data_generation/generate_foods.py --only onion       # just one: onion, biscuit_cake, swiss_roll or croissant
 ```
 
-Each food is built from a model of the real object, then imaged the way the head was scanned (`tools/head_style.py`):
+Each food is built from a model of the real object, then imaged the way the head was scanned (`data_generation/head_style.py`):
 blurred by the limited resolution of MRI, shaded, given noise, and stored in the food's value type.
 Surfaces are drawn as the fraction of each voxel that they cover, so slanted surfaces come out smooth, not as staircases.
 The script reads each file back and checks the data, the header, the value type and range, the dark background,
@@ -198,14 +198,14 @@ They are meant for automated tests of the algorithm, where the expected image mu
 | `synthetic/dice.nrrd` | synthetic geometry | `uint32` | 200 × 180 × 160 | 1 × 1 × 1 | game die with pips; values above 65535 |
 
 ```
-python tools/generate_datasets.py                  # all test volumes into DATA/synthetic/
-python tools/generate_datasets.py --only cake      # just one: cake, tomato or dice
+python data_generation/generate_datasets.py                  # all test volumes into DATA/synthetic/
+python data_generation/generate_datasets.py --only cake      # just one: cake, tomato or dice
 ```
 
 The script reads each file back after writing it and checks the data, the header, the set of label values and a list of known voxels.
 For the simulated scans it also checks that the main materials have the expected brightness order.
 Random choices use fixed seeds, so the voxel data is identical on every run; only the creation-time comment that pynrrd puts in the header changes.
-The label values are defined as `IntEnum`s: `Material` in `tools/cake.py`, `Tissue` in `tools/tomato.py`, `Dice` in `tools/generate_datasets.py`.
+The label values are defined as `IntEnum`s: `Material` in `data_generation/cake.py`, `Tissue` in `data_generation/tomato.py`, `Dice` in `data_generation/generate_datasets.py`.
 For a test, project the `.seg.nrrd` file with the same plane as the scan: every pixel of that image has an exact material label.
 
 These files use simpler conventions than the main set:
@@ -218,7 +218,7 @@ These files use simpler conventions than the main set:
 ## `synthetic/cake_3layers.nrrd`
 
 A simulated T1-weighted MRI of a rectangular three-layer cake, made to look like `MRHead_1.nrrd`:
-the same voxel size (1 × 1 × 1.3 mm), intensity scale, noise level (σ = 4.5) and black background. Built by `tools/cake.py`.
+the same voxel size (1 × 1 × 1.3 mm), intensity scale, noise level (σ = 4.5) and black background. Built by `data_generation/cake.py`.
 The cake (170 × 110 mm, about 87 mm tall) sits square to the axes, so the axial view shows the top, the coronal view the long side and the sagittal view the short side.
 
 - From the bottom, on a platter and a cake board: chocolate sponge (z 16 to 38 mm), ganache (38 to 44), vanilla sponge (44 to 66),
@@ -241,7 +241,7 @@ The cake (170 × 110 mm, about 87 mm tall) sits square to the axes, so the axial
 
 ## `synthetic/tomato.nrrd`
 
-A simulated T2-weighted MRI of a tomato, 64 mm wide and 52 mm tall, with 0.4 mm voxels. Built by `tools/tomato.py`.
+A simulated T2-weighted MRI of a tomato, 64 mm wide and 52 mm tall, with 0.4 mm voxels. Built by `data_generation/tomato.py`.
 It has a skin, a 6.2 mm pericarp with vascular bundles, five gel-filled locules separated by septa, a columella with placenta lobes,
 210 seeds, a stem with six sepals and a small air pocket. The fruit is tilted 8° and off-center, so no axis is aligned with it.
 The gel is the brightest tissue and the seeds are dark; the background is Rician noise (mean ≈ 48).

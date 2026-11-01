@@ -97,7 +97,7 @@ A line of the planes file that is not a valid plane gives a black frame and a wa
 ([algorithm document, section 9](docs/ALGORITHM.md#9-program-structure)).
 
 The planes files of the demo, one for each volume of the main data set and one of edge cases, sit next to their volumes in [DATA/](DATA/).
-They are made by `tools/make_demo_planes.py` and described in the [testing strategy](docs/TESTING.md#61-demo-planes-files).
+They are made by `data_generation/make_demo_planes.py` and described in the [testing strategy](docs/TESTING.md#61-demo-planes-files).
 
 **Performance:** on a volume of 500³ bytes the projection must run at **30 frames per second at least**, and **100 is expected**.
 
@@ -144,7 +144,7 @@ The data set is described in [docs/DATA.md](docs/DATA.md): the lecturer's MRI he
 simulated MRI scans of layered foods (including a 500³ file for the speed test), and test volumes with known answers.
 Preview images are in [DATA/images/](DATA/images/).
 
-The scripts that make the data are in [tools/](tools/).
+The scripts that made the data set and its planes files are in [data_generation/](data_generation/). They are not needed to run the program or the tests.
 
 ## Setup, tests and benchmark
 

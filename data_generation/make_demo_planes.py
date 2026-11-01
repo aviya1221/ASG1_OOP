@@ -23,18 +23,20 @@ A clean file must have no bad plane, no warning, and no plane that misses the vo
 each plane of edge_cases.csv must give the result that its comment names.
 
 Usage:
-    python tools/make_demo_planes.py [--out FOLDER]
+    python data_generation/make_demo_planes.py [--out FOLDER]
 """
 
 import argparse
 import math
+import sys
 from pathlib import Path
 
 import numpy as np
 
-import prototype_speed
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "tools"))
+import prototype_speed  # noqa: E402
+
 HEAD_GRID = (256, 256, 130)                 # the head and the three smaller foods share this grid
 CROISSANT_GRID = (500, 500, 500)
 DICE_GRID = (200, 180, 160)
