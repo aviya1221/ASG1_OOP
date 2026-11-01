@@ -46,7 +46,8 @@ What the frames show:
 - **The die** gives the images that are known in advance: the top face with one pip, a regular hexagon for the plane across the main diagonal,
   and a triangle for the plane that cuts off a corner.
 - **The edge cases** give exactly the expected warnings, one per line, each naming its line and frame
-  (frames 7 and 8 are drawn with a warning, frames 9 to 16 are black), and frame 6, a plane outside the volume, is black without a warning.
+  (frames 7 and 8 are drawn with a warning, frames 9 to 16 are error frames that show their frame, line and cause),
+  and frame 6, a plane outside the volume, is black without a warning. After the summary, the run lists the 8 error frames with their causes.
   The full list is in the [testing strategy](../docs/TESTING.md#61-demo-planes-files).
 - **The three foods** show their layers in all three value types of the assignment.
 - **The head** looks shorter along `z` than in 3D Slicer. Its voxels are 1.3 times longer along `z`, and the program draws one pixel per voxel unit
