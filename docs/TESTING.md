@@ -204,12 +204,12 @@ Each table lists the cases of one module, with the requirements they check. Smal
 | a rectangle written as a trapezoid | every row spans all the columns | FR-16, FR-18 |
 | the apex | in row 0, at the column of its own `s` | FR-21 |
 | a base of length `7.9999999` | counted as 8, so 9 columns | FR-16 |
-| `b = c` | bad: base | FR-24 |
-| three points on one line | bad: one line | FR-24 |
-| `a''` 0.6 off the plane, and 0.4 off | bad, and valid | FR-24 |
-| a trapezoid with `a'` and `a''` swapped, so its sides cross | bad: shape | FR-24 |
+| `b = c` | bad: base, with the short cause `B AND C ARE THE SAME POINT` | FR-24 |
+| three points on one line | bad: one line, `POINTS ON ONE LINE` | FR-24 |
+| `a''` 0.6 off the plane, and 0.4 off | bad, `TRAPEZOID NOT FLAT`, and valid | FR-24 |
+| a trapezoid with `a'` and `a''` swapped, so its sides cross | bad: shape, `TRAPEZOID SIDES CROSS` | FR-24 |
 | a trapezoid with `a' = a''` | valid, with the same image as the triangle `a', b, c` | FR-24 |
-| an image of 4097 columns, and of 4096 | bad: size, and valid | FR-24 |
+| an image of 4097 columns, and of 4096 | bad: size, `IMAGE TOO LARGE`, and valid | FR-24 |
 | legs that differ by 0.6, and by 0.4 | a warning, and none | FR-25 |
 | a trapezoid whose top side is tilted by 0.6 | valid, with a warning | FR-25 |
 | 1000 random triangles and trapezoids | for every pixel, the row spans agree with the inside test of the reference | FR-18 |
@@ -233,14 +233,18 @@ Each table lists the cases of one module, with the requirements they check. Smal
 
 All the tests in this table, except the slow ones, build their volume in memory and open no file (NFR-12).
 
-### 4.5 `frames.py`: frame size, gray levels, placement
+### 4.5 `frames.py`: frame size, gray levels, placement, error frames
 
 | Case | Expected | Requirements |
 |---|---|---|
 | valid planes of 101 × 57 and 80 × 90 (columns × rows) | frames of 102 × 90 | FR-30 |
 | no valid plane | frames of 64 × 64 | FR-30 |
 | an image of 5 × 3 in a frame of 8 × 6 | placed at column 1, row 1, with black around it | FR-31 |
-| a bad plane | an all-black frame | FR-24, FR-31 |
+| a bad plane, in a frame of 282 × 244 | read back from the pixels with the font: `ERROR`, larger than the rest, `FRAME 9`, `LINE 35`, and the cause in two lines | FR-24b |
+| the same frame | only gray, the border and white, with the border on all four edges, and nothing left of an image drawn before | FR-24b |
+| frames of 64 × 64, 60 × 50, 40 × 30 and 22 × 20 | all four parts; all but the cause; `ERROR` alone; an X | FR-24b |
+| frames from 2 × 2 to 4096 × 4096 | drawn, with no pixel black | FR-24b, NFR-8 |
+| each of the 9 short causes, in a frame of 256 × 256 | read back whole | FR-24b |
 | `uint8`, `lo = 0`, `hi = 200`: the values 0, 100, 200 | 0, 128, 255 | FR-32 |
 | every value from 0 to `hi` of a `uint16` volume | the table gives exactly the formula of [ALGORITHM 7.2](ALGORITHM.md#72-gray-levels) | FR-32 |
 | `uint32` values up to `4·10⁹` | exactly the formula of [ALGORITHM 7.2](ALGORITHM.md#72-gray-levels) | FR-32 |
@@ -275,10 +279,10 @@ and captures the exit code, the standard output and the standard error.
 | `--help` | exit code 0, and text that explains the three arguments and the planes file | FR-2, NFR-15 |
 | a good run: a 20 × 20 × 20 volume and 5 planes | exit code 0, a video of 5 frames, the summary on the standard output, nothing on the standard error | FR-1, FR-29, FR-35, FR-36 |
 | a missing volume, an invalid volume, a missing planes file, a planes file without planes, a missing output folder | exit code 1, one line `error: <file>: <cause>`, no traceback, and no video file | FR-3, FR-4 |
-| one bad and one doubtful plane among good ones | exit code 0; two warnings in the format of FR-27, with the right line and frame numbers; one frame per plane line, the bad one black | FR-23 to FR-27 |
+| one bad and one doubtful plane among good ones | exit code 0; two warnings in the format of FR-27, with the right line and frame numbers; one frame per plane line, the bad one an error frame; after the summary, the list with the bad plane's frame, line and cause | FR-23 to FR-27, FR-35b |
 | planes of different sizes | the frame size is that of the largest valid plane, rounded up to even | FR-30 |
-| the summary | counts the frames, the black frames and the warnings correctly | FR-35 |
-| an error forced inside the projection of one plane | a black frame and a warning, exit code 0 | NFR-8 |
+| the summary | counts the frames, the error frames and the warnings correctly | FR-35 |
+| an error forced inside the projection of one plane | an error frame and a warning, the plane in the list at the end, exit code 0 | FR-24c, NFR-8 |
 | an error forced inside the encoder | exit code 1, and no file left behind | FR-3 |
 
 ---
@@ -292,7 +296,7 @@ automatically, to check that every run produces the right video, and by eye, to 
 
 The planes files of the demo are made by `data_generation/make_demo_planes.py`, with fixed numbers and seeds, and kept in `DATA/`, each next to its volume.
 After writing a file, the script reads it back and checks every plane by the rules of [SRS 3.4 and 3.5](SRS.md#34-projection-geometry):
-the five clean files must give no warning and no black frame, and each line of `edge_cases.csv` must give the result listed below.
+the five clean files must give no warning, no error frame and no black frame, and each line of `edge_cases.csv` must give the result listed below.
 
 ```
 python data_generation/make_demo_planes.py
@@ -325,14 +329,14 @@ The lines of `edge_cases.csv`, with the frame and line numbers that the warnings
 | 6 | 25 | a triangle at `z = 300`, above the volume | black, without a warning (FR-26) |
 | 7 | 29 | a triangle with legs of 188.8 and 226.6 | drawn, with a warning: equal legs (FR-25) |
 | 8 | 31 | a trapezoid whose top side is not parallel to its base | drawn, with a warning: parallel sides (FR-25) |
-| 9 | 35 | 4 points, but only the 9 numbers of a triangle | black, with a warning: count (FR-24) |
-| 10 | 37 | a word | black, with a warning: numbers |
-| 11 | 39 | `inf` | black, with a warning: numbers |
-| 12 | 41 | `b = c` | black, with a warning: base |
-| 13 | 43 | `a`, `b` and `c` on one line | black, with a warning: one line |
-| 14 | 45 | `a''` 10 voxels off the plane of `a'`, `b` and `c` | black, with a warning: flat trapezoid |
-| 15 | 47 | `a'` and `a''`, points 1 and 3, swapped, so the sides cross | black, with a warning: trapezoid shape |
-| 16 | 49 | a base of 10199, so 10200 columns | black, with a warning: size |
+| 9 | 35 | 4 points, but only the 9 numbers of a triangle | an error frame, `WRONG NUMBER OF VALUES`, with a warning: count (FR-24) |
+| 10 | 37 | a word | an error frame, `NOT A NUMBER`, with a warning: numbers |
+| 11 | 39 | `inf` | an error frame, `NOT A NUMBER`, with a warning: numbers |
+| 12 | 41 | `b = c` | an error frame, `B AND C ARE THE SAME POINT`, with a warning: base |
+| 13 | 43 | `a`, `b` and `c` on one line | an error frame, `POINTS ON ONE LINE`, with a warning: one line |
+| 14 | 45 | `a''` 10 voxels off the plane of `a'`, `b` and `c` | an error frame, `TRAPEZOID NOT FLAT`, with a warning: flat trapezoid |
+| 15 | 47 | `a'` and `a''`, points 1 and 3, swapped, so the sides cross | an error frame, `TRAPEZOID SIDES CROSS`, with a warning: trapezoid shape |
+| 16 | 49 | a base of 10199, so 10200 columns | an error frame, `IMAGE TOO LARGE`, with a warning: size |
 
 The commands, from the project folder:
 
@@ -359,8 +363,8 @@ The videos go to `output/`, which git ignores. The experiment keeps its own copi
 | frames | one per plane line: 280, 120, 120, 120, 100 and 16 | FR-23, FR-29 |
 | frame size | the largest valid plane of the file, rounded up to even | FR-30 |
 | standard error | empty for the five clean files; for `edge_cases.csv` and `lecturer_example.csv`, exactly the expected list of warnings, with their line and frame numbers | FR-24 to FR-27, FR-36 |
-| summary | printed, with the number of frames and the projection rate | FR-35 |
-| black frames | in `edge_cases.mp4`, the frames of the bad lines and of the plane outside the volume are black | FR-24, FR-26 |
+| summary | printed, with the number of frames and the projection rate; for `edge_cases.csv`, `16 (8 errors, 2 warnings)`, then the list of the 8 error frames with the causes of their warnings | FR-35 |
+| black and error frames | in `edge_cases.mp4`, frame 6, the plane outside the volume, is black, and frames 9 to 16, the bad lines, are error frames: mostly gray, with white text; no other frame is either | FR-24, FR-26 |
 | known frames | frame 66 of `head.mp4` is within 3 gray levels on average of the slice `z = 65` after the gray map, and closer to it than to the slices around it; on the noise of the MRI, H.264 loses about 2.5 gray levels, and the next slices are 6 or more away | FR-19, FR-32 |
 
 ### 6.3 Checks by eye
@@ -370,6 +374,7 @@ A person watches every video and checks that:
 - the motion is smooth, with no frame that jumps out of place;
 - the brightness does not flicker between frames, since one gray map is used for the whole video (FR-32);
 - the apex or top side of every shape is at the top of the frame, with `b` on the left (FR-21);
+- paused on each error frame of `edge_cases.mp4`, its text can be read: ERROR, the frame, the line and the short cause (FR-24b);
 - the parts of a plane outside the volume are black (FR-20).
 
 A few frames of each video are then compared with the same plane in the Reformat module of 3D Slicer ([3.7](#37-3d-slicer)). Two differences are expected:
@@ -419,7 +424,7 @@ and its result goes into the experiment report. A quick test in the suite runs i
 | Case | Expected | Requirements |
 |---|---|---|
 | 1000 random lines from a fixed seed, the first of them a good plane so that it is not taken for a header: good planes, wrong numbers of points, wrong counts, words, empty fields, `±1e300`, `nan`, `inf`, repeated points, points on one line, lines of commas only, very long lines | exit code 0, 1000 frames, no traceback | NFR-8, FR-23 |
-| the same file with no good plane at all | exit code 0 and 64 × 64 black frames | FR-30, NFR-8 |
+| the same file with no good plane at all | exit code 0 and 64 × 64 error frames | FR-30, NFR-8 |
 | the demo planes projected twice | the images `E`, and the frames before encoding, identical byte for byte | NFR-9 |
 
 ---
@@ -461,8 +466,8 @@ The data set is part of the repository, so the slow tests have their files. A ba
 | FR-10 to FR-14 | [4.2](#42-planespy-reading-the-planes) |
 | FR-15 to FR-18 | [4.3](#43-geometrypy-plane-setup-and-checks), [3.1](#31-results-worked-out-by-hand), [3.2](#32-a-slow-reference) |
 | FR-19 to FR-21 | [4.4](#44-projectorpy-the-projection), [3.2](#32-a-slow-reference) to [3.6](#36-label-volumes) |
-| FR-23 to FR-27 | [4.2](#42-planespy-reading-the-planes), [4.3](#43-geometrypy-plane-setup-and-checks), [5](#5-command-line-tests), [6.2](#62-automatic-checks) |
-| FR-28 to FR-34 | [4.5](#45-framespy-frame-size-gray-levels-placement), [4.6](#46-videopy-writing-the-video), [5](#5-command-line-tests), [6](#6-the-demo) |
+| FR-23 to FR-27 | [4.2](#42-planespy-reading-the-planes), [4.3](#43-geometrypy-plane-setup-and-checks), [4.5](#45-framespy-frame-size-gray-levels-placement-error-frames), [5](#5-command-line-tests), [6.2](#62-automatic-checks) |
+| FR-28 to FR-34 | [4.5](#45-framespy-frame-size-gray-levels-placement-error-frames), [4.6](#46-videopy-writing-the-video), [5](#5-command-line-tests), [6](#6-the-demo) |
 | FR-35, FR-36 | [5](#5-command-line-tests), [6.2](#62-automatic-checks) |
 | NFR-1 to NFR-4 | [7.1](#71-speed) |
 | NFR-6 | [7.2](#72-memory) |
