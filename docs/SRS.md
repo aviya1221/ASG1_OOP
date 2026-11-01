@@ -36,7 +36,8 @@ What is out of scope is listed in the [README](../README.md#scope).
 | Valid plane | A plane that passes the checks of [FR-24](#35-input-validation). | |
 | Projection | Sampling the volume at the points of the shape. It is a slice, not a sum along rays. | |
 | `E`, the image | The 2D array of `rows × cols` voxel values that the projection gives for one plane. | each size 1 to 4096 (FR-16, FR-24) |
-| Frame | One picture of the video: the image in gray levels, in the middle of a `W × H` picture. | `W` and `H` even, 64 × 64 if no plane is valid; gray levels 0 to 255 (FR-30, FR-32) |
+| Frame | One picture of the video: the image in gray levels, in the middle of a `W × H` picture, or an error frame. | `W` and `H` even, 64 × 64 if no plane is valid; gray levels 0 to 255 (FR-30, FR-32) |
+| Error frame | The frame of a bad plane: gray, with the word ERROR, the frame and line numbers, and a short cause. | gray levels 64, 160 and 255 (FR-24b) |
 
 ### 1.4 References
 
@@ -93,7 +94,7 @@ The IDs of removed requirements are not used again.
 
 **FR-2.** The program shall accept the options `--fps N`, the frame rate of the video, a positive number with a default of 30, and `--help`, which prints the usage and exits.
 
-**FR-3.** The program shall exit with code `0` when the video was written, even if some planes gave warnings,
+**FR-3.** The program shall exit with code `0` when the video was written, even if some planes gave warnings or error frames,
 `1` after a fatal error, and `2` for wrong command-line arguments.
 
 **FR-4a.** On a fatal error, the program shall print one message to the standard error that names the file and the cause, without a Python traceback, and shall write no video.
@@ -167,17 +168,24 @@ A point exactly halfway between two voxels is equally near both, and shall take 
 
 **FR-23.** Every plane line shall give exactly one frame, in the order of the file.
 
-**FR-24. Bad planes.** A plane that fails one of these checks shall give a black frame and a warning:
+**FR-24a. Bad planes.** A plane that fails one of these checks shall give an error frame and a warning, and the run shall go on:
 
-| Check | The plane is bad when |
-|---|---|
-| count | its first field is not 3 or 4, or it does not have 3 numbers for each point |
-| numbers | a field is not a number, or is infinite or not a number (`inf`, `nan`) |
-| base | `b` and `c` are less than `1e-6` apart |
-| one line | the first point is less than `1e-6` from the line of the base |
-| flat trapezoid | `a''` is more than 0.5 from the plane through `a'`, `b` and `c` |
-| trapezoid shape | the quadrilateral `a', a'', c, b` is not convex, for example because its sides cross |
-| size | the image would have more than 4096 rows or columns |
+| Check | The plane is bad when | Short cause on the frame |
+|---|---|---|
+| count | its first field is not 3 or 4, or it does not have 3 numbers for each point | `WRONG NUMBER OF POINTS`, or `WRONG NUMBER OF VALUES` |
+| numbers | a field is empty or not a number, or is infinite or not a number (`inf`, `nan`) | `NOT A NUMBER` |
+| base | `b` and `c` are less than `1e-6` apart | `B AND C ARE THE SAME POINT` |
+| one line | the first point is less than `1e-6` from the line of the base | `POINTS ON ONE LINE` |
+| flat trapezoid | `a''` is more than 0.5 from the plane through `a'`, `b` and `c` | `TRAPEZOID NOT FLAT` |
+| trapezoid shape | the quadrilateral `a', a'', c, b` is not convex, for example because its sides cross | `TRAPEZOID SIDES CROSS` |
+| size | the image would have more than 4096 rows or columns | `IMAGE TOO LARGE` |
+
+**FR-24b. Error frame.** An error frame shall fill the whole frame with gray in a lighter border, not black, and show in white letters, centered:
+the word ERROR, larger than the rest; `FRAME` and the frame number; `LINE` and the line number; and the short cause, wrapped at its words.
+The text shall be as large as fits. In a frame too small for all of it, the cause shall be left out whole, and then lines from the bottom;
+a frame too small for the word ERROR shall show a large X.
+
+**FR-24c.** An unexpected error while setting up or projecting one plane shall give an error frame with the short cause `INTERNAL ERROR`, and a warning, and the run shall go on (NFR-8).
 
 **FR-25. Doubtful planes (Should).** A plane that passes FR-24 but breaks a promise of the assignment shall be drawn as given, with a warning:
 
@@ -191,7 +199,7 @@ A point exactly halfway between two voxels is equally near both, and shall take 
 **FR-27.** A warning shall name the line of the file and the frame, both counted from 1, the cause and the result:
 
 ```
-warning: line 7, frame 5: points a, b and c are on one line; the frame is black
+warning: line 7, frame 5: points a, b and c are on one line; drawn as an error frame
 ```
 
 ### 3.6 Video output
@@ -216,9 +224,16 @@ warning: line 7, frame 5: points a, b and c are on one line; the frame is black
 
 ### 3.7 Run report
 
-**FR-35. Summary (Should).** When the video is written, the program shall print a summary of five lines, in this order: `volume`, the file with its size and value type; `frames`, such as `120 (2 black, 3 warnings)`; `load`, the time to read both input files; `projection`, the time of NFR-3 in total, per frame and in frames per second; and `video`, the time of the gray levels, the placement and the encoding.
+**FR-35a. Summary (Should).** When the video is written, the program shall print a summary of five lines, in this order: `volume`, the file with its size and value type; `frames`, such as `120 (2 errors, 3 warnings)`, with the number of error frames and of doubtful planes; `load`, the time to read both input files; `projection`, the time of NFR-3 in total, per frame and in frames per second; and `video`, the time of the gray levels, the placement and the encoding.
 
-**FR-36.** The summary shall go to the standard output, and warnings and errors to the standard error, as they happen.
+**FR-35b. List of error frames.** If any frame is an error frame, the program shall print, after the summary, a blank line, a line with their number, and one line for each error frame in the order of the video, with the frame, the line and the full cause:
+
+```
+1 frame could not be drawn and shows an error:
+  frame 5  line 7  points a, b and c are on one line
+```
+
+**FR-36.** The summary and the list of error frames shall go to the standard output, and warnings and errors to the standard error, as they happen.
 
 ### 3.8 Non-functional requirements
 
@@ -257,7 +272,7 @@ the gray levels, the placement or the encoding. The rate is the number of planes
 
 | Use case | Actor | Main flow and result | Alternative flows |
 |---|---|---|---|
-| UC-01 Make a video | the lecturer or a grader | runs `Ex0.py` with a volume and a planes file (FR-1); the program checks them, projects each plane, writes an MP4 file with one frame per plane line, prints the summary and exits with code 0 | wrong arguments: exit code 2 (FR-3); fatal error: no video, exit code 1 (FR-4); bad plane: a black frame and a warning (FR-24); doubtful plane: drawn, with a warning (FR-25) |
+| UC-01 Make a video | the lecturer or a grader | runs `Ex0.py` with a volume and a planes file (FR-1); the program checks them, projects each plane, writes an MP4 file with one frame per plane line, prints the summary and exits with code 0 | wrong arguments: exit code 2 (FR-3); fatal error: no video, exit code 1 (FR-4); bad plane: an error frame and a warning, and the frame listed at the end (FR-24, FR-35b); doubtful plane: drawn, with a warning (FR-25) |
 | UC-02 Measure the speed | a developer | runs `python tools/benchmark.py`, which projects the planes of NFR-4 and prints the median rate, recorded with the machine | under 30 frames per second: exit code 1 (NFR-1) |
 | UC-03 Project a plane from code | a developer | calls `plane_setup` and then `Projector.project` with a volume array and a plane of 3 or 4 points, and gets the image of FR-15 to FR-21, with no file read or written (NFR-12) | bad plane: the setup gives the reason, and there is no image (FR-24) |
 
@@ -269,9 +284,9 @@ Design sections are in the [algorithm document](ALGORITHM.md), and test files in
 |---|---|---|---|---|
 | FR-1 to FR-14, command line and input files | UC-01 | [3](ALGORITHM.md#3-reading-the-inputs), [8.1](ALGORITHM.md#81-errors) | `test_cli`, `test_volume`, `test_planes` | passed |
 | FR-15 to FR-21, geometry | UC-01, UC-03 | [4](ALGORITHM.md#4-plane-setup-and-checks), [5](ALGORITHM.md#5-projection) | `test_geometry`, `test_projector`, `test_demo` | passed |
-| FR-23 to FR-27, input validation | UC-01, UC-03 | [4](ALGORITHM.md#4-plane-setup-and-checks), [8.1](ALGORITHM.md#81-errors) | `test_planes`, `test_geometry`, `test_cli`, `test_demo` | passed |
+| FR-23 to FR-27, input validation and error frames | UC-01, UC-03 | [4](ALGORITHM.md#4-plane-setup-and-checks), [7.5](ALGORITHM.md#75-error-frames), [8.1](ALGORITHM.md#81-errors) | `test_planes`, `test_geometry`, `test_frames`, `test_cli`, `test_demo` | passed |
 | FR-28 to FR-36, video and run report | UC-01 | [7](ALGORITHM.md#7-frames-and-video), [8.2](ALGORITHM.md#82-run-report) | `test_frames`, `test_video`, `test_cli`, `test_demo` | passed |
 | NFR-1 to NFR-4, speed | UC-02 | [6](ALGORITHM.md#6-speed) | `test_benchmark`, and the benchmark of the [experiment](../experiment/README.md#3-speed) | passed, 317 fps |
 | NFR-6 to NFR-15, other qualities | UC-01, UC-03 | [5.2](ALGORITHM.md#52-sampling), [7.4](ALGORITHM.md#74-encoding), [9](ALGORITHM.md#9-program-structure), [10](ALGORITHM.md#10-complexity) | `test_volume`, `test_robustness`, `test_projector`, `test_cli`, and the continuous integration | passed on Windows, 98% of the lines covered |
 
-Status of 2026-10-29: the 155 everyday tests and the 42 slow tests pass on Windows.
+Status of 2026-11-01: the 180 everyday tests and the 43 slow tests pass on Windows.
