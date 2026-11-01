@@ -84,7 +84,7 @@ class Reference:
             for col in range(self.cols):
                 if not self.inside(row, col):
                     continue
-                index = [math.floor(x + 0.5) for x in self.point(row, col)]
+                index = [math.floor(x + 0.5 + EPS) for x in self.point(row, col)]     # halves up, FR-19
                 if all(0 <= index[k] < data.shape[k] for k in range(3)):
                     image[row, col] = data[index[0], index[1], index[2]]
         return image

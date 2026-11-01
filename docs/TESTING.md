@@ -105,7 +105,7 @@ It shares no code with the package, and it decides "inside the shape" in a diffe
 |---|---|---|
 | speed | NumPy arrays, bands, threads | a Python loop over pixels |
 | inside the shape | the row spans `c0[r]`, `c1[r]` ([ALGORITHM 4.3](ALGORITHM.md#43-row-spans)) | the point is on the inner side of every edge, by cross products |
-| nearest voxel | `floor` on a whole array | `math.floor(p + 0.5)` for each axis |
+| nearest voxel | `floor` on a whole array | `math.floor(p + 0.5 + 1e-6)` for each axis |
 
 The two must give the same image, pixel for pixel. Because they reach it in different ways, a mistake in one shows up as a difference.
 The reference is slow, so it is used on images of up to about 60 × 60 pixels.
@@ -114,7 +114,7 @@ The reference is slow, so it is used on images of up to about 60 × 60 pixels.
 
 The **index volume** holds in each voxel its own position, `M[x][y][z] = x + 1000·y + 1000000·z`, in `uint32`.
 Any pixel of any image can then be decoded back to the voxel it read, so a test sees not only that a pixel is wrong, but which voxel it took instead.
-This is how the rounding of FR-19 and the edges of FR-20 are checked: the voxel is compared with `floor(p + 0.5)` computed separately.
+This is how the rounding of FR-19 and the edges of FR-20 are checked: the voxel is compared with `floor(p + 0.5 + 1e-6)` computed separately.
 
 ### 3.4 Slices along the axes
 
@@ -218,6 +218,7 @@ Each table lists the cases of one module, with the requirements they check. Smal
 | the cake of the worked example | exactly the 11 × 9 matrix of [3.1](#31-results-worked-out-by-hand) | FR-17 to FR-21 |
 | 1000 random planes on index volumes from 1 × 1 × 1 to 40 × 30 × 20, some partly or fully outside | the same image as the reference, pixel for pixel | FR-19, FR-20 |
 | a point at exactly 2.5 on an axis | voxel 3: halves round up | FR-19 |
+| triangles along `(3, 4, 0) / 5` and three other such directions, where many points lie exactly halfway between two voxels and some come out a hair below the half in floats | every pixel reads the voxel that exact fractions give, the one above at a half | FR-19 |
 | a point at −0.5, and at `size − 0.5` | inside, and outside | FR-20 |
 | a plane that misses the volume | all zeros, through the early exit | FR-26 |
 | a plane with points near `10⁹` | all zeros, and no warning from NumPy about overflow | FR-20, NFR-8 |

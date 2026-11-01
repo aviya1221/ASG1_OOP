@@ -200,7 +200,7 @@ If on some axis all four lie below `−0.5`, or all lie at `size − 0.5` or abo
 
 `E` starts as an array of zeros. Its rows are split into bands, and the pixels of each band are computed at once with NumPy arrays.
 A band computes only the columns that the shape reaches in its rows: it is trimmed.
-The voxel of a point `p` is `floor(p + 0.5)` on each axis, the nearest one with halves rounded up (FR-19).
+The voxel of a point `p` is `floor(p + 0.5 + 1e-6)` on each axis, the nearest one with halves rounded up (FR-19).
 
 ```
 R  = rows of the band, as a column                             (shape: band × 1)
@@ -208,7 +208,7 @@ C  = min c0[R] … max c1[R], as a row                           (shape: 1 × wi
 ok = (C >= c0[R]) & (C <= c1[R])                              # inside the shape, FR-18
 flat_index = 0
 for axis k in x, y, z, with stride 1, sx, sx·sy:
-    i_k = floor((corner_k + 0.5) + R · down_k + C · right_k)  # nearest voxel, FR-19
+    i_k = floor((corner_k + HALF) + R · down_k + C · right_k) # nearest voxel, HALF = 0.5 + 1e-6, FR-19
     ok &= (0 <= i_k) & (i_k < size_k)                          # inside M, FR-20
     clamp i_k to 0 … size_k − 1
     flat_index += i_k · stride_k
@@ -218,9 +218,12 @@ E[R, C] = values
 ```
 
 - **Direct, not stepped.** Each pixel's point is computed from `corner` in one formula, not by adding a step again and again as in the assignment's
-  `p = p + dp`. Rounding errors do not pile up along a row; in `float64` they stay far below `1e-9` of a voxel for any image of up to 4096 pixels.
-  This keeps the rounding of FR-19 exact, and the result identical on every run (NFR-9).
-- **`+ 0.5` once.** `corner_k + 0.5` is computed once per plane, so rounding to the nearest voxel costs a single `floor`.
+  `p = p + dp`. Rounding errors do not pile up along a row; in `float64` they stay far below `1e-9` of a voxel for any image of up to 4096 pixels,
+  and the result is identical on every run (NFR-9).
+- **Halfway points.** A small error is still enough to tip a point that lies exactly halfway between two voxels:
+  on tilted planes, about 1 in 100 such points came out a hair below the half, and a plain `floor(p + 0.5)` took the voxel below.
+  `HALF` adds `1e-6`, far above the errors and far below any real distance, so every halfway point takes the voxel above, as FR-19 requires.
+- **`+ HALF` once.** `corner_k + HALF` is computed once per plane, so rounding to the nearest voxel costs a single `floor`.
 - **Clamping.** After `ok` is known, each index is clamped into the volume. The read is then always a real voxel, even for pixels that are masked out,
   and the flat index is at most the number of voxels minus one.
 - **`int32` indices** take half the memory traffic of `int64`. They fit every volume of FR-7: the largest index is `1023³ − 1`, about `1.07 · 10⁹`, below `2³¹`.

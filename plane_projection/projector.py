@@ -8,7 +8,8 @@ from plane_projection.geometry import PlaneSetup
 from plane_projection.volume import Volume
 
 THREADS = 4                                 # the number that measured fastest (docs/ALGORITHM.md, section 6)
-MARGIN = 1e-6                               # the early exit skips a plane only when it is clearly outside
+HALF = 0.5 + 1e-6                           # rounding to the nearest voxel: up to 1e-6 below a half counts as the half (FR-19)
+MARGIN = 1e-3                               # the early exit skips a plane only when it is clearly outside
 
 
 def index_type(voxels: int) -> type:
@@ -83,8 +84,8 @@ class Projector:
         ok = (columns >= c0[:, None]) & (columns <= c1[:, None])           # inside the shape, FR-18
         index = np.zeros(ok.shape, dtype=self.index_type)
         for k in range(3):
-            # each point straight from the corner, with the + 0.5 of rounding to the nearest voxel (FR-19)
-            p = np.floor((setup.corner[k] + 0.5) + rows * setup.down[k] + cols * setup.right[k])
+            # each point straight from the corner, with the + HALF of rounding to the nearest voxel (FR-19)
+            p = np.floor((setup.corner[k] + HALF) + rows * setup.down[k] + cols * setup.right[k])
             ok &= (p >= 0) & (p < self.sizes[k])                           # inside the volume, FR-20
             np.clip(p, 0, self.sizes[k] - 1, out=p)
             index += p.astype(self.index_type) * self.index_type(self.strides[k])

@@ -2,6 +2,7 @@
 
 import math
 import warnings
+from fractions import Fraction
 
 import numpy as np
 import pytest
@@ -65,6 +66,29 @@ def test_halves_round_up():
     image = project(index_volume((6, 6, 6)), *rectangle((0.5, 0, 2.5), (3, 0, 0), (0, 3, 0)))
     assert decode(image[0, 0]) == (1, 0, 3)
     assert decode(image[3, 3]) == (4, 3, 3)
+
+
+@pytest.mark.parametrize("p, q, n", [(3, 4, 5), (5, 12, 13), (8, 15, 17), (20, 21, 29)])
+def test_points_exactly_halfway_go_to_the_voxel_above(p, q, n):
+    """FR-19: on a plane along (p, q, 0) / n, many points fall exactly halfway between two voxels, and in floats some
+    of them come out a hair below the half. Exact fractions say which voxel each pixel must read."""
+    a = (Fraction(141, 2), Fraction(61, 2), Fraction(15, 2))
+    right, down = (Fraction(p, n), Fraction(q, n), 0), (Fraction(-q, n), Fraction(p, n), 0)
+    corner = [a[k] - n * right[k] for k in range(3)]
+    b = [corner[k] + 2 * n * down[k] for k in range(3)]
+    c = [b[k] + 2 * n * right[k] for k in range(3)]
+    data = index_volume((120, 120, 10)) + 1
+    image = project(data, *([float(x) for x in point] for point in (a, b, c)))
+    expected = np.zeros((2 * n + 1, 2 * n + 1), dtype=data.dtype)
+    halfway = 0
+    for row in range(2 * n + 1):
+        for col in range(2 * n + 1):
+            if 2 * abs(col - n) <= row:                         # inside the triangle
+                point = [corner[k] + col * right[k] + row * down[k] for k in range(3)]
+                halfway += any((x + Fraction(1, 2)).denominator == 1 for x in point[:2])
+                expected[row, col] = data[tuple(math.floor(x + Fraction(1, 2)) for x in point)]
+    assert halfway > 0
+    assert_same(image, expected, show=read)
 
 
 @pytest.mark.parametrize("z, voxel", [(-0.5, 0), (-0.51, None), (4.49, 4), (4.5, None)])

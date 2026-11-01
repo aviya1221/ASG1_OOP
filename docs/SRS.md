@@ -157,6 +157,7 @@ from the top left corner of the smallest rectangle along these directions that h
 or inside the quadrilateral `a', a'', c, b` projected onto the plane of FR-15, or on its edge, within `1e-6`.
 
 **FR-19. Sampling.** The value at a point shall be that of the nearest voxel: each coordinate is rounded to the nearest whole number, with halves rounded up.
+A point exactly halfway between two voxels is equally near both, and shall take the one above. A coordinate at most `1e-6` below a half shall count as the half.
 
 **FR-20. Pixel value.** `E[r][c]` shall be the value of the voxel nearest to the pixel's point if the pixel belongs to the shape and that voxel lies inside `M`, and 0 otherwise.
 
