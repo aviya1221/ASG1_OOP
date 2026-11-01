@@ -92,7 +92,7 @@ The [experiment](experiment/README.md) has the runs on every volume with their v
 | [docs/TESTING.md](docs/TESTING.md) | the testing strategy |
 | [docs/DATA.md](docs/DATA.md) | the data set |
 | [experiment/](experiment/README.md) | the experiment, its results and the output videos |
-| [Ex0.py](Ex0.py), [plane_projection/](plane_projection/) | the demo, and the package with one module for each step |
+| [Ex0.py](Ex0.py), [plane_projection/](plane_projection/) | the demo, and the package with one module for each step; the steps that make the video are in [plane_projection/video/](plane_projection/video/) |
 | [tests/](tests/) | the tests, which run on every push on Windows, Ubuntu and macOS |
 | [DATA/](DATA/) | the volumes and their planes files |
 | [tools/](tools/), [dataSet_generation/](dataSet_generation/) | the benchmark and the experiment; the scripts that made the data set |

@@ -388,7 +388,7 @@ OpenCV was considered and rejected: its `pip` package does not write H.264 witho
 draws a border of level 160, `max(1, min(W, H) // 64)` pixels wide, and writes four parts in white, 255:
 `ERROR`, `FRAME n`, `LINE m`, and the short cause of the plane, its `title`.
 
-- **Font.** `plane_projection/font.py` draws capital letters, digits and the space, each 5 × 7 pixels, written in the code as rows of `#` and `.`.
+- **Font.** `plane_projection/video/font.py` draws capital letters, digits and the space, each 5 × 7 pixels, written in the code as rows of `#` and `.`.
   A character takes 6 columns, with the blank one after it, and at scale `s` each pixel of the font becomes an `s × s` square.
   The font is part of the program, so an error frame needs no font file or library, and is the same on every machine (NFR-9).
 - **Layout.** Inside a margin of `border + max(1, min(W, H) // 32)` pixels, the scale `s` of the small lines goes down from 8 to 1,
@@ -442,6 +442,8 @@ If there were error frames, the list of FR-35b follows, in the order of the fram
 ## 9. Program structure
 
 Each step of the pipeline is its own module, in a package named `plane_projection`.
+The modules at its top compute the image of each plane, and the four that turn the images into the video are in its subpackage `plane_projection/video/`.
+The video modules use the projection modules, never the other way, so the projection can run and be tested without any video.
 Only `Ex0.py` talks to the user; the modules return results or raise `InputError`, and never print.
 
 | Module | Contents | Uses | Requirements |
@@ -452,10 +454,10 @@ Only `Ex0.py` talks to the user; the modules return results or raise `InputError
 | `plane_projection/planes.py` | `Plane`, `read_planes` | `errors` | FR-10 to FR-14 |
 | `plane_projection/geometry.py` | `PlaneSetup`, `plane_setup`, `Shape`, `Triangle`, `Trapezoid` | `planes` | FR-15 to FR-18, FR-21, FR-23 to FR-27 |
 | `plane_projection/projector.py` | `Projector` | `volume`, `geometry` | FR-19, FR-20, NFR-1 to NFR-3, NFR-12 |
-| `plane_projection/frames.py` | `frame_size`, `GrayMap`, `place`, `error_frame` | `geometry`, `font` | FR-24b, FR-29 to FR-32 |
-| `plane_projection/render.py` | `safe_setup`, `Renderer`: the frame of each plane, an image or an error frame | `geometry`, `projector`, `frames` | FR-24, FR-30 to FR-32, NFR-8 |
-| `plane_projection/font.py` | the pixel font of the error frames: `render`, `text_width` | | FR-24b |
-| `plane_projection/video.py` | `VideoWriter` | `errors`, `imageio-ffmpeg` | FR-28, FR-33, FR-34, NFR-6 |
+| `plane_projection/video/frames.py` | `frame_size`, `GrayMap`, `place`, `error_frame` | `geometry`, `font` | FR-24b, FR-29 to FR-32 |
+| `plane_projection/video/render.py` | `safe_setup`, `Renderer`: the frame of each plane, an image or an error frame | `geometry`, `projector`, `frames` | FR-24, FR-30 to FR-32, NFR-8 |
+| `plane_projection/video/font.py` | the pixel font of the error frames: `render`, `text_width` | | FR-24b |
+| `plane_projection/video/writer.py` | `VideoWriter` | `imageio-ffmpeg` | FR-28, FR-33, FR-34, NFR-6 |
 | `tests/` | one test file for each module | | NFR-14 |
 | `tools/benchmark.py` | the benchmark of NFR-4 | `geometry`, `projector` | NFR-1 to NFR-4 |
 
