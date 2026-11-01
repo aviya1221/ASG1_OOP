@@ -15,7 +15,7 @@ from time import perf_counter
 import numpy as np
 
 from plane_projection.errors import InputError
-from plane_projection.frames import GrayMap, frame_size, place
+from plane_projection.frames import GrayMap, error_frame, frame_size, place
 from plane_projection.geometry import PlaneSetup, plane_setup
 from plane_projection.planes import Plane, read_planes
 from plane_projection.projector import Projector
@@ -30,7 +30,8 @@ The planes file has one plane per line, in comma-separated fields: the number of
             the top side from a' to a'', and the base from b to c
 A triangle leaves the fields of the fourth point empty. Blank lines and lines starting
 with # are skipped, and so is a first line that is not numbers (a header). A line that
-is not a plane gives a black frame and a warning.
+is not a plane gives a warning and an error frame, which shows the frame, the line and
+a short cause; the run goes on, and the summary at the end lists every error frame.
 
 Example, with the header, a triangle in the slice z = 65 of a 256 x 256 x 130 volume,
 and a tilted trapezoid:
@@ -62,41 +63,47 @@ def parse_args(argv=None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+INTERNAL = "INTERNAL ERROR"                 # the short cause of an unexpected error (NFR-8)
+
+
 class Run:
-    """One run of the demo: the warnings it printed, and its timers (FR-35, NFR-3)."""
+    """One run of the demo: the warnings it printed, the error frames, and its timers (FR-35, NFR-3)."""
 
     def __init__(self):
         self.warnings = 0
-        self.black = 0
+        self.errors: dict[int, PlaneSetup] = {}     # frame number: the bad setup that its error frame shows
         self.load = self.projection = self.video = 0.0
 
-    def warn(self, plane: Plane, text: str) -> None:
+    def say(self, plane: Plane, text: str) -> None:
         print(f"warning: line {plane.line}, frame {plane.frame}: {text}", file=sys.stderr, flush=True)
-        self.warnings += 1
+
+    def fail(self, setup: PlaneSetup) -> None:
+        self.say(setup.plane, f"{setup.reason}; drawn as an error frame")
+        self.errors[setup.plane.frame] = setup
 
     def set_up(self, plane: Plane) -> PlaneSetup:
         start = perf_counter()
         try:
             setup = plane_setup(plane)
         except Exception as error:          # NFR-8: no plane line can stop the program
-            setup = PlaneSetup(plane, f"internal error in the setup ({error})")
+            setup = PlaneSetup(plane, reason=f"internal error in the setup ({error})", title=INTERNAL)
         self.projection += perf_counter() - start
         for doubt in setup.warnings:
-            self.warn(plane, f"{doubt}; drawn as given")
+            self.say(plane, f"{doubt}; drawn as given")
+            self.warnings += 1
         if not setup.valid:
-            self.warn(plane, f"{setup.reason}; the frame is black")
-            self.black += 1
+            self.fail(setup)
         return setup
 
     def project(self, projector: Projector, setup: PlaneSetup) -> np.ndarray | None:
+        """The image of the plane, or None when the plane gives an error frame."""
         if not setup.valid:
             return None
         start = perf_counter()
         try:
             return projector.project(setup)
         except Exception as error:          # NFR-8
-            self.warn(setup.plane, f"internal error while projecting ({error}); the frame is black")
-            self.black += 1
+            self.fail(PlaneSetup(setup.plane, reason=f"internal error while projecting ({error})", title=INTERNAL))
             return None
         finally:
             self.projection += perf_counter() - start
@@ -133,7 +140,10 @@ def run(args: argparse.Namespace) -> None:
         with Projector(volume) as projector, VideoWriter(video_path, width, height, args.fps) as video:
             for setup in setups:
                 image = state.project(projector, setup)
-                video.write(place(None if image is None else gray(image), frame))
+                if image is None:
+                    video.write(error_frame(state.errors[setup.plane.frame], frame))
+                else:
+                    video.write(place(gray(image), frame))
     except (OSError, RuntimeError) as error:
         raise InputError(video_path, f"the video could not be written ({error})") from None
     state.video = perf_counter() - start - (state.projection - projection_before)
@@ -142,14 +152,26 @@ def run(args: argparse.Namespace) -> None:
 
 
 def report(args: argparse.Namespace, volume, frames: int, state: Run) -> None:
-    """The summary of FR-35."""
+    """The summary of FR-35a, and the list of error frames of FR-35b."""
     projection = max(state.projection, 1e-9)
     print(f"volume:      {args.volume}, {' x '.join(map(str, volume.shape))}, {volume.dtype}")
-    print(f"frames:      {frames} ({state.black} black, {state.warnings} warning{'' if state.warnings == 1 else 's'})")
+    print(f"frames:      {frames} ({count(len(state.errors), 'error')}, {count(state.warnings, 'warning')})")
     print(f"load:        {state.load:.2f} s")
     print(f"projection:  {state.projection:.2f} s total, {projection / frames * 1000:.1f} ms per frame, "
           f"{frames / projection:.0f} fps")
     print(f"video:       {state.video:.2f} s")
+    if state.errors:
+        failed = [state.errors[frame] for frame in sorted(state.errors)]
+        frame_width = max(len(str(setup.plane.frame)) for setup in failed)
+        line_width = max(len(str(setup.plane.line)) for setup in failed)
+        print()
+        print(f"{count(len(failed), 'frame')} could not be drawn and show{'s' if len(failed) == 1 else ''} an error:")
+        for setup in failed:
+            print(f"  frame {setup.plane.frame:<{frame_width}}  line {setup.plane.line:<{line_width}}  {setup.reason}")
+
+
+def count(number: int, noun: str) -> str:
+    return f"{number} {noun}{'' if number == 1 else 's'}"
 
 
 if __name__ == "__main__":

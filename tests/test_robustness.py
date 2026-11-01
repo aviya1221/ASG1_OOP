@@ -7,7 +7,7 @@ import pytest
 
 import Ex0
 from conftest import DATA, index_volume, video_frames, video_info
-from plane_projection.frames import GrayMap, frame_size, place
+from plane_projection.frames import ERROR_GRAY, GrayMap, error_frame, frame_size, place
 from plane_projection.geometry import plane_setup
 from plane_projection.planes import Plane, read_planes
 from plane_projection.projector import Projector
@@ -115,14 +115,14 @@ def test_random_lines(tmp_path, write_nrrd, write_csv, capsys):
 
 
 def test_file_without_a_good_plane(tmp_path, write_nrrd, write_csv, capsys):
-    """FR-30, NFR-8: black frames of 64 x 64"""
+    """FR-30, NFR-8: error frames of 64 x 64"""
     video = tmp_path / "video.mp4"
     lines = ["1,2,3", "3, 0,0,0, 1,1,1, 2,2,2", "3,abc,1,2,3,4,5,6,7,8"]
     assert Ex0.main([str(write_nrrd(np.ones((4, 4, 4), np.uint8))), str(write_csv(*lines)), str(video)]) == 0
     capsys.readouterr()
     info = video_info(video)
     assert (info["width"], info["height"]) == (64, 64)
-    assert all(frame.max() <= 2 for frame in video_frames(video))
+    assert all(abs(np.median(frame) - ERROR_GRAY) <= 4 and frame.max() > 200 for frame in video_frames(video))
 
 
 @pytest.mark.parametrize("volume_name, planes_name", [("MRHead_1.nrrd", "head.csv"),
@@ -137,8 +137,11 @@ def test_same_input_gives_the_same_frames(volume_name, planes_name):
     def frames():
         with Projector(volume) as projector:
             for setup in setups:
-                image = projector.project(setup) if setup.valid else None
-                yield (None if image is None else image.tobytes(),
-                       place(None if image is None else gray(image), np.zeros((height, width), np.uint8)).tobytes())
+                frame = np.zeros((height, width), np.uint8)
+                if setup.valid:
+                    image = projector.project(setup)
+                    yield image.tobytes(), place(gray(image), frame).tobytes()
+                else:
+                    yield None, error_frame(setup, frame).tobytes()
 
     assert list(frames()) == list(frames())

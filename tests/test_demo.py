@@ -3,6 +3,7 @@
 Each demo of section 6.1 runs once, into a temporary folder, and every test reads its results.
 """
 
+import re
 import subprocess
 import sys
 
@@ -10,7 +11,7 @@ import numpy as np
 import pytest
 
 from conftest import DATA, PROJECT_ROOT, video_frames, video_info
-from plane_projection.frames import GrayMap
+from plane_projection.frames import ERROR_GRAY, GrayMap
 from plane_projection.volume import read_volume
 
 pytestmark = pytest.mark.slow
@@ -31,21 +32,22 @@ WARNINGS = {
         "warning: line 29, frame 7: the legs differ by 37.8 voxels; drawn as given",
         "warning: line 31, frame 8: the top side a' a'' is not parallel to the base: its ends differ by 16 voxels; "
         "drawn as given",
-        "warning: line 35, frame 9: 9 numbers for 4 points instead of 12; the frame is black",
-        "warning: line 37, frame 10: field 10 is not a number: 'abc'; the frame is black",
-        "warning: line 39, frame 11: field 7 is not a finite number: 'inf'; the frame is black",
-        "warning: line 41, frame 12: b and c are the same point; the frame is black",
-        "warning: line 43, frame 13: points a, b and c are on one line; the frame is black",
-        "warning: line 45, frame 14: point a'' is 10 voxels off the plane of a', b and c; the frame is black",
-        "warning: line 47, frame 15: the sides of the trapezoid a', a'', c, b cross each other; the frame is black",
+        "warning: line 35, frame 9: 9 numbers for 4 points instead of 12; drawn as an error frame",
+        "warning: line 37, frame 10: field 10 is not a number: 'abc'; drawn as an error frame",
+        "warning: line 39, frame 11: field 7 is not a finite number: 'inf'; drawn as an error frame",
+        "warning: line 41, frame 12: b and c are the same point; drawn as an error frame",
+        "warning: line 43, frame 13: points a, b and c are on one line; drawn as an error frame",
+        "warning: line 45, frame 14: point a'' is 10 voxels off the plane of a', b and c; drawn as an error frame",
+        "warning: line 47, frame 15: the sides of the trapezoid a', a'', c, b cross each other; drawn as an error frame",
         "warning: line 49, frame 16: the image would be 10200 x 180 pixels, more than 4096 on a side; "
-        "the frame is black",
+        "drawn as an error frame",
     ],
     "lecturer_example": [
         "warning: line 4, frame 3: the legs differ by 20.5 voxels; drawn as given",
     ],
 }
-BLACK_FRAMES = [6] + list(range(9, 17))     # the plane outside the volume, and the bad lines
+BLACK_FRAMES = [6]                          # the plane outside the volume
+ERROR_FRAMES = list(range(9, 17))           # the bad lines
 
 
 @pytest.fixture(scope="module")
@@ -91,16 +93,33 @@ def test_expected_warnings(demos, name):
 def test_summary(demos, name):
     """FR-35"""
     lines = demos[name][0].stdout.splitlines()
-    assert [line.split(":")[0] for line in lines] == ["volume", "frames", "load", "projection", "video"]
+    assert [line.split(":")[0] for line in lines[:5]] == ["volume", "frames", "load", "projection", "video"]
+    assert len(lines) == (5 if name != "edge_cases" else 5 + 2 + len(ERROR_FRAMES))
     assert lines[1].split(":", 1)[1].strip().startswith(f"{DEMOS[name][1]} (")
     assert lines[3].endswith(" fps")
 
 
-def test_black_frames_of_the_edge_cases(demos):
-    """FR-24, FR-26: black within the loss of H.264; the other frames are not black"""
+def test_error_list_of_the_edge_cases(demos):
+    """FR-35: the error frames, listed after the summary with the causes of their warnings"""
+    lines = demos["edge_cases"][0].stdout.splitlines()
+    assert lines[1].split(":", 1)[1].strip() == "16 (8 errors, 2 warnings)"
+    assert lines[5:7] == ["", "8 frames could not be drawn and show an error:"]
+    expected = []
+    for warning in WARNINGS["edge_cases"]:
+        found = re.fullmatch(r"warning: line (\d+), frame (\d+): (.*); drawn as an error frame", warning)
+        if found:
+            line, frame, cause = found.groups()
+            expected.append(f"  frame {frame:<2}  line {line}  {cause}")
+    assert lines[7:] == expected
+
+
+def test_black_and_error_frames_of_the_edge_cases(demos):
+    """FR-24, FR-26: black within the loss of H.264, or an error frame, gray with white text; the rest are drawn"""
     frames = video_frames(demos["edge_cases"][1])
     for number, frame in enumerate(frames, start=1):
         assert (frame.max() <= 2) == (number in BLACK_FRAMES), f"frame {number}"
+        is_error = abs(np.median(frame) - ERROR_GRAY) <= 4 and frame.max() > 200
+        assert is_error == (number in ERROR_FRAMES), f"frame {number}"
 
 
 def test_known_head_frame(demos):

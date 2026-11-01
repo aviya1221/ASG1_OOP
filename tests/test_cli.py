@@ -7,6 +7,7 @@ import pytest
 
 import Ex0
 from conftest import index_volume, video_frames, video_info
+from plane_projection.frames import ERROR_GRAY
 from plane_projection.projector import Projector
 from plane_projection.video import VideoWriter
 
@@ -17,6 +18,11 @@ GOOD = [
 ]
 ON_ONE_LINE = "3, 0,0,0, 1,1,1, 2,2,2"
 UNEQUAL_LEGS = "3, 0,0,15, 0,10,15, 3.5157,10,15"   # legs of 10 and 10.6, high up where the volume is bright
+
+
+def is_error_frame(frame: np.ndarray) -> bool:
+    """Mostly the gray of an error frame, with white text, within the loss of H.264."""
+    return abs(np.median(frame) - ERROR_GRAY) <= 4 and frame.max() > 200
 
 
 @pytest.fixture
@@ -69,7 +75,7 @@ def test_good_run(files, capsys):
     lines = out.splitlines()
     assert [line.split(":")[0] for line in lines] == ["volume", "frames", "load", "projection", "video"]
     assert "20 x 20 x 20, uint32" in lines[0]
-    assert lines[1].split(":", 1)[1].strip() == "5 (0 black, 0 warnings)"
+    assert lines[1].split(":", 1)[1].strip() == "5 (0 errors, 0 warnings)"
     assert "fps" in lines[3]
 
 
@@ -104,19 +110,22 @@ def test_fatal_errors(files, tmp_path, write_nrrd, write_csv, broken, capsys):
 
 
 def test_bad_and_doubtful_planes(files, capsys):
-    """FR-23 to FR-27, FR-35"""
+    """FR-23 to FR-27, FR-35: the run goes on after a bad plane, and lists it at the end"""
     argv = files(GOOD[0], ON_ONE_LINE, "# a comment", UNEQUAL_LEGS, GOOD[1])
     code, out, err = run(argv, capsys)
     assert code == 0
     assert err.splitlines() == [
-        "warning: line 2, frame 2: points a, b and c are on one line; the frame is black",
+        "warning: line 2, frame 2: points a, b and c are on one line; drawn as an error frame",
         "warning: line 4, frame 3: the legs differ by 0.6 voxels; drawn as given",
     ]
     frames = video_frames(argv[2])
     assert len(frames) == 4
-    assert frames[1].max() <= 2                         # black, within the loss of H.264
+    assert [is_error_frame(frame) for frame in frames] == [False, True, False, False]
     assert frames[2].max() > 100                        # drawn
-    assert "4 (1 black, 2 warnings)" in out
+    lines = out.splitlines()
+    assert lines[1].split(":", 1)[1].strip() == "4 (1 error, 1 warning)"
+    assert lines[5:] == ["", "1 frame could not be drawn and shows an error:",
+                         "  frame 2  line 2  points a, b and c are on one line"]
 
 
 def test_frame_size_is_the_largest_valid_plane_rounded_up(files, capsys):
@@ -128,7 +137,7 @@ def test_frame_size_is_the_largest_valid_plane_rounded_up(files, capsys):
 
 
 def test_error_while_projecting_one_plane(files, monkeypatch, capsys):
-    """NFR-8: a black frame and a warning, and the run goes on"""
+    """NFR-8: an error frame and a warning, and the run goes on"""
     project = Projector.project
 
     def failing(self, setup):
@@ -141,8 +150,9 @@ def test_error_while_projecting_one_plane(files, monkeypatch, capsys):
     code, out, err = run(argv, capsys)
     assert code == 0
     assert err.splitlines() == ["warning: line 2, frame 2: internal error while projecting "
-                                "(something unexpected); the frame is black"]
-    assert len(video_frames(argv[2])) == 3
+                                "(something unexpected); drawn as an error frame"]
+    assert [is_error_frame(frame) for frame in video_frames(argv[2])] == [False, True, False]
+    assert out.splitlines()[-1] == "  frame 2  line 2  internal error while projecting (something unexpected)"
 
 
 def test_error_while_writing_the_video(files, monkeypatch, capsys):
