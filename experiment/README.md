@@ -66,14 +66,17 @@ Pixels inside the shapes were compared, with `vtkImageReslice` set to the neares
 
 | Volume and planes | Planes | Pixels compared | Identical | Different |
 |---|---|---|---|---|
-| `MRHead_1.nrrd`, `head.csv` | 280 | 15,255,640 | 99.9991% | 131 |
+| `MRHead_1.nrrd`, `head.csv` | 280 | 15,255,640 | 99.9999% | 14 |
 | `swiss_roll.nrrd`, `swiss_roll.csv` | 120 | 7,864,320 | 99.9997% | 26 |
 | `synthetic/dice.nrrd`, `edge_cases.csv` (valid planes) | 8 | 185,374 | 100% | 0 |
-| **all** | **408** | **23,305,334** | **99.9993%** | **157** |
+| **all** | **408** | **23,305,334** | **99.9998%** | **40** |
 
-All 157 differing pixels lie halfway between two voxels on some axis, within 0.00001 of a voxel. There the nearest voxel is a tie:
-the program rounds exactly by `floor(p + 0.5)` ([FR-19](../docs/SRS.md#34-projection-geometry)), while VTK rounds with a small tolerance, so the two pick different neighbors.
-Away from these ties the two images are the same.
+All 40 differing pixels lie just below the halfway point between two voxels on some axis, 0.000002 to 0.0000074 of a voxel below it.
+The nearest voxel is the one below, and the program takes it: only a point within 0.000001 of the half counts as the half ([FR-19](../docs/SRS.md#34-projection-geometry)).
+VTK rounds more coarsely, to about 0.0000076 of a voxel (2⁻¹⁷), so it counts these points as halves and takes the voxel above.
+Away from these points the two images are the same.
+Before the program counted points within 0.000001 of a half as the half (commit dfb36b2), 157 pixels differed:
+the other 117 were points a hair below the half, which both now send to the voxel above.
 
 ![The program and vtkImageReslice on three planes of the head](images/slicer_comparison.png)
 
@@ -139,7 +142,7 @@ set no target for these.
 ## 4. Conclusions
 
 - The program does what the requirements define: every demo run gave the expected number and size of frames and the expected warnings,
-  and its images agree with the reslicing filter of 3D Slicer on every pixel except exact ties between two voxels.
+  and its images agree with the reslicing filter of 3D Slicer on every pixel except 40 points a few millionths of a voxel from a half, where VTK rounds more coarsely.
 - It meets the speed target: 317 fps on the benchmark, about 3 times the target of 100 and 10 times the minimum of 30.
   On battery the laptop slows down, and the median fell to 90 fps, still 3 times the minimum.
 - **Limitations.** Speed was measured on one laptop. The nearest voxel makes oblique cuts look blocky next to 3D Slicer's smooth view, and pixels in voxel units

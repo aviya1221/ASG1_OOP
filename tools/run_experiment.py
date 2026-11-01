@@ -192,8 +192,8 @@ def inside(setup) -> np.ndarray:
 def halfway(setup, rows, cols) -> np.ndarray:
     """Pixels whose point lies halfway between two voxels on some axis, within 1e-5 of a voxel.
 
-    There the nearest voxel is a tie: this program rounds exactly by floor(p + 0.5) (FR-19), while VTK rounds with
-    a small tolerance, so the two may pick different neighbors.
+    There the nearest voxel is almost a tie: this program counts a point as the half only within 1e-6 of it (FR-19),
+    while VTK rounds more coarsely, so the two may pick different neighbors.
     """
     p = setup.corner + cols[:, None] * setup.right + rows[:, None] * setup.down + 0.5
     return (np.abs(p - np.round(p)) < 1e-5).any(axis=1)
