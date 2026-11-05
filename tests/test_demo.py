@@ -10,7 +10,7 @@ import sys
 import numpy as np
 import pytest
 
-from conftest import DATA, PROJECT_ROOT, video_frames, video_info
+from conftest import DATASET, PROJECT_ROOT, video_frames, video_info
 from plane_projection.video.frames import ERROR_GRAY, GrayMap
 from plane_projection.volume import read_volume
 
@@ -57,7 +57,7 @@ def demos(tmp_path_factory):
     results = {}
     for name, (volume, _, _) in DEMOS.items():
         video = out / f"{name}.mp4"
-        command = [sys.executable, "Ex0.py", str(DATA / volume), str((DATA / volume).with_name(f"{name}.csv")), str(video)]
+        command = [sys.executable, "Ex0.py", str(DATASET / volume), str((DATASET / volume).with_name(f"{name}.csv")), str(video)]
         results[name] = (subprocess.run(command, cwd=PROJECT_ROOT, capture_output=True, text=True), video)
     return results
 
@@ -128,7 +128,7 @@ def test_known_head_frame(demos):
     On the noise of the MRI the loss is about 2.5 gray levels on average, and the neighboring slices
     are 6 or more away, so frame 66 must be within 3 of slice 65 and closer to it than to its neighbors.
     """
-    volume = read_volume(DATA / "MRHead_1.nrrd")
+    volume = read_volume(DATASET / "MRHead_1.nrrd")
     gray = GrayMap(volume.lo, volume.hi, volume.dtype)
     frame = video_frames(demos["head"][1])[65].astype(int)
     distance = {z: np.abs(frame - gray(volume.data[:, :, z].T)).mean() for z in range(62, 69)}

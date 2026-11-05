@@ -167,8 +167,8 @@ def measure(name, sample, planes, reference):
 
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Compare ways to sample a plane with NumPy.")
-    parser.add_argument("--volume", type=Path, default=PROJECT_ROOT / "DATA" / "croissant.nrrd",
-                        help="a 500 x 500 x 500 NRRD volume (default: DATA/croissant.nrrd)")
+    parser.add_argument("--volume", type=Path, default=PROJECT_ROOT / "DATASET" / "croissant.nrrd",
+                        help="a 500 x 500 x 500 NRRD volume (default: DATASET/croissant.nrrd)")
     parser.add_argument("--random", action="store_true", help="use random values instead of a file")
     return parser.parse_args(argv)
 

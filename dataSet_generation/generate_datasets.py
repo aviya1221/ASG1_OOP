@@ -7,7 +7,7 @@
     dice.nrrd               uint32   game die with a different number of pips per face (toy geometry)
 
 These synthetic volumes have an exact answer for every voxel, so they serve as test data; the main
-data set, the food scans, is made by generate_foods.py. By default the files are written to DATA/synthetic/.
+data set, the food scans, is made by generate_foods.py. By default the files are written to DATASET/synthetic/.
 
 Every volume is indexed vol[x, y, z], like M[x][y][z] in the assignment, and is saved on an LPS
 grid with origin (0, 0, 0), so the IJK index that 3D Slicer shows is exactly (x, y, z).
@@ -218,7 +218,7 @@ def check(condition: bool, message: str) -> None:
 
 
 def nrrd_header(spacing_mm) -> dict:
-    """Header shared by all files; same layout as DATA/MRHead_1.nrrd, with the axes along x, y, z."""
+    """Header shared by all files; same layout as DATASET/MRHead_1.nrrd, with the axes along x, y, z."""
     return {
         "space": "left-posterior-superior",
         "space directions": np.diag(spacing_mm),
@@ -309,8 +309,8 @@ def print_summary(path: Path, scan: Scan, dataset: Dataset) -> None:
 
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate the NRRD test volumes.")
-    parser.add_argument("--out", type=Path, default=PROJECT_ROOT / "DATA" / "synthetic",
-                        help="output folder (default: DATA/synthetic/ in the project)")
+    parser.add_argument("--out", type=Path, default=PROJECT_ROOT / "DATASET" / "synthetic",
+                        help="output folder (default: DATASET/synthetic/ in the project)")
     parser.add_argument("--only", choices=DATASETS, help="generate a single volume")
     return parser.parse_args(argv)
 

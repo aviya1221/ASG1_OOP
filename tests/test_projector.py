@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from scipy import ndimage
 
-from conftest import CAKE_IMAGE, CAKE_TRIANGLE, DATA, assert_same, cake, decode, index_volume
+from conftest import CAKE_IMAGE, CAKE_TRIANGLE, DATASET, assert_same, cake, decode, index_volume
 from plane_projection.geometry import plane_setup
 from plane_projection.planes import Plane
 from plane_projection.projector import Projector, index_type
@@ -163,7 +163,7 @@ AXIS_FILES = ["MRHead_1.nrrd", "onion.nrrd", "biscuit_cake.nrrd", "swiss_roll.nr
 @pytest.mark.parametrize("name", AXIS_FILES)
 def test_slices_along_the_axes(name):
     """FR-8, FR-19: images of planes along the axes equal NumPy slices, turned so that rows come first"""
-    volume = read_volume(DATA / name)
+    volume = read_volume(DATASET / name)
     data = volume.data
     sx, sy, sz = (n - 1 for n in data.shape)
     x, y, z = (n // 2 for n in data.shape)
@@ -176,7 +176,7 @@ def test_slices_along_the_axes(name):
 
 @pytest.fixture(scope="module")
 def dice():
-    return read_volume(DATA / "synthetic" / "dice.nrrd")
+    return read_volume(DATASET / "synthetic" / "dice.nrrd")
 
 
 def pips(image):
@@ -226,7 +226,7 @@ def test_dice_diagonal_cuts(dice, total, side, area, perimeter):
 @pytest.mark.slow
 def test_cake_labels():
     """FR-19, FR-20: a horizontal plane in the middle of the ganache layer shows mostly ganache"""
-    labels = read_volume(DATA / "synthetic" / "cake_3layers.seg.nrrd")
+    labels = read_volume(DATASET / "synthetic" / "cake_3layers.seg.nrrd")
     sx, sy, _ = (n - 1 for n in labels.shape)
     z = round(41 / 1.3)                     # 41 mm, between 38 and 44 mm
     with Projector(labels) as projector:
@@ -238,8 +238,8 @@ def test_cake_labels():
 @pytest.mark.slow
 def test_tomato_gel_is_brighter_than_seeds():
     """FR-19, FR-20: the scan and its labels, cut by the same plane through the middle"""
-    scan = read_volume(DATA / "synthetic" / "tomato.nrrd")
-    labels = read_volume(DATA / "synthetic" / "tomato.seg.nrrd")
+    scan = read_volume(DATASET / "synthetic" / "tomato.nrrd")
+    labels = read_volume(DATASET / "synthetic" / "tomato.seg.nrrd")
     sx, sy, sz = (n - 1 for n in scan.shape)
     points = rectangle((0, 0, sz // 2), (sx, 0, 0), (0, sy, 0))
     with Projector(scan) as scan_projector, Projector(labels) as label_projector:

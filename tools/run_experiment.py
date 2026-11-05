@@ -40,7 +40,7 @@ from plane_projection.projector import Projector  # noqa: E402
 from plane_projection.volume import Volume, read_volume  # noqa: E402
 
 OUT = PROJECT_ROOT / "experiment"
-DATA = PROJECT_ROOT / "DATA"
+DATASET = PROJECT_ROOT / "DATASET"
 DEMOS = {                                   # demo name: volume
     "head": "MRHead_1.nrrd",
     "onion": "onion.nrrd",
@@ -80,8 +80,8 @@ def run_demos() -> None:
         folder.mkdir(parents=True, exist_ok=True)
     log = [f"# Demo runs, commit {commit()}", f"# {machine()}", ""]
     for name, volume in DEMOS.items():
-        planes = Path("DATA", volume).with_name(f"{name}.csv").as_posix()       # the planes file sits next to its volume
-        command = [sys.executable, "Ex0.py", f"DATA/{volume}", planes, f"experiment/videos/{name}.mp4"]
+        planes = Path("DATASET", volume).with_name(f"{name}.csv").as_posix()       # the planes file sits next to its volume
+        command = [sys.executable, "Ex0.py", f"DATASET/{volume}", planes, f"experiment/videos/{name}.mp4"]
         process = subprocess.run(command, cwd=PROJECT_ROOT, capture_output=True, text=True)
         log += [f"$ python {' '.join(command[1:])}", process.stderr + process.stdout + f"exit code {process.returncode}", ""]
         print(f"{name}: exit code {process.returncode}")
@@ -140,8 +140,8 @@ def power() -> str:
 def run_speed() -> None:
     """Every configuration runs once in each round, in turn, so changes of the clock over time affect all of them alike."""
     import benchmark
-    volume = read_volume(DATA / "croissant.nrrd")
-    planes = read_planes(DATA / "croissant.csv")
+    volume = read_volume(DATASET / "croissant.nrrd")
+    planes = read_planes(DATASET / "croissant.csv")
     copies = {np.dtype(t).name: Volume(np.asfortranarray(volume.data.astype(t))) for t in (np.uint16, np.uint32)}
     copies["uint8"] = volume
     configurations = (
@@ -150,7 +150,7 @@ def run_speed() -> None:
         + [("size", f"{s + 1} x {s + 1}", "uint8", resized(planes, s), 4) for s in SIZES])
     found = {label: [] for _, label, *_ in configurations}
     lines = [f"# Speed of the projection, commit {commit()}", f"# {machine()}", f"# at the start: {power()}",
-             f"# DATA/croissant.nrrd, the {len(planes)} planes of DATA/croissant.csv (docs/SRS.md, NFR-4) and resized copies;",
+             f"# DATASET/croissant.nrrd, the {len(planes)} planes of DATASET/croissant.csv (docs/SRS.md, NFR-4) and resized copies;",
              f"# {ROUNDS} rounds, each running every configuration once, in turn;",
              "# fps = planes / time of plane_setup and Projector.project (NFR-3)"]
     for round_number in range(ROUNDS):
@@ -224,9 +224,9 @@ def run_slicer(slicer_exe: Path) -> None:
     figure = []
     with tempfile.TemporaryDirectory() as folder:
         for volume_name, name in SLICER_SETS:
-            volume = read_volume(DATA / volume_name)
-            setups = [setup for setup in map(plane_setup, read_planes((DATA / volume_name).with_name(f"{name}.csv"))) if setup.valid]
-            report, nearest, linear = resliced_by_slicer(slicer_exe, DATA / volume_name, setups, Path(folder), name)
+            volume = read_volume(DATASET / volume_name)
+            setups = [setup for setup in map(plane_setup, read_planes((DATASET / volume_name).with_name(f"{name}.csv"))) if setup.valid]
+            report, nearest, linear = resliced_by_slicer(slicer_exe, DATASET / volume_name, setups, Path(folder), name)
             with Projector(volume) as projector:
                 ours = [projector.project(setup) for setup in setups]
             compared = identical = differ_halfway = 0
@@ -271,8 +271,8 @@ def run_slicer(slicer_exe: Path) -> None:
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the experiment and write its results into experiment/.")
     parser.add_argument("--only", choices=["demos", "speed", "slicer"], help="run one part only")
-    parser.add_argument("--slicer", type=Path, default=Path(r"C:\Users\Hod Cohen\3D Slicer 5.12.4\Slicer.exe"),
-                        help="the 3D Slicer program, for the slicer part")
+    parser.add_argument("--slicer", type=Path, default=Path(r"C:\Program Files\Slicer 5.12.4\Slicer.exe"),
+                        help="the 3D Slicer program, for the slicer part (pass the path if it is installed elsewhere)")
     return parser.parse_args(argv)
 
 

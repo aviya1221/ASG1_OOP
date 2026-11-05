@@ -69,11 +69,11 @@ python tools/benchmark.py             # the speed on the 500³ volume
 
 ## A run
 
-The lecturer's head scan, cut by the 280 planes of `DATA/head.csv` ([the video](experiment/videos/head.mp4)):
+The lecturer's head scan, cut by the 280 planes of `DATASET/head.csv` ([the video](experiment/videos/head.mp4)):
 
 ```
-$ python Ex0.py DATA/MRHead_1.nrrd DATA/head.csv head.mp4
-volume:      DATA/MRHead_1.nrrd, 256 x 256 x 130, int16
+$ python Ex0.py DATASET/MRHead_1.nrrd DATASET/head.csv head.mp4
+volume:      DATASET/MRHead_1.nrrd, 256 x 256 x 130, int16
 frames:      280 (0 errors, 0 warnings)
 load:        0.14 s
 projection:  1.38 s total, 4.9 ms per frame, 203 fps
@@ -81,7 +81,7 @@ video:       0.40 s
 ```
 
 On the 500³ benchmark the projection runs at 317 planes per second, the median of 5 rounds, against 30 required and 100 expected.
-The [experiment](experiment/README.md) has the runs on every volume with their videos, the edge cases, and the comparison with 3D Slicer.
+The [experiment](experiment/README.md) has the runs on every volume, the edge cases, and the comparison with 3D Slicer.
 
 ## Documents and files
 
@@ -94,5 +94,5 @@ The [experiment](experiment/README.md) has the runs on every volume with their v
 | [experiment/](experiment/README.md) | the experiment, its results and the output videos |
 | [Ex0.py](Ex0.py), [plane_projection/](plane_projection/) | the demo, and the package with one module for each step; the steps that make the video are in [plane_projection/video/](plane_projection/video/) |
 | [tests/](tests/) | the tests, which run on every push on Windows, Ubuntu and macOS |
-| [DATA/](DATA/) | the volumes and their planes files |
+| [DATASET/](DATASET/) | the volumes and their planes files |
 | [tools/](tools/), [dataSet_generation/](dataSet_generation/) | the benchmark and the experiment; the scripts that made the data set |

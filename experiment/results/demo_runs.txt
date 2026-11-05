@@ -1,47 +1,47 @@
 # Demo runs, commit bfeeeaf
 # Intel64 Family 6 Model 142 Stepping 12, GenuineIntel, 8 logical processors, Windows-11-10.0.26300-SP0, Python 3.13.15, NumPy 2.5.4
 
-$ python Ex0.py DATA/MRHead_1.nrrd DATA/head.csv experiment/videos/head.mp4
-volume:      DATA/MRHead_1.nrrd, 256 x 256 x 130, int16
+$ python Ex0.py DATASET/MRHead_1.nrrd DATASET/head.csv experiment/videos/head.mp4
+volume:      DATASET/MRHead_1.nrrd, 256 x 256 x 130, int16
 frames:      280 (0 errors, 0 warnings)
 load:        0.14 s
 projection:  1.38 s total, 4.9 ms per frame, 203 fps
 video:       0.40 s
 exit code 0
 
-$ python Ex0.py DATA/onion.nrrd DATA/onion.csv experiment/videos/onion.mp4
-volume:      DATA/onion.nrrd, 256 x 256 x 130, uint8
+$ python Ex0.py DATASET/onion.nrrd DATASET/onion.csv experiment/videos/onion.mp4
+volume:      DATASET/onion.nrrd, 256 x 256 x 130, uint8
 frames:      120 (0 errors, 0 warnings)
 load:        0.10 s
 projection:  0.58 s total, 4.9 ms per frame, 206 fps
 video:       0.36 s
 exit code 0
 
-$ python Ex0.py DATA/biscuit_cake.nrrd DATA/biscuit_cake.csv experiment/videos/biscuit_cake.mp4
-volume:      DATA/biscuit_cake.nrrd, 256 x 256 x 130, uint16
+$ python Ex0.py DATASET/biscuit_cake.nrrd DATASET/biscuit_cake.csv experiment/videos/biscuit_cake.mp4
+volume:      DATASET/biscuit_cake.nrrd, 256 x 256 x 130, uint16
 frames:      120 (0 errors, 0 warnings)
 load:        0.16 s
 projection:  0.65 s total, 5.4 ms per frame, 184 fps
 video:       0.36 s
 exit code 0
 
-$ python Ex0.py DATA/swiss_roll.nrrd DATA/swiss_roll.csv experiment/videos/swiss_roll.mp4
-volume:      DATA/swiss_roll.nrrd, 256 x 256 x 130, uint32
+$ python Ex0.py DATASET/swiss_roll.nrrd DATASET/swiss_roll.csv experiment/videos/swiss_roll.mp4
+volume:      DATASET/swiss_roll.nrrd, 256 x 256 x 130, uint32
 frames:      120 (0 errors, 0 warnings)
 load:        0.29 s
 projection:  0.77 s total, 6.4 ms per frame, 156 fps
 video:       0.48 s
 exit code 0
 
-$ python Ex0.py DATA/croissant.nrrd DATA/croissant.csv experiment/videos/croissant.mp4
-volume:      DATA/croissant.nrrd, 500 x 500 x 500, uint8
+$ python Ex0.py DATASET/croissant.nrrd DATASET/croissant.csv experiment/videos/croissant.mp4
+volume:      DATASET/croissant.nrrd, 500 x 500 x 500, uint8
 frames:      100 (0 errors, 0 warnings)
 load:        1.18 s
 projection:  0.98 s total, 9.8 ms per frame, 102 fps
 video:       0.84 s
 exit code 0
 
-$ python Ex0.py DATA/synthetic/dice.nrrd DATA/synthetic/edge_cases.csv experiment/videos/edge_cases.mp4
+$ python Ex0.py DATASET/synthetic/dice.nrrd DATASET/synthetic/edge_cases.csv experiment/videos/edge_cases.mp4
 warning: line 29, frame 7: the legs differ by 37.8 voxels; drawn as given
 warning: line 31, frame 8: the top side a' a'' is not parallel to the base: its ends differ by 16 voxels; drawn as given
 warning: line 35, frame 9: 9 numbers for 4 points instead of 12; drawn as an error frame
@@ -52,7 +52,7 @@ warning: line 43, frame 13: points a, b and c are on one line; drawn as an error
 warning: line 45, frame 14: point a'' is 10 voxels off the plane of a', b and c; drawn as an error frame
 warning: line 47, frame 15: the sides of the trapezoid a', a'', c, b cross each other; drawn as an error frame
 warning: line 49, frame 16: the image would be 10200 x 180 pixels, more than 4096 on a side; drawn as an error frame
-volume:      DATA/synthetic/dice.nrrd, 200 x 180 x 160, uint32
+volume:      DATASET/synthetic/dice.nrrd, 200 x 180 x 160, uint32
 frames:      16 (8 errors, 2 warnings)
 load:        0.09 s
 projection:  0.03 s total, 2.1 ms per frame, 488 fps

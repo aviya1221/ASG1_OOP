@@ -285,7 +285,7 @@ Every point of this triangle is inside the volume, so `ok` depends on the row sp
 ### 6.1 Measurements
 
 The design of [section 5](#5-projection) was chosen by measuring a prototype, [tools/prototype_speed.py](../tools/prototype_speed.py),
-on the benchmark of NFR-4: `DATA/croissant.nrrd` and 100 triangles of 501 × 501 pixels in random directions.
+on the benchmark of NFR-4: `DATASET/croissant.nrrd` and 100 triangles of 501 × 501 pixels in random directions.
 It times the sampling only, as NFR-3 defines, and counts the pixels that differ from the exact rounding of FR-19.
 
 | Machine | |

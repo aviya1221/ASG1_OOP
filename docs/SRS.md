@@ -44,7 +44,7 @@ What is out of scope is listed in the [README](../README.md#scope).
 | Reference | Use |
 |---|---|
 | Ex1 assignment text, Introduction to Software Engineering | the problem and the speed target |
-| [DATA/lecturer_example.csv](../DATA/lecturer_example.csv), a copy of the [example the lecturer shared](https://docs.google.com/spreadsheets/d/1Tfy1yMYhAJjRBA8ZpRp_07pZXqGtxWhWoP02yZW1FQE/edit) | the planes file format |
+| [DATASET/lecturer_example.csv](../DATASET/lecturer_example.csv), a copy of the [example the lecturer shared](https://docs.google.com/spreadsheets/d/1Tfy1yMYhAJjRBA8ZpRp_07pZXqGtxWhWoP02yZW1FQE/edit) | the planes file format |
 | [NRRD file format](https://teem.sourceforge.net/nrrd/format.html) | the volume file format |
 | Software Engineering Documents, Intro2SE lecture 02a | the structure of this document |
 
@@ -119,7 +119,7 @@ The IDs of removed requirements are not used again.
 
 ### 3.3 Planes file
 
-The planes file has the format of the lecturer's example, [DATA/lecturer_example.csv](../DATA/lecturer_example.csv).
+The planes file has the format of the lecturer's example, [DATASET/lecturer_example.csv](../DATASET/lecturer_example.csv).
 
 **FR-10a.** Every line that is not blank and not a comment shall be one plane.
 
@@ -244,7 +244,7 @@ warning: line 7, frame 5: points a, b and c are on one line; drawn as an error f
 **NFR-3. What is measured.** The time of a plane shall run from its points to its image `E`, including FR-15 to FR-17, and shall not include reading the files,
 the gray levels, the placement or the encoding. The rate is the number of planes divided by the total of these times.
 
-**NFR-4. Benchmark.** The benchmark is `DATA/croissant.nrrd`, 500 × 500 × 500 voxels of `uint8`, cut by the 100 isosceles triangles of `DATA/croissant.csv`. Each triangle has a base and a height of 500, so its image is 501 × 501 pixels, the point halfway between its apex and the middle of its base lies at the center of the volume, `(249.5, 249.5, 249.5)`, and the directions are spread evenly by a fixed random seed. The result shall be recorded with the processor, memory, operating system, and Python and NumPy versions.
+**NFR-4. Benchmark.** The benchmark is `DATASET/croissant.nrrd`, 500 × 500 × 500 voxels of `uint8`, cut by the 100 isosceles triangles of `DATASET/croissant.csv`. Each triangle has a base and a height of 500, so its image is 501 × 501 pixels, the point halfway between its apex and the middle of its base lies at the center of the volume, `(249.5, 249.5, 249.5)`, and the directions are spread evenly by a fixed random seed. The result shall be recorded with the processor, memory, operating system, and Python and NumPy versions.
 
 **NFR-6. Memory.** The program shall hold the volume in memory once, in its own value type, and the rest of its memory shall grow with the size of an image, not with the size of the volume or the number of planes.
 

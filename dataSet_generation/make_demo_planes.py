@@ -1,19 +1,19 @@
-"""Write the planes files of the demo into DATA/, each next to its volume (docs/TESTING.md, section 6.1).
+"""Write the planes files of the demo into DATASET/, each next to its volume (docs/TESTING.md, section 6.1).
 
-Each file has the format of the lecturer's example file, DATA/lecturer_example.csv (docs/SRS.md, section 3.3):
+Each file has the format of the lecturer's example file, DATASET/lecturer_example.csv (docs/SRS.md, section 3.3):
 its header, then one plane per line, the number of points and x, y, z of each point, in voxel indices of the volume:
 3 points a, b, c for a triangle, or 4 points a', b, a'', c for a trapezoid. The five clean files have nothing else,
 like the lecturer's example; edge_cases.csv adds comments and blank lines (FR-11).
 All the numbers are fixed, so every run writes the same files:
 
-    head.csv                   DATA/MRHead_1.nrrd        280 frames: 130 slices along z, a square turning around the y axis,
+    head.csv                   DATASET/MRHead_1.nrrd        280 frames: 130 slices along z, a square turning around the y axis,
                                                          and a triangle turning within an oblique plane
-    onion.csv                  DATA/onion.nrrd           120 frames: a square turning around an axis tilted 30 degrees
-    biscuit_cake.csv           DATA/biscuit_cake.nrrd    from upright; the same planes in all three files
-    swiss_roll.csv             DATA/swiss_roll.nrrd
-    croissant.csv              DATA/croissant.nrrd       the 100 triangles of the speed benchmark (docs/SRS.md, NFR-4),
+    onion.csv                  DATASET/onion.nrrd           120 frames: a square turning around an axis tilted 30 degrees
+    biscuit_cake.csv           DATASET/biscuit_cake.nrrd    from upright; the same planes in all three files
+    swiss_roll.csv             DATASET/swiss_roll.nrrd
+    croissant.csv              DATASET/croissant.nrrd       the 100 triangles of the speed benchmark (docs/SRS.md, NFR-4),
                                                          the same planes that tools/prototype_speed.py measured
-    synthetic/edge_cases.csv   DATA/synthetic/dice.nrrd  16 frames: images of the die known in advance, a plane outside
+    synthetic/edge_cases.csv   DATASET/synthetic/dice.nrrd  16 frames: images of the die known in advance, a plane outside
                                                          the volume, and one line for each bad and doubtful case of
                                                          FR-24 and FR-25
 
@@ -220,11 +220,11 @@ def edge_case_lines():
     warned = [frame for frame, (result, _, _) in enumerate(cases, start=1) if result.startswith(("bad", "warning"))]
     lines = [
         HEADER,
-        "# Edge cases on DATA/synthetic/dice.nrrd: 200 x 180 x 160 voxels of uint32 (docs/TESTING.md, section 6.1).",
+        "# Edge cases on DATASET/synthetic/dice.nrrd: 200 x 180 x 160 voxels of uint32 (docs/TESTING.md, section 6.1).",
         "# The die is the cube x = 40 ... 159, y = 30 ... 149, z = 20 ... 139, with the value 100000; its pips have 200000.",
         "# The line above is the header of the lecturer's format (FR-11). Each plane starts with its number of points:",
         "# 3 for a triangle a, b, c, or 4 for a trapezoid a', b, a'', c (FR-12).",
-        run_comment("DATA/synthetic/dice.nrrd", "edge_cases.csv"),
+        run_comment("DATASET/synthetic/dice.nrrd", "edge_cases.csv"),
         f"# Expected: {len(cases)} frames; black: {frame_list(black)}; error frames: {frame_list(errors)}; "
         f"a warning for {frame_list(warned)}.",
     ]
@@ -337,7 +337,7 @@ def check_file(path: Path, grid, expected=None) -> str:
 
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Write the planes files of the demo.")
-    parser.add_argument("--out", type=Path, default=PROJECT_ROOT / "DATA", help="the data folder (default: DATA/)")
+    parser.add_argument("--out", type=Path, default=PROJECT_ROOT / "DATASET", help="the data folder (default: DATASET/)")
     return parser.parse_args(argv)
 
 

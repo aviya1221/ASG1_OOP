@@ -1,7 +1,7 @@
 # Speed of the projection, commit c3d7ade
 # Intel64 Family 6 Model 142 Stepping 12, GenuineIntel, 8 logical processors, Windows-11-10.0.26200-SP0, Python 3.13.15, NumPy 2.5.4
 # at the start: on battery, processor at 1502 of 2304 MHz
-# DATA/croissant.nrrd, the 100 planes of demo/croissant.csv (docs/SRS.md, NFR-4) and resized copies;
+# DATASET/croissant.nrrd, the 100 planes of demo/croissant.csv (docs/SRS.md, NFR-4) and resized copies;
 # 5 rounds, each running every configuration once, in turn;
 # fps = planes / time of plane_setup and Projector.project (NFR-3)
 # at the end: on battery, processor at 1803 of 2304 MHz

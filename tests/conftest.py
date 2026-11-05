@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DATA = PROJECT_ROOT / "DATA"
+DATASET = PROJECT_ROOT / "DATASET"
 SHOWN = 5                                   # differences that a failure message lists
 
 CHOCOLATE, CREAM, BISCUIT = 1, 2, 3

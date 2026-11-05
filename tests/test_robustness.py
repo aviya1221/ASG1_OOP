@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 import Ex0
-from conftest import DATA, index_volume, video_frames, video_info
+from conftest import DATASET, index_volume, video_frames, video_info
 from plane_projection.geometry import plane_setup
 from plane_projection.planes import Plane, read_planes
 from plane_projection.projector import Projector
@@ -132,8 +132,8 @@ def test_file_without_a_good_plane(tmp_path, write_nrrd, write_csv, capsys):
                                                       ("synthetic/dice.nrrd", "edge_cases.csv")])
 def test_same_input_gives_the_same_frames(volume_name, planes_name):
     """NFR-9: the images and the frames before encoding are identical on a second run"""
-    volume = read_volume(DATA / volume_name)
-    setups = [safe_setup(plane) for plane in read_planes((DATA / volume_name).with_name(planes_name))]
+    volume = read_volume(DATASET / volume_name)
+    setups = [safe_setup(plane) for plane in read_planes((DATASET / volume_name).with_name(planes_name))]
 
     def frames():
         with Renderer(volume, setups) as renderer:

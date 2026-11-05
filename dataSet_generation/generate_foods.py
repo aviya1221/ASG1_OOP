@@ -18,7 +18,7 @@ three smaller foods also copy its grid (256 x 256 x 130 voxels) and voxel shape 
 farther apart than pixels); the croissant has 500 x 500 x 500 cubic voxels, the size of the speed test.
 The voxel size differs, so that each food fills the field of view like the head, and the values are the
 head scan's, multiplied to suit each value type.
-By default the files are written to DATA/, next to MRHead_1.nrrd.
+By default the files are written to DATASET/, next to MRHead_1.nrrd.
 
 Usage:
     python dataSet_generation/generate_foods.py [--out DIR] [--only {onion,biscuit_cake,swiss_roll,croissant}]
@@ -169,7 +169,7 @@ def print_summary(path: Path, scan: Scan, food: Food) -> None:
 
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate the food scans in the style of MRHead_1.nrrd.")
-    parser.add_argument("--out", type=Path, default=PROJECT_ROOT / "DATA", help="output folder (default: DATA/)")
+    parser.add_argument("--out", type=Path, default=PROJECT_ROOT / "DATASET", help="output folder (default: DATASET/)")
     parser.add_argument("--only", choices=sorted(FOODS), help="generate just this food")
     return parser.parse_args(argv)
 

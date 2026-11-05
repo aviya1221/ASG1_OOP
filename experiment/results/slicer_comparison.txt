@@ -2,17 +2,17 @@
 # Intel64 Family 6 Model 142 Stepping 12, GenuineIntel, 8 logical processors, Windows-11-10.0.26300-SP0, Python 3.13.15, NumPy 2.5.4
 # For every valid plane, the pixels inside the shape are compared with vtkImageReslice using the nearest voxel.
 
-MRHead_1.nrrd with head.csv: resliced 280 planes of C:\Users\Hod Cohen\Desktop\intro SW asg1\DATA\MRHead_1.nrrd, VTK 9.6.2, 3D Slicer 5.12.4
+MRHead_1.nrrd with head.csv: resliced 280 planes of DATASET/MRHead_1.nrrd, VTK 9.6.2, 3D Slicer 5.12.4
     280 planes, 15255640 pixels inside the shapes
     identical: 15255626 (99.9999%)
     different: 14, of which 14 lie halfway between two voxels, within 1e-5 of a voxel
 
-swiss_roll.nrrd with swiss_roll.csv: resliced 120 planes of C:\Users\Hod Cohen\Desktop\intro SW asg1\DATA\swiss_roll.nrrd, VTK 9.6.2, 3D Slicer 5.12.4
+swiss_roll.nrrd with swiss_roll.csv: resliced 120 planes of DATASET/swiss_roll.nrrd, VTK 9.6.2, 3D Slicer 5.12.4
     120 planes, 7864320 pixels inside the shapes
     identical: 7864294 (99.9997%)
     different: 26, of which 26 lie halfway between two voxels, within 1e-5 of a voxel
 
-synthetic/dice.nrrd with edge_cases.csv: resliced 8 planes of C:\Users\Hod Cohen\Desktop\intro SW asg1\DATA\synthetic\dice.nrrd, VTK 9.6.2, 3D Slicer 5.12.4
+synthetic/dice.nrrd with edge_cases.csv: resliced 8 planes of DATASET/synthetic/dice.nrrd, VTK 9.6.2, 3D Slicer 5.12.4
     8 planes, 185374 pixels inside the shapes
     identical: 185374 (100.0000%)
     different: 0, of which 0 lie halfway between two voxels, within 1e-5 of a voxel

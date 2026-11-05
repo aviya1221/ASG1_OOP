@@ -1,4 +1,4 @@
-"""Synthetic T1-weighted MRI scan of a rectangular three-layer cake, made to look like DATA/MRHead_1.nrrd.
+"""Synthetic T1-weighted MRI scan of a rectangular three-layer cake, made to look like DATASET/MRHead_1.nrrd.
 
 The cake is rectangular and sits square to the scanner axes, so every view is easy to recognize:
 an axial slice shows the 17 x 11 cm top view, a coronal slice the long side with all the layers,

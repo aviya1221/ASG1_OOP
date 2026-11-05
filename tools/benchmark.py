@@ -55,10 +55,10 @@ def describe(found: list[float]) -> str:
 
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Measure the speed of the projection (docs/SRS.md, NFR-4).")
-    parser.add_argument("--volume", type=Path, default=PROJECT_ROOT / "DATA" / "croissant.nrrd",
-                        help="the volume (default: DATA/croissant.nrrd)")
-    parser.add_argument("--planes", type=Path, default=PROJECT_ROOT / "DATA" / "croissant.csv",
-                        help="the planes (default: DATA/croissant.csv, the 100 benchmark planes)")
+    parser.add_argument("--volume", type=Path, default=PROJECT_ROOT / "DATASET" / "croissant.nrrd",
+                        help="the volume (default: DATASET/croissant.nrrd)")
+    parser.add_argument("--planes", type=Path, default=PROJECT_ROOT / "DATASET" / "croissant.csv",
+                        help="the planes (default: DATASET/croissant.csv, the 100 benchmark planes)")
     parser.add_argument("--rounds", type=int, default=3, help="how many times to run all the planes (default: 3)")
     parser.add_argument("--threads", type=int, default=THREADS, help=f"threads of the projection (default: {THREADS})")
     parser.add_argument("--types", action="store_true", help="also run on copies of the volume in 16 and 32 bits")

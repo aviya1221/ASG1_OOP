@@ -13,7 +13,7 @@ python tools/run_experiment.py            # or --only demos, --only speed, --onl
 
 | Folder | Contents |
 |---|---|
-| [videos/](videos/) | the six output videos |
+| [videos/](videos/) | the output videos kept here, `head.mp4` and `edge_cases.mp4` |
 | [results/](results/) | the printed output of the runs, and the measurements |
 | [images/](images/) | chosen frames, and the comparison with 3D Slicer |
 
@@ -25,7 +25,7 @@ The speed measurements of [section 3](#3-speed) ran on the charger, while Window
 ## 1. The demo videos
 
 ```
-python Ex0.py DATA/MRHead_1.nrrd DATA/head.csv experiment/videos/head.mp4
+python Ex0.py DATASET/MRHead_1.nrrd DATASET/head.csv experiment/videos/head.mp4
 ```
 
 and the same for the other five files. All six runs ended with exit code 0 ([results/demo_runs.txt](results/demo_runs.txt)).
@@ -33,11 +33,13 @@ and the same for the other five files. All six runs ended with exit code 0 ([res
 | Video | Volume | Value type | Frames | Frame size | What it shows |
 |---|---|---|---|---|---|
 | [head.mp4](videos/head.mp4) | `MRHead_1.nrrd`, the lecturer's MRI | `int16` | 280 | 256 × 256 | the head slice by slice from side to side, then a square turning around the vertical axis, then a turning triangle |
-| [onion.mp4](videos/onion.mp4) | `onion.nrrd` | `uint8` | 120 | 256 × 256 | a square turning around a tilted axis through the onion |
-| [biscuit_cake.mp4](videos/biscuit_cake.mp4) | `biscuit_cake.nrrd` | `uint16` | 120 | 256 × 256 | the same planes through the cake |
-| [swiss_roll.mp4](videos/swiss_roll.mp4) | `swiss_roll.nrrd` | `uint32` | 120 | 256 × 256 | the same planes through the roll |
-| [croissant.mp4](videos/croissant.mp4) | `croissant.nrrd`, 500 × 500 × 500 | `uint8` | 100 | 502 × 502 | the 100 planes of the speed benchmark |
+| `onion.mp4` | `onion.nrrd` | `uint8` | 120 | 256 × 256 | a square turning around a tilted axis through the onion |
+| `biscuit_cake.mp4` | `biscuit_cake.nrrd` | `uint16` | 120 | 256 × 256 | the same planes through the cake |
+| `swiss_roll.mp4` | `swiss_roll.nrrd` | `uint32` | 120 | 256 × 256 | the same planes through the roll |
+| `croissant.mp4` | `croissant.nrrd`, 500 × 500 × 500 | `uint8` | 100 | 502 × 502 | the 100 planes of the speed benchmark |
 | [edge_cases.mp4](videos/edge_cases.mp4) | `synthetic/dice.nrrd` | `uint32` | 16 | 282 × 244 | known images of a die, and one line for each kind of bad or doubtful plane |
+
+Only `head.mp4` and `edge_cases.mp4` are kept in the repository; the other four are reproduced by the command above, and a frame of each is in the image below.
 
 ![Frames of the six demo videos](images/demo_frames.png)
 
@@ -86,7 +88,7 @@ The third column shows linear interpolation, as 3D Slicer shows a slice by defau
 
 ## 3. Speed
 
-The benchmark of [NFR-4](../docs/SRS.md#38-non-functional-requirements) is the 100 triangles of `DATA/croissant.csv` through the 500 × 500 × 500 croissant, each an image of 501 × 501 pixels.
+The benchmark of [NFR-4](../docs/SRS.md#38-non-functional-requirements) is the 100 triangles of `DATASET/croissant.csv` through the 500 × 500 × 500 croissant, each an image of 501 × 501 pixels.
 The time of a plane is that of `plane_setup` and `Projector.project` together ([NFR-3](../docs/SRS.md#38-non-functional-requirements)).
 Each configuration ran 5 rounds, every round running all configurations in turn, so that changes of the processor clock affect them alike
 ([results/speed.txt](results/speed.txt)). The laptop was on the charger.

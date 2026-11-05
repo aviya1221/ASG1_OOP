@@ -19,8 +19,8 @@ The assignment allows a voxel to be an unsigned integer of 8, 16 or 32 bits, and
 The head scan is a signed 16-bit file, but all its values are positive, so it reads like an unsigned one.
 The food scans are simulated MRI scans, made by `dataSet_generation/generate_foods.py`.
 
-All the files are in the `DATA/` folder. `DATA/synthetic/` holds test volumes with an exact answer for every voxel: a cake, a tomato and a die.
-Next to the volumes are the planes files that the demo and the tests run on, listed in [DATA/README.md](../DATA/README.md).
+All the files are in the `DATASET/` folder. `DATASET/synthetic/` holds test volumes with an exact answer for every voxel: a cake, a tomato and a die.
+Next to the volumes are the planes files that the demo and the tests run on, listed in [DATASET/README.md](../DATASET/README.md).
 
 ## What each part checks
 
@@ -36,12 +36,12 @@ Next to the volumes are the planes files that the demo and the tests run on, lis
 
 ## Preview images
 
-`DATA/images/` holds a picture of every volume: the cuts through its middle that 3D Slicer shows
+`DATASET/images/` holds a picture of every volume: the cuts through its middle that 3D Slicer shows
 in its three views, turned the same way and marked with the directions (R/L, A/P, S/I), and one oblique cut.
 Each cut is zoomed in on the object and has a scale bar.
 `images/overview.png` shows the main set, one row per file; `images/synthetic/` holds the test volumes.
 
-![The main data set](../DATA/images/overview.png)
+![The main data set](../DATASET/images/overview.png)
 
 To make the images again, for example after changing a volume:
 
@@ -162,7 +162,7 @@ GitHub accepts a file of this size but warns about files over 50 MB. Instead of 
 ## Making the food scans again
 
 ```
-python dataSet_generation/generate_foods.py                    # all four foods into DATA/
+python dataSet_generation/generate_foods.py                    # all four foods into DATASET/
 python dataSet_generation/generate_foods.py --only onion       # just one: onion, biscuit_cake, swiss_roll or croissant
 ```
 
@@ -184,7 +184,7 @@ Random choices use fixed seeds, so the data is identical on every run.
 
 ---
 
-# Test volumes: `DATA/synthetic/`
+# Test volumes: `DATASET/synthetic/`
 
 Generated volumes with known geometry. Each scan comes with an exact answer:
 a `.seg.nrrd` segmentation for the simulated scans, and exact values for the die.
@@ -199,7 +199,7 @@ They are meant for automated tests of the algorithm, where the expected image mu
 | `synthetic/dice.nrrd` | synthetic geometry | `uint32` | 200 × 180 × 160 | 1 × 1 × 1 | game die with pips; values above 65535 |
 
 ```
-python dataSet_generation/generate_datasets.py                  # all test volumes into DATA/synthetic/
+python dataSet_generation/generate_datasets.py                  # all test volumes into DATASET/synthetic/
 python dataSet_generation/generate_datasets.py --only cake      # just one: cake, tomato or dice
 ```
 

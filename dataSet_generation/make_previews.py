@@ -1,4 +1,4 @@
-"""Save preview images of the data set in DATA/images/, so the volumes can be seen without 3D Slicer.
+"""Save preview images of the data set in DATASET/images/, so the volumes can be seen without 3D Slicer.
 
 For every volume, one image shows the cuts through its middle that 3D Slicer shows in its three
 views, turned the same way, and one oblique cut:
@@ -191,8 +191,8 @@ def overview(paths, out: Path, title: str) -> None:
 
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Save preview images of the NRRD volumes.")
-    parser.add_argument("--data", type=Path, default=PROJECT_ROOT / "DATA", help="folder of volumes (default: DATA/)")
-    parser.add_argument("--out", type=Path, help="folder for the images (default: DATA/images/)")
+    parser.add_argument("--data", type=Path, default=PROJECT_ROOT / "DATASET", help="folder of volumes (default: DATASET/)")
+    parser.add_argument("--out", type=Path, help="folder for the images (default: DATASET/images/)")
     return parser.parse_args(argv)
 
 
@@ -210,7 +210,7 @@ def main(argv=None) -> None:
             preview(path, target / (path.name[: -len(".nrrd")] + ".png"))
             print(f"{target / (path.name[: -len('.nrrd')] + '.png')}")
         name = "main data set" if folder == args.data else f"{folder.name}/"
-        overview(paths, target / "overview.png", f"DATA: {name}")
+        overview(paths, target / "overview.png", f"DATASET: {name}")
         print(target / "overview.png")
 
 
